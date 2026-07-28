@@ -158,7 +158,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:unit -- --coverage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: unit-coverage
@@ -188,7 +188,7 @@ jobs:
         id: e2e
         continue-on-error: true
         run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
@@ -220,7 +220,7 @@ jobs:
           # No key (fork PR) → replay mode against committed cassettes.
           SENTRA_REPLAY: ${{ secrets.ANTHROPIC_API_KEY == '' && '1' || '' }}
         run: npm run eval -- --gate
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: eval-report
@@ -273,7 +273,7 @@ jobs:
         run: npm run agents:analyze
 
       - name: Upload report and spans
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: triage-report
