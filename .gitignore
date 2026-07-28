@@ -1,0 +1,37 @@
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+.env
+.env.local
+
+# Pipeline outputs — regenerated every run, never committed.
+results.json
+analysis.json
+report.md
+otel-spans.json
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# Run history lives in the CI cache (ADR-0004), not in git.
+.flakemetry/history.json
+
+# Local SQLite data for the demo app.
+app/server/*.db
+app/server/*.db-journal
+*.sqlite
+*.sqlite3
+
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+npm-debug.log*
+yarn-error.log*
+.eslintcache
