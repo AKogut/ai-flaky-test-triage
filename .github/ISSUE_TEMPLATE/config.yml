@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/AKogut/ai-flaky-test-triage/wiki
+    about: Architecture, taxonomy, evaluation methodology, and contributor guide.
+  - name: Why was my failure misclassified?
+    url: https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md
+    about: The classifier has a measured, published error rate. Read the methodology before filing a bug.
+  - name: Discussions
+    url: https://github.com/AKogut/ai-flaky-test-triage/discussions
+    about: Open-ended questions and ideas that are not yet a task.

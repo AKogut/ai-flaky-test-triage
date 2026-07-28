@@ -1,0 +1,50 @@
+name: "Architecture decision"
+description: "Propose a decision that needs to be recorded as an ADR"
+title: "[adr] <decision to be made>"
+labels: ["type: adr", "area: docs", "status: backlog"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        An ADR is required for changes to the agent architecture, the classification schema,
+        the persistence approach, or any guardrail. See `docs/adr/README.md`.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What forces are in play? What rules out the obvious answer?
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: Options under consideration
+      value: |
+        ### Option A —
+        - Pros:
+        - Cons:
+
+        ### Option B —
+        - Pros:
+        - Cons:
+    validations:
+      required: true
+
+  - type: textarea
+    id: leaning
+    attributes:
+      label: Current leaning and why
+
+  - type: input
+    id: supersedes
+    attributes:
+      label: Supersedes
+      placeholder: "ADR-0004"
+
+  - type: textarea
+    id: reversibility
+    attributes:
+      label: Reversibility
+      description: What does it cost to undo this later? Cheap-to-reverse decisions do not need long debate.

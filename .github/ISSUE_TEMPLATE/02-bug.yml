@@ -1,0 +1,80 @@
+name: "Bug"
+description: "Something in the pipeline, the app, or the harness behaves incorrectly"
+title: "[bug] <what is wrong>"
+labels: ["type: bug", "status: backlog"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - "app / server"
+        - "app / client"
+        - "tests / unit"
+        - "tests / e2e"
+        - "flakemetry-lib"
+        - "agents / triage"
+        - "agents / root-cause"
+        - "agents / fix-suggestion"
+        - "agents / orchestrator"
+        - "eval harness"
+        - "golden dataset"
+        - "CI workflow"
+        - "docs"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Expected vs actual
+      value: |
+        **Expected:**
+
+        **Actual:**
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Exact commands. Prefer replay mode (`SENTRA_REPLAY=1`) so the repro is deterministic.
+      value: |
+        ```bash
+
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Stack trace, failing assertion, CI run link, or the relevant slice of `report.md` / `analysis.json`.
+      render: text
+
+  - type: input
+    id: run-link
+    attributes:
+      label: CI run
+      placeholder: "https://github.com/AKogut/ai-flaky-test-triage/actions/runs/..."
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "Blocks the pipeline / CI is red"
+        - "Wrong output, pipeline still completes"
+        - "Cosmetic or docs"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: "I checked whether this is the classifier being wrong (expected, see eval/report.md) rather than a defect"
+          required: true

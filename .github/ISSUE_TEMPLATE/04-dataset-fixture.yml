@@ -1,0 +1,79 @@
+name: "Golden dataset fixture"
+description: "Add or relabel a fixture in the evaluation dataset"
+title: "[dataset] <failure scenario in one line>"
+labels: ["type: dataset", "area: eval", "status: backlog"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ground truth is the foundation every metric in this project rests on.
+        Label first, using the ordered rules in `docs/taxonomy.md`. Do not let the agent's
+        output influence the label.
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: What fails, and why.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Ground truth — owner
+      options: ["app_code", "test_code", "environment"]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: determinism
+    attributes:
+      label: Ground truth — determinism
+      options: ["deterministic", "intermittent"]
+    validations:
+      required: true
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Label justification
+      description: Which numbered rule from `docs/taxonomy.md` decided it, and why the tempting alternative is wrong.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provenance
+    attributes:
+      label: Provenance
+      options:
+        - "synthetic — hand-authored"
+        - "captured — from a real CI run"
+        - "mutated — captured run with an injected defect"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bucket
+    attributes:
+      label: Difficulty bucket
+      options:
+        - "Hard quadrant (app_code + intermittent)"
+        - "Misleading history"
+        - "Environment dressed as regression"
+        - "Stale test after refactor"
+        - "Cross-file state leak"
+        - "Straightforward"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Fixture hygiene
+      options:
+        - label: "No ground-truth term (`app_code`, `flaky`, `race`, …) appears in the fixture payload, filename, or test title"
+          required: true
+        - label: "The fixture is realistic — it could plausibly come from a real reporter output"
+          required: true
+        - label: "Marked `lowConfidenceGroundTruth: true` if the label is genuinely arguable"

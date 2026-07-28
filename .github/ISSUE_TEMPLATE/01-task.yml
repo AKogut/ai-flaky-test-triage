@@ -1,0 +1,72 @@
+name: "Task"
+description: "A unit of implementation work belonging to a milestone"
+title: "[<area>] <short imperative summary>"
+labels: ["type: task", "status: backlog"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One task = one branch = one squash commit on `main`.
+        If it does not fit in ~400 changed lines, split it.
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What is true after this is done that is not true now? Describe the end state, not the activity.
+      placeholder: "`flakemetry-lib/history.ts` reads, merges and atomically writes `.flakemetry/history.json`, capped at N runs per test."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why now, and what makes this non-obvious? Link the doc, ADR, or issue that motivates it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable statements. A reviewer should be able to verify each one without asking questions.
+      value: |
+        - [ ]
+        - [ ]
+        - [ ] Unit tests cover the happy path and at least one failure mode
+        - [ ] Public types exported and documented
+        - [ ] Docs updated if behaviour or contract changed
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this task deliberately does not do. Prevents scope creep in review.
+
+  - type: input
+    id: depends-on
+    attributes:
+      label: Depends on
+      description: Issue numbers that must land first.
+      placeholder: "#12, #14"
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      options:
+        - "XS — under an hour"
+        - "S — a few hours"
+        - "M — about a day"
+        - "L — two or more days, consider splitting"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Implementation notes
+      description: Sketches, API shapes, gotchas. Optional.

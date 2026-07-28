@@ -1,0 +1,310 @@
+name: CI
+
+# The entire pipeline lives in this one workflow. Nothing here runs outside a job.
+#
+# Jobs that depend on application code are gated on `needs.bootstrap.outputs.has-code`.
+# Until the npm workspace lands (M0, issue #1) those jobs skip, so `main` stays green
+# and each job activates on its own as the milestone that introduces it is completed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Always runs. Guards the parts of the repository that exist today.
+  # ---------------------------------------------------------------------------
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    outputs:
+      has-code: ${{ steps.detect.outputs.has-code }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect whether the npm workspace exists yet
+        id: detect
+        run: |
+          if [ -f package.json ]; then
+            echo "has-code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-code=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No package.json yet — code jobs will skip. See milestone M0."
+          fi
+
+      - name: Validate workflow and issue-template YAML
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check pyyaml
+          python3 - <<'PY'
+          import sys, pathlib, yaml
+          bad = []
+          for p in list(pathlib.Path('.github').rglob('*.yml')) + list(pathlib.Path('.github').rglob('*.yaml')):
+              try:
+                  yaml.safe_load(p.read_text())
+              except Exception as e:
+                  bad.append(f"{p}: {e}")
+          if bad:
+              print("\n".join(bad)); sys.exit(1)
+          print("all .github YAML parses")
+          PY
+
+      - name: Required documentation is present
+        run: |
+          missing=0
+          for f in README.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md LICENSE \
+                   docs/architecture.md docs/taxonomy.md docs/agent-design.md \
+                   docs/eval-methodology.md docs/limitations-and-guardrails.md \
+                   docs/branching-strategy.md docs/adr/README.md; do
+            [ -f "$f" ] || { echo "::error::missing $f"; missing=1; }
+          done
+          exit $missing
+
+      - name: ADR index matches the files on disk
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+          index = pathlib.Path('docs/adr/README.md').read_text()
+          files = {p.name for p in pathlib.Path('docs/adr').glob('0*-*.md')
+                   if p.name != '0000-template.md'}
+          linked = set(re.findall(r'\((\d{4}-[a-z0-9-]+\.md)\)', index))
+          if files - linked:
+              print("::error::ADRs not listed in docs/adr/README.md:", files - linked); sys.exit(1)
+          if linked - files:
+              print("::error::index links a missing ADR:", linked - files); sys.exit(1)
+          print(f"{len(files)} ADRs indexed")
+          PY
+
+      - name: No internal doc links point at missing files
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+          bad = []
+          for md in list(pathlib.Path('docs').rglob('*.md')) + [pathlib.Path('README.md'),
+                    pathlib.Path('CONTRIBUTING.md'), pathlib.Path('SECURITY.md')]:
+              for target in re.findall(r'\]\(([^)#:]+\.md)[^)]*\)', md.read_text()):
+                  if not (md.parent / target).resolve().exists():
+                      bad.append(f"{md} -> {target}")
+          if bad:
+              print("::error::broken doc links:\n" + "\n".join(bad)); sys.exit(1)
+          print("doc links resolve")
+          PY
+
+  # ---------------------------------------------------------------------------
+  # PR title becomes the squash commit on main, so it must be a valid
+  # Conventional Commit. See docs/branching-strategy.md.
+  # ---------------------------------------------------------------------------
+  pr-title:
+    name: PR title convention
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Conventional Commit format
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|test|chore|refactor|perf|build|ci|revert)(\([a-z0-9-]+\))?!?: .{1,72}$'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::PR title is not a valid Conventional Commit: '$TITLE'"
+            echo "Expected e.g. 'feat(triage): add two-axis output schema'"
+            exit 1
+          fi
+          echo "ok: $TITLE"
+
+  # ---------------------------------------------------------------------------
+  # M0 — static quality gates.
+  # ---------------------------------------------------------------------------
+  static:
+    name: Lint, format, typecheck
+    needs: hygiene
+    if: needs.hygiene.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+
+  # ---------------------------------------------------------------------------
+  # M5 — unit tests, contract tests.
+  # ---------------------------------------------------------------------------
+  unit:
+    name: Unit & contract tests
+    needs: hygiene
+    if: needs.hygiene.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit -- --coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-coverage
+          path: coverage/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # M5 — end-to-end. Deliberately does NOT retry: retries would erase the
+  # intermittency signal the whole pipeline depends on.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: E2E tests
+    needs: hygiene
+    if: needs.hygiene.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run Playwright
+        id: e2e
+        continue-on-error: true
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            results.json
+            playwright-report/
+          retention-days: 14
+      - name: Record whether the suite was red
+        run: echo "e2e_outcome=${{ steps.e2e.outcome }}" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # M2/M3 — the eval gate. Blocks merge on classifier regression.
+  # ---------------------------------------------------------------------------
+  eval:
+    name: Evaluation gate
+    needs: hygiene
+    if: needs.hygiene.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Run golden-dataset evaluation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # No key (fork PR) → replay mode against committed cassettes.
+          SENTRA_REPLAY: ${{ secrets.ANTHROPIC_API_KEY == '' && '1' || '' }}
+        run: npm run eval -- --gate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: eval/report.md
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # M6/M7/M8 — flakiness analysis and agent triage. Never fails the build.
+  # ---------------------------------------------------------------------------
+  analyze:
+    name: Flakiness analysis & triage
+    needs: [hygiene, e2e]
+    if: needs.hygiene.outputs.has-code == 'true' && always()
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # agents need real diff history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: test-results
+
+      # ADR-0004: keyed cache with fallback to main. Only the main-branch run writes.
+      - name: Restore run history
+        uses: actions/cache/restore@v4
+        with:
+          path: .flakemetry/history.json
+          key: history-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            history-${{ github.ref_name }}-
+            history-main-
+
+      - name: flakemetry analysis
+        run: npm run flakemetry:analyze
+
+      - name: Agent triage
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run agents:analyze
+
+      - name: Upload report and spans
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: triage-report
+          path: |
+            report.md
+            analysis.json
+            otel-spans.json
+          retention-days: 30
+
+      - name: Upsert PR comment
+        if: github.event_name == 'pull_request' && hashFiles('report.md') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const MARKER = '<!-- sentra:report -->';
+            const body = MARKER + '\n' + fs.readFileSync('report.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const existing = (await github.paginate(
+              github.rest.issues.listComments, { owner, repo, issue_number }
+            )).find(c => c.body?.startsWith(MARKER));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Persist run history (main only — ADR-0004)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .flakemetry/history.json
+          key: history-main-${{ github.run_id }}

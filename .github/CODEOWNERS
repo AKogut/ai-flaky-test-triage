@@ -1,0 +1,9 @@
+# Default owner for everything.
+*                           @AKogut
+
+# Areas where a change carries extra risk and should never be merged inattentively.
+/agents/                    @AKogut
+/prompts/                   @AKogut
+/eval/golden-dataset/       @AKogut
+/docs/adr/                  @AKogut
+/.github/workflows/         @AKogut

@@ -1,0 +1,63 @@
+name: "Experiment"
+description: "A measured investigation — prompt change, ablation, model swap, heuristic tweak"
+title: "[exp] <hypothesis in one line>"
+labels: ["type: experiment", "area: eval", "status: backlog"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Experiments may close as **not adopted**. That is a successful outcome — the finding is
+        the deliverable. If it changes a decision, it also produces an ADR.
+
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis
+      description: A falsifiable statement with a direction and, ideally, a magnitude.
+      placeholder: "Including the test's own source in the context bundle improves `test_code` recall by ≥5pp on the hard quadrant."
+    validations:
+      required: true
+
+  - type: textarea
+    id: method
+    attributes:
+      label: Method
+      description: What exactly changes, what stays fixed, which dataset slice, how many samples per fixture.
+      value: |
+        - **Variable:**
+        - **Held fixed:** model, temperature, dataset revision, prompt version
+        - **Dataset slice:**
+        - **Samples per fixture:** 5
+    validations:
+      required: true
+
+  - type: textarea
+    id: metric
+    attributes:
+      label: Decision metric and threshold
+      description: Which number decides this, and what value counts as a win? Set this before running.
+      placeholder: "Joint accuracy on the held-out slice, lower bound of the 95% interval, +3pp or better."
+    validations:
+      required: true
+
+  - type: textarea
+    id: cost
+    attributes:
+      label: Expected cost
+      description: Rough token/dollar estimate and wall-clock time.
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: Filled in when the experiment completes. Report the number even — especially — when it is negative.
+      value: |
+        _Pending._
+
+        | Variant | Joint acc. | 95% CI | Hard-quadrant recall | Cost/fixture |
+        |---|---|---|---|---|
+        | Control |  |  |  |  |
+        | Variant |  |  |  |  |
+
+        **Verdict:** adopted / not adopted
+        **ADR:** n/a
