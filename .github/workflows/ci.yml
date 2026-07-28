@@ -79,7 +79,7 @@ jobs:
           index = pathlib.Path('docs/adr/README.md').read_text()
           files = {p.name for p in pathlib.Path('docs/adr').glob('0*-*.md')
                    if p.name != '0000-template.md'}
-          linked = set(re.findall(r'\((\d{4}-[a-z0-9-]+\.md)\)', index))
+          linked = set(re.findall(r'\((\d{4}-[a-z0-9-]+\.md)\)', index)) - {'0000-template.md'}
           if files - linked:
               print("::error::ADRs not listed in docs/adr/README.md:", files - linked); sys.exit(1)
           if linked - files:
