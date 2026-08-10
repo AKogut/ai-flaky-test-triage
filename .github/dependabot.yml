@@ -51,6 +51,14 @@ updates:
       - dependency-name: 'lint-staged'
         update-types: ['version-update:semver-major']
 
+      # @types/node is versioned by Node major, so its major has to track
+      # engines.node rather than the newest release. @types/node@26 declares
+      # node:ffi and node:quic, which Node 22 does not have — importing them
+      # would type-check and then throw. Held until the runtime floor moves;
+      # tests/unit/node-floor.test.ts fails if the two ever disagree.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: github-actions
     directory: '/'
     schedule:

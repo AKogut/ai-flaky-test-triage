@@ -20,7 +20,10 @@ import { describe, expect, it } from 'vitest'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (file: string): string => readFileSync(join(root, file), 'utf8')
 
-const packageJson = JSON.parse(read('package.json')) as { engines: { node: string } }
+const packageJson = JSON.parse(read('package.json')) as {
+  engines: { node: string }
+  devDependencies: Record<string, string>
+}
 
 /** `">=22.13"` → `"22.13"`. The comparator is fixed; only the version travels. */
 const declaredFloor = (): string => {
@@ -68,5 +71,30 @@ describe('the documented Node floor', () => {
     const [major = 0, minor = 0] = floor.split('.').map(Number)
     expect(major).toBeGreaterThanOrEqual(22)
     if (major === 22) expect(minor).toBeGreaterThanOrEqual(13)
+  })
+})
+
+describe('@types/node tracks the runtime, not the newest release', () => {
+  /**
+   * DefinitelyTyped versions `@types/node` by Node major, so the types describe
+   * one specific runtime's API surface. Taking a newer major than the project
+   * runs is not a harmless upgrade — it is the compiler agreeing to calls that
+   * do not exist.
+   *
+   * Concretely: `@types/node@26` declares `node:ffi` and `node:quic`, neither of
+   * which Node 22 has. Under those types an import from `node:quic` type-checks
+   * cleanly and throws `ERR_UNKNOWN_BUILTIN_MODULE` at runtime — the compiler
+   * turned from a check into a rubber stamp, silently.
+   */
+  const range = packageJson.devDependencies['@types/node']
+
+  it('is declared at all', () => {
+    expect(range).toBeDefined()
+  })
+
+  it('has the same major as engines.node', () => {
+    const typesMajor = /(\d+)/.exec(range ?? '')?.[1]
+    const runtimeMajor = declaredFloor().split('.')[0]
+    expect(typesMajor).toBe(runtimeMajor)
   })
 })
