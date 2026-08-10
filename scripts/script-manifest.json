@@ -1,0 +1,89 @@
+{
+  "$comment": "Single source of truth for the CLI surface. Consumed by scripts/help.mjs (the annotated listing), scripts/pending.mjs (the placeholder message), and tests/unit/script-contract.test.ts (which asserts this file, package.json and the README table cannot drift apart).",
+  "scripts": [
+    {
+      "name": "help",
+      "description": "Annotated listing of every pipeline command and its status",
+      "milestone": "M0",
+      "issue": 9,
+      "status": "implemented"
+    },
+    {
+      "name": "dev",
+      "description": "Start TaskFlow (API + client) locally",
+      "milestone": "M4",
+      "issue": 48,
+      "status": "pending"
+    },
+    {
+      "name": "build",
+      "description": "Build the TaskFlow client bundle",
+      "milestone": "M4",
+      "issue": 43,
+      "status": "pending"
+    },
+    {
+      "name": "test:unit",
+      "description": "Vitest — API, flakemetry-lib, prompt builders, contracts",
+      "milestone": "M0",
+      "issue": 9,
+      "status": "implemented"
+    },
+    {
+      "name": "test:e2e",
+      "description": "Playwright — TaskFlow UI flows including the flaky specs",
+      "milestone": "M5",
+      "issue": 50,
+      "status": "pending"
+    },
+    {
+      "name": "test",
+      "description": "Unit and E2E together; emits results.json",
+      "milestone": "M5",
+      "issue": 50,
+      "status": "pending"
+    },
+    {
+      "name": "flakemetry:analyze",
+      "description": "Test report + history → analysis.json",
+      "milestone": "M6",
+      "issue": 59,
+      "status": "pending"
+    },
+    {
+      "name": "agents:analyze",
+      "description": "analysis.json → report.md",
+      "milestone": "M7",
+      "issue": 66,
+      "status": "pending"
+    },
+    {
+      "name": "analyze",
+      "description": "flakemetry and agents in sequence",
+      "milestone": "M8",
+      "issue": 71,
+      "status": "pending"
+    },
+    {
+      "name": "eval",
+      "description": "Golden-dataset evaluation → eval/report.md",
+      "milestone": "M2",
+      "issue": 27,
+      "status": "pending"
+    },
+    {
+      "name": "eval:ablation",
+      "description": "Context-ablation study → eval/ablation.md",
+      "milestone": "M9",
+      "issue": 78,
+      "status": "pending"
+    },
+    {
+      "name": "demo",
+      "description": "Full pipeline in replay mode, no credentials",
+      "milestone": "M3",
+      "issue": 39,
+      "status": "pending"
+    }
+  ]
+}

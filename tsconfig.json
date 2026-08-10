@@ -2,10 +2,23 @@
   "//": "Solution file. Holds no sources of its own; `tsc --build` walks the references.",
   "files": [],
   "references": [
-    { "path": "./flakemetry-lib" },
-    { "path": "./agents" },
-    { "path": "./eval" },
-    { "path": "./app/server" },
-    { "path": "./app/client" }
+    {
+      "path": "./flakemetry-lib"
+    },
+    {
+      "path": "./agents"
+    },
+    {
+      "path": "./eval"
+    },
+    {
+      "path": "./app/server"
+    },
+    {
+      "path": "./app/client"
+    },
+    {
+      "path": "./tests"
+    }
   ]
 }
