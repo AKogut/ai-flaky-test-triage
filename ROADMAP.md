@@ -17,6 +17,8 @@ Live status: [Milestones](https://github.com/AKogut/ai-flaky-test-triage/milesto
 Tooling that makes every later milestone cheaper: TypeScript project references, ESLint flat
 config, Prettier, Husky, commitlint, the npm workspace layout, and the CI skeleton.
 
+**Status:** in progress
+
 **Exit criterion:** `npm ci && npm run lint && npm run typecheck` passes on a clean clone, and CI
 enforces it on every PR.
 
@@ -25,6 +27,8 @@ enforces it on every PR.
 The type boundaries everything else is written against: `TestRun`, `TestResult`, `FlakySignal`,
 `Classification`, and the fixture format. Zod schemas at every boundary so a reporter version bump
 fails loudly in one file instead of silently three stages downstream.
+
+**Status:** planned
 
 **Exit criterion:** every artifact the pipeline reads or writes has a Zod schema, a TypeScript type
 inferred from it, and a round-trip test.
@@ -35,6 +39,8 @@ The measurement apparatus, built before the thing it measures. Hand-authored adv
 the non-LLM baseline heuristic, metrics with confidence intervals, confusion matrices, and the CI
 gate.
 
+**Status:** planned
+
 **Exit criterion:** `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and
 writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model
 involved.
@@ -43,6 +49,8 @@ involved.
 
 The first model call. Structured output, the shared rubric, prompt versioning, cassette
 record/replay, calibration measurement, and self-consistency sampling.
+
+**Status:** planned
 
 **Exit criterion:** the triage agent beats the baseline on joint accuracy by a margin that survives
 its confidence interval — or the finding that it does not is documented in the README. Either way,
@@ -54,6 +62,8 @@ The system under test: React + TypeScript client, Express + SQLite API, task CRU
 drag-to-reorder, optimistic updates. Deliberately small. Includes a seedable nondeterminism layer
 so flakiness can be _emergent_ rather than scripted.
 
+**Status:** planned
+
 **Exit criterion:** `npm run dev` serves a working task board, and `SENTRA_CHAOS=<seed>` reproduces
 a specific interleaving of the optimistic-update race.
 
@@ -63,6 +73,8 @@ Vitest for the API and libraries, Playwright for UI flows, and a set of genuinel
 flakiness comes from real races rather than a `Math.random()` in the test. Captured runs feed the
 golden dataset.
 
+**Status:** planned
+
 **Exit criterion:** ≥10 `captured` fixtures from real CI runs are in the dataset, and eval metrics
 are reported broken down by provenance.
 
@@ -70,6 +82,8 @@ are reported broken down by provenance.
 
 `analyze()` and the history file: EWMA flakiness scoring, streak tracking, atomic capped writes,
 and the CI cache strategy with `main`-only writes.
+
+**Status:** planned
 
 **Exit criterion:** history survives across CI runs on `main`, a cache miss degrades gracefully
 rather than crashing, and both behaviours have tests.
@@ -79,6 +93,8 @@ rather than crashing, and both behaviours have tests.
 The two downstream agents, the orchestrator, budget enforcement, concurrency limiting, partial
 failure isolation, and the report writer.
 
+**Status:** planned
+
 **Exit criterion:** `npm run agents:analyze` turns a fixture `analysis.json` into a `report.md`
 whose structure is asserted by an integration test running fully in replay mode.
 
@@ -86,6 +102,8 @@ whose structure is asserted by an integration test running fully in replay mode.
 
 Wiring the whole thing together in one workflow, plus the comment upsert, the fork degradation
 path, and the truncation notice.
+
+**Status:** planned
 
 **Exit criterion:** a pull request that touches a flaky spec produces exactly one bot comment, and
 pushing again updates that comment rather than adding another.
@@ -95,6 +113,8 @@ pushing again updates that comment rather than adding another.
 OpenTelemetry spans to a file exporter, per-run token and cost accounting, and the ablation study
 that measures what each context field actually contributes.
 
+**Status:** planned
+
 **Exit criterion:** `eval/ablation.md` reports every variant from
 [eval-methodology.md](docs/eval-methodology.md#ablation-study), and at least one context field is
 either justified by the numbers or removed because of them.
@@ -103,6 +123,8 @@ either justified by the numbers or removed because of them.
 
 The wiki, the README screenshot of a real PR comment, the honest limitations write-up, and the
 release.
+
+**Status:** planned
 
 **Exit criterion:** the Definition of Done in the README holds end to end on a clean clone, and
 `v1.0.0` is tagged with `eval/report.md` headline numbers in the release notes.

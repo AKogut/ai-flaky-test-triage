@@ -28,6 +28,8 @@
     "changelog:check": "tsx scripts/changelog.ts --check",
     "demo": "node scripts/pending.mjs demo",
     "dev": "node scripts/pending.mjs dev",
+    "docs:status": "tsx scripts/status-banner.ts",
+    "docs:status:check": "tsx scripts/status-banner.ts --check",
     "eval": "node scripts/pending.mjs eval",
     "eval:ablation": "node scripts/pending.mjs eval:ablation",
     "flakemetry:analyze": "node scripts/pending.mjs flakemetry:analyze",
