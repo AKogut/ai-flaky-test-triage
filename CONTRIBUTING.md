@@ -22,7 +22,8 @@ npm install
 npm run demo            # full pipeline in replay mode — no API key needed
 ```
 
-Requires Node ≥ 22. An `ANTHROPIC_API_KEY` is only needed for live model calls; everything else,
+Requires Node ≥ 22.13 — the floor ESLint 10 sets, not an arbitrary one. An `ANTHROPIC_API_KEY` is
+only needed for live model calls; everything else,
 including the whole test suite, runs in replay mode.
 
 ```bash
