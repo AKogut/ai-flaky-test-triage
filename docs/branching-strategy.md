@@ -103,7 +103,7 @@ with an eval delta in the PR body. Prompts are code.
 
 **Requirements before merge**
 
-1. Green CI: lint, typecheck, unit, e2e, contract.
+1. Green CI: lint, typecheck, unit (including coverage floors), e2e, contract.
 2. Eval gate green when the PR touches `agents/`, `eval/`, or `prompts/`.
 3. PR description follows the template, links its issue, and states how the change was verified.
 4. Prompt/agent changes include the before/after eval table in the description.

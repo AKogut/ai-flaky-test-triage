@@ -16,6 +16,12 @@ export default defineConfig({
       reporter: ['text-summary', 'lcov'],
       reportsDirectory: 'coverage',
       exclude: ['**/dist/**', '**/*.config.*', 'scripts/**', 'tests/**'],
+      thresholds: {
+        statements: 87, // 91.89% when the floor was introduced.
+        branches: 77, // 83.63% when the floor was introduced.
+        functions: 90, // 95.55% when the floor was introduced.
+        lines: 88, // 92.42% when the floor was introduced.
+      },
     },
   },
 })
