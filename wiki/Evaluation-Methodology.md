@@ -18,14 +18,18 @@ something.
 
 ## 1. A non-LLM baseline
 
-A deliberately simple heuristic — roughly thirty lines — classifies the same fixtures:
+A deliberately simple heuristic — roughly sixty lines — classifies the same fixtures:
 
 ```
 no assertion reached (crash / bind / install)   → environment
-diff touches the file under test                → app_code
-locator or timeout error                        → test_code
+the commit changes any non-test source file     → app_code
+locator or timeout error, not a value           → test_code
 otherwise                                       → app_code
 ```
+
+The second rule says **any** changed non-test source path, not "the file under test". A heuristic
+cannot map a test to the implementation it exercises, and the looser wording pointed in two
+opposite directions at once.
 
 Every agent number is reported next to it, and the **delta** is the headline, not the absolute.
 
@@ -36,6 +40,31 @@ something rarer than a working classifier.
 The baseline has a second job: on fork pull requests there is no API key, so it is the only
 classifier available. That forces it to be good enough for a human to read, which also makes it a
 fair control rather than a straw man.
+
+### What it scores today
+
+Against the 33 committed fixtures, with 95% Wilson intervals:
+
+| Metric                | Baseline              | Macro-F1 |
+| --------------------- | --------------------- | -------- |
+| **Joint** (both axes) | **36.4% [22.2–53.4]** | —        |
+| `owner`               | 54.5% [38.0–70.2]     | 0.36     |
+| `determinism`         | 78.8% [62.2–89.3]     | 0.77     |
+
+Joint accuracy sits 18pp below the `owner` axis and 42pp below `determinism` — reporting either
+axis alone would describe a classifier that half works.
+
+`test_code` has an F1 of exactly **0**: the baseline never once identifies a test-code failure.
+Accuracy hides that; macro-F1 is what makes it visible.
+
+And a classifier that answers `app_code` unconditionally beats it on `owner` accuracy — 63.6%
+against 54.5%, because 21 of 33 fixtures are `app_code`. That is the adversarial dataset doing its
+job rather than a defect in the baseline: on macro-F1 the constant classifier scores 0.26 against
+the baseline's 0.36. The intervals overlap heavily, so at n=33 neither result is evidence of a
+difference — which is the argument for growing the dataset to 60.
+
+Every number here is pinned in `eval/metrics.test.ts`, so a change to the rules or the dataset
+fails the build with the old and new values side by side.
 
 ## 2. An adversarial dataset
 

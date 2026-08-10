@@ -56,6 +56,37 @@ This has two good outcomes and no bad one. If the agent wins, there is evidence 
 cost. If the baseline wins, that is a genuinely interesting finding that goes in the README, and
 the project demonstrates something rarer than a working classifier: a willingness to measure.
 
+### What it scores today
+
+Against the 33 committed fixtures, with 95% Wilson intervals:
+
+| Metric                | Baseline              | Macro-F1 |
+| --------------------- | --------------------- | -------- |
+| **Joint** (both axes) | **36.4% [22.2–53.4]** | —        |
+| `owner`               | 54.5% [38.0–70.2]     | 0.36     |
+| `determinism`         | 78.8% [62.2–89.3]     | 0.77     |
+
+Three things in that table are worth reading carefully, because they are the reason the metrics are
+shaped this way.
+
+**Joint accuracy is 18pp below the `owner` axis and 42pp below `determinism`.** Reporting either
+axis alone would describe a classifier that half works; 36.4% is how often it produces an answer a
+developer could act on without checking.
+
+**`test_code` has an F1 of exactly 0.** The baseline never once identifies a test-code failure —
+support 8, four predictions, none correct. Accuracy hides this completely; macro-F1 is what makes
+it visible, which is the argument for reporting both.
+
+**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 63.6%
+against 54.5%, because 21 of 33 fixtures are `app_code`. That is not a defect in the baseline — it
+is the adversarial dataset doing its job. The constant classifier's macro-F1 is 0.26 against the
+baseline's 0.36, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
+two intervals overlap heavily, so at n=33 neither result is evidence of a difference at all. That
+is the honest reading, and it is also the argument for growing the dataset to 60.
+
+Every number above is pinned in `eval/metrics.test.ts`. A change to the rules or to the dataset
+fails the suite with the old and new values side by side.
+
 ## 2. An adversarial dataset
 
 `eval/golden-dataset/` targets **≥60 fixtures**, hand-labelled, with this composition:
