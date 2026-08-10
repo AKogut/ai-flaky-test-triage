@@ -8,3 +8,4 @@
 
 export * from './test-run.js'
 export * from './reporters/playwright.js'
+export * from './reporters/vitest.js'
