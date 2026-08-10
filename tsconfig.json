@@ -6,6 +6,9 @@
       "path": "./scripts"
     },
     {
+      "path": "./contracts"
+    },
+    {
       "path": "./flakemetry-lib"
     },
     {

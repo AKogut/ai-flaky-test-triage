@@ -3,16 +3,16 @@
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
 [![CI](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml)
-[![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/1?label=M0)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
+[![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/2?label=M1)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](package.json)
 
 <!-- status:start -->
 
-> **Project status: M0 — Foundations & repository hygiene.**
-> 0 of 11 milestones complete.
-> Current exit criterion: `npm ci && npm run lint && npm run typecheck` passes on a clean clone, and CI enforces it on every PR.
+> **Project status: M1 — Contracts, schemas & taxonomy.**
+> 1 of 11 milestones complete.
+> Current exit criterion: every artifact the pipeline reads or writes has a Zod schema, a TypeScript type inferred from it, and a round-trip test.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
 > Commands marked 🚧 in the script table are not implemented yet and say so when run.
@@ -168,6 +168,8 @@ Everything else runs today. `npm run help` prints this table from the terminal.
 │   ├── workflows/ci.yml         # the entire pipeline, one workflow
 │   ├── ISSUE_TEMPLATE/          # task / bug / experiment / ADR forms
 │   └── CODEOWNERS
+├── contracts/                   # Zod schemas + inferred types for every artifact
+│                                #   the pipeline reads or writes
 ├── app/                         # TaskFlow — the system under test
 │   ├── client/                  # React + TypeScript
 │   └── server/                  # Express + SQLite

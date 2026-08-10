@@ -17,7 +17,7 @@ Live status: [Milestones](https://github.com/AKogut/ai-flaky-test-triage/milesto
 Tooling that makes every later milestone cheaper: TypeScript project references, ESLint flat
 config, Prettier, Husky, commitlint, the npm workspace layout, and the CI skeleton.
 
-**Status:** in progress
+**Status:** done
 
 **Exit criterion:** `npm ci && npm run lint && npm run typecheck` passes on a clean clone, and CI
 enforces it on every PR.
@@ -28,7 +28,7 @@ The type boundaries everything else is written against: `TestRun`, `TestResult`,
 `Classification`, and the fixture format. Zod schemas at every boundary so a reporter version bump
 fails loudly in one file instead of silently three stages downstream.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** every artifact the pipeline reads or writes has a Zod schema, a TypeScript type
 inferred from it, and a round-trip test.

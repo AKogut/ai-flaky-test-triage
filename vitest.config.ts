@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: [
       'tests/unit/**/*.test.ts',
+      'contracts/**/*.test.ts',
       'flakemetry-lib/**/*.test.ts',
       'agents/**/*.test.ts',
       'eval/**/*.test.ts',
