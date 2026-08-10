@@ -1,0 +1,512 @@
+{
+  "config": {
+    "argv": ["/usr/local/bin/node", "/repo/node_modules/.bin/playwright", "test"],
+    "configFile": "/repo/playwright.config.ts",
+    "rootDir": "/repo/specs",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/repo/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/repo/specs",
+        "testIgnore": [],
+        "testMatch": ["**/*.@(spec|test).?(c|m)[jt]s?(x)"],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json",
+        {
+          "outputFile": "report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 14,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "sample.spec.ts",
+      "file": "sample.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "completion toggle settles before assertion",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 3,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at /repo/specs/sample.spec.ts:21:13",
+                    "location": {
+                      "file": "/repo/specs/sample.spec.ts",
+                      "column": 13,
+                      "line": 21
+                    },
+                    "snippet": "  19 |   const n = existsSync(COUNTER) ? Number(readFileSync(COUNTER, 'utf8')) : 0\n  20 |   writeFileSync(COUNTER, String(n + 1))\n> 21 |   expect(n).toBeGreaterThan(0)\n     |             ^\n  22 | })\n  23 |\n  24 | test('drag handle is present', async () => {"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/repo/specs/sample.spec.ts",
+                        "column": 13,
+                        "line": 21
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  19 |   const n = existsSync(COUNTER) ? Number(readFileSync(COUNTER, 'utf8')) : 0\n  20 |   writeFileSync(COUNTER, String(n + 1))\n> 21 |   expect(n).toBeGreaterThan(0)\n     |             ^\n  22 | })\n  23 |\n  24 | test('drag handle is present', async () => {\n    at /repo/specs/sample.spec.ts:21:13"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T10:31:10.849Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/repo/test-results/sample-completion-toggle-settles-before-assertion-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/repo/specs/sample.spec.ts",
+                    "column": 13,
+                    "line": 21
+                  }
+                },
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-08-10T10:31:11.038Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "flaky"
+            }
+          ],
+          "id": "b92766bcf73bd5c029a8-c0e8f226384405cbfe68",
+          "file": "sample.spec.ts",
+          "line": 18,
+          "column": 5
+        },
+        {
+          "title": "drag handle is present",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "covered by keyboard reorder",
+                  "location": {
+                    "file": "/repo/specs/sample.spec.ts",
+                    "line": 25,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T10:31:11.054Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "covered by keyboard reorder",
+                      "location": {
+                        "file": "/repo/specs/sample.spec.ts",
+                        "line": 25,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "b92766bcf73bd5c029a8-02d9b1baa6be5b11dbb7",
+          "file": "sample.spec.ts",
+          "line": 24,
+          "column": 5
+        },
+        {
+          "title": "slow operation finishes in time",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 150,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 151,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-08-10T10:31:11.060Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/repo/test-results/sample-slow-operation-finishes-in-time-chromium/error-context.md"
+                    }
+                  ]
+                },
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 152,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-08-10T10:31:11.400Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/repo/test-results/sample-slow-operation-finishes-in-time-chromium-retry1/error-context.md"
+                    }
+                  ]
+                },
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 152,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 2,
+                  "startTime": "2026-08-10T10:31:11.749Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/repo/test-results/sample-slow-operation-finishes-in-time-chromium-retry2/error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "b92766bcf73bd5c029a8-a30fc39ecd98ffbb09af",
+          "file": "sample.spec.ts",
+          "line": 28,
+          "column": 5
+        }
+      ],
+      "suites": [
+        {
+          "title": "task board",
+          "file": "sample.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "lists tasks after load",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-08-10T10:31:10.248Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b92766bcf73bd5c029a8-75946ab33b639189b73d",
+              "file": "sample.spec.ts",
+              "line": 7,
+              "column": 7
+            }
+          ],
+          "suites": [
+            {
+              "title": "reorder",
+              "file": "sample.spec.ts",
+              "line": 11,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "moves a task above its neighbour",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 2,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n    at /repo/specs/sample.spec.ts:13:26",
+                            "location": {
+                              "file": "/repo/specs/sample.spec.ts",
+                              "column": 26,
+                              "line": 13
+                            },
+                            "snippet": "  11 |   test.describe('reorder', () => {\n  12 |     test('moves a task above its neighbour', async () => {\n> 13 |       expect(['b', 'a']).toEqual(['a', 'b'])\n     |                          ^\n  14 |     })\n  15 |   })\n  16 | })"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/repo/specs/sample.spec.ts",
+                                "column": 26,
+                                "line": 13
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n\n  11 |   test.describe('reorder', () => {\n  12 |     test('moves a task above its neighbour', async () => {\n> 13 |       expect(['b', 'a']).toEqual(['a', 'b'])\n     |                          ^\n  14 |     })\n  15 |   })\n  16 | })\n    at /repo/specs/sample.spec.ts:13:26"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-08-10T10:31:10.265Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/repo/test-results/sample-task-board-reorder-moves-a-task-above-its-neighbour-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/repo/specs/sample.spec.ts",
+                            "column": 26,
+                            "line": 13
+                          }
+                        },
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 4,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n    at /repo/specs/sample.spec.ts:13:26",
+                            "location": {
+                              "file": "/repo/specs/sample.spec.ts",
+                              "column": 26,
+                              "line": 13
+                            },
+                            "snippet": "  11 |   test.describe('reorder', () => {\n  12 |     test('moves a task above its neighbour', async () => {\n> 13 |       expect(['b', 'a']).toEqual(['a', 'b'])\n     |                          ^\n  14 |     })\n  15 |   })\n  16 | })"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/repo/specs/sample.spec.ts",
+                                "column": 26,
+                                "line": 13
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n\n  11 |   test.describe('reorder', () => {\n  12 |     test('moves a task above its neighbour', async () => {\n> 13 |       expect(['b', 'a']).toEqual(['a', 'b'])\n     |                          ^\n  14 |     })\n  15 |   })\n  16 | })\n    at /repo/specs/sample.spec.ts:13:26"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 1,
+                          "startTime": "2026-08-10T10:31:10.449Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/repo/test-results/sample-task-board-reorder-moves-a-task-above-its-neighbour-chromium-retry1/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/repo/specs/sample.spec.ts",
+                            "column": 26,
+                            "line": 13
+                          }
+                        },
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 4,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n    at /repo/specs/sample.spec.ts:13:26",
+                            "location": {
+                              "file": "/repo/specs/sample.spec.ts",
+                              "column": 26,
+                              "line": 13
+                            },
+                            "snippet": "  11 |   test.describe('reorder', () => {\n  12 |     test('moves a task above its neighbour', async () => {\n> 13 |       expect(['b', 'a']).toEqual(['a', 'b'])\n     |                          ^\n  14 |     })\n  15 |   })\n  16 | })"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/repo/specs/sample.spec.ts",
+                                "column": 26,
+                                "line": 13
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n\n  11 |   test.describe('reorder', () => {\n  12 |     test('moves a task above its neighbour', async () => {\n> 13 |       expect(['b', 'a']).toEqual(['a', 'b'])\n     |                          ^\n  14 |     })\n  15 |   })\n  16 | })\n    at /repo/specs/sample.spec.ts:13:26"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 2,
+                          "startTime": "2026-08-10T10:31:10.649Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/repo/test-results/sample-task-board-reorder-moves-a-task-above-its-neighbour-chromium-retry2/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/repo/specs/sample.spec.ts",
+                            "column": 26,
+                            "line": 13
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "b92766bcf73bd5c029a8-7be10cfa6da011233bfc",
+                  "file": "sample.spec.ts",
+                  "line": 12,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-08-10T10:31:10.059Z",
+    "duration": 1864.0789999999997,
+    "expected": 1,
+    "skipped": 1,
+    "unexpected": 2,
+    "flaky": 1
+  }
+}
