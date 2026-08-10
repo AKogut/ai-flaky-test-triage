@@ -1,0 +1,33 @@
+{
+  "name": "proxy-answers-a-data-request-with-a-login-page",
+  "scenario": "A client test fails while an interception layer replaces responses with a sign-in page.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.client.test.ts›client › parses the task list",
+      "title": "client › parses the task list",
+      "file": "tests/unit/tasks.client.test.ts",
+      "status": "failed",
+      "attempts": 2,
+      "flakyWithinRun": true,
+      "durationMs": 642,
+      "annotations": [],
+      "error": {
+        "message": "SyntaxError: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON\n    at JSON.parse (<anonymous>)\n    at parseResponse (app/client/src/api.ts:38:24)",
+        "stack": "    at JSON.parse (<anonymous>)\n    at parseResponse (app/client/src/api.ts:38:24)\n    at tests/unit/tasks.client.test.ts:41:26",
+        "snippet": "> const tasks = await client.listTasks()"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.client.test.ts›client › parses the task list",
+      "flakinessScore": 0.18,
+      "consecutiveFailures": 0,
+      "totalRuns": 131,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-10T09:22:11.000Z",
+      "statusHistory": "PPPFPPPPPFP",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/api.ts b/app/client/src/api.ts\n@@ -35,7 +35,7 @@ async function parseResponse(response: Response) {\n-  return response.json()\n+  return JSON.parse(await response.text())\n }\n"
+}

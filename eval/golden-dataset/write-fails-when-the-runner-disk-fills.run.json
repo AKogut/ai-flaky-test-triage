@@ -1,0 +1,33 @@
+{
+  "name": "write-fails-when-the-runner-disk-fills",
+  "scenario": "A persistence test fails when the agent's disk is exhausted by another job on the same host.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.repository.test.ts›createTask › persists the row",
+      "title": "createTask › persists the row",
+      "file": "tests/unit/tasks.repository.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 203,
+      "annotations": [],
+      "error": {
+        "message": "SqliteError: SQLITE_FULL: database or disk is full\n    at Database.run (node_modules/better-sqlite3/lib/methods/wrappers.js:5:21)\n    at insertTask (app/server/tasks/repository.ts:21:18)",
+        "stack": "    at insertTask (app/server/tasks/repository.ts:21:18)\n    at tests/unit/tasks.repository.test.ts:12:20",
+        "snippet": "> const task = await createTask('Write the report')"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.repository.test.ts›createTask › persists the row",
+      "flakinessScore": 0.09,
+      "consecutiveFailures": 1,
+      "totalRuns": 142,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-10T08:44:02.000Z",
+      "statusHistory": "PPPPPPPPPPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/repository.ts b/app/server/tasks/repository.ts\n@@ -18,7 +18,8 @@ export async function insertTask(title: string): Promise<Task> {\n-  const { lastID } = await db.run('INSERT INTO tasks (title) VALUES (?)', title)\n+  const { lastID } = await db.run('INSERT INTO tasks (title, created_at) VALUES (?, ?)',\n+    title, new Date().toISOString())\n   return getTask(lastID)\n"
+}

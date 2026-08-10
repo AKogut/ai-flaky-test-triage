@@ -1,0 +1,10 @@
+{
+  "name": "timestamps-serialised-without-an-offset",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The score is the misleading feature: this test alternated for months while it compared whole timestamps against a clock, and that comparison was replaced with a pattern match long ago. Today's failure has nothing to do with timing. The formatter was swapped for one that drops the offset, so the emitted value can never match the pattern regardless of when the run happens, on any machine, in any zone.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "misleading-history",
+  "lowConfidenceGroundTruth": false
+}

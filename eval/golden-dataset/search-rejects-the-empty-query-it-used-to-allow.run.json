@@ -1,0 +1,33 @@
+{
+  "name": "search-rejects-the-empty-query-it-used-to-allow",
+  "scenario": "A long-unstable search test began failing on every attempt after validation was tightened.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.search.test.ts›search › an empty query returns every task",
+      "title": "search › an empty query returns every task",
+      "file": "tests/unit/tasks.search.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 34,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 400 to be 200 // Object.is equality\n\nresponse.body.error: \"query must contain at least 1 character\"",
+        "stack": "    at tests/unit/tasks.search.test.ts:29:29",
+        "snippet": "  const response = await request(app).get('/api/v1/tasks/search?q=')\n> expect(response.status).toBe(200)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.search.test.ts›search › an empty query returns every task",
+      "flakinessScore": 0.71,
+      "consecutiveFailures": 1,
+      "totalRuns": 214,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-09T22:17:03.000Z",
+      "statusHistory": "PFPPFPFPPFPFPPFPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/schema.ts b/app/server/tasks/schema.ts\n@@ -14,7 +14,7 @@ export const SearchQuerySchema = z.object({\n-  q: z.string().optional(),\n+  q: z.string().min(1),\n })\n"
+}

@@ -1,0 +1,33 @@
+{
+  "name": "port-still-held-by-the-previous-job",
+  "scenario": "The suite fails during startup while the port it needs is still held from an earlier job.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.api.test.ts›GET /api/v1/tasks › lists the seeded tasks",
+      "title": "GET /api/v1/tasks › lists the seeded tasks",
+      "file": "tests/unit/tasks.api.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 94,
+      "annotations": [],
+      "error": {
+        "message": "Error: listen EADDRINUSE: address already in use :::3001\n    at Server.setupListenHandle (node:net:1908:16)\n    at startServer (app/server/index.ts:28:6)",
+        "stack": "    at Server.setupListenHandle (node:net:1908:16)\n    at startServer (app/server/index.ts:28:6)",
+        "snippet": "> await startServer()"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.api.test.ts›GET /api/v1/tasks › lists the seeded tasks",
+      "flakinessScore": 0.06,
+      "consecutiveFailures": 2,
+      "totalRuns": 97,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-09T19:07:35.000Z",
+      "statusHistory": "PPPPPPPPFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/index.ts b/app/server/index.ts\n@@ -25,7 +25,7 @@ export async function startServer(): Promise<Server> {\n-  return app.listen(0)\n+  return app.listen(Number(process.env.PORT ?? 3001))\n }\n"
+}

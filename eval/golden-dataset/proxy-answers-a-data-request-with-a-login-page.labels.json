@@ -1,0 +1,10 @@
+{
+  "name": "proxy-answers-a-data-request-with-a-login-page",
+  "owner": "environment",
+  "determinism": "intermittent",
+  "justification": "The commit rewrites the parsing helper and the stack points inside it, which is exactly the coincidence that makes this look like a product defect. The body being parsed is a sign-in page, so nothing answered the request but the network in front of it — no assertion was reached, and rule 1 applies. The rewritten helper handles valid payloads correctly, which is why the retry in the same run passed once the interception window closed.",
+  "ruleApplied": "rule-1-no-assertion-reached",
+  "provenance": "synthetic",
+  "bucket": "environment-as-regression",
+  "lowConfidenceGroundTruth": false
+}

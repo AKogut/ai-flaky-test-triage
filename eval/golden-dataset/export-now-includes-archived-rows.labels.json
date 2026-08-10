@@ -1,0 +1,10 @@
+{
+  "name": "export-now-includes-archived-rows",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The misleading feature is the score, built from months of alternation caused by export ordering that was fixed long ago. It is wrong here because the count is now off by a fixed amount on every run: the filter that excluded archived rows was removed, so the export returns all seven rather than the four the board shows. A rerun reproduces it exactly, and the difference matches the number of archived rows in the seed.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "misleading-history",
+  "lowConfidenceGroundTruth": false
+}

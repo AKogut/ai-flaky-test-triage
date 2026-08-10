@@ -1,0 +1,10 @@
+{
+  "name": "search-rejects-the-empty-query-it-used-to-allow",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The misleading feature is the score: 214 runs of alternation put this near the top of any instability ranking, and the obvious conclusion is more of the same. It is wrong here because the cause changed. The old alternation came from a shared search index warming up; today's failure is a validation error that reproduces on every attempt and on a rerun in isolation. Reading the history rather than the failure would send someone to rerun a test that will never pass again until either the endpoint or the expectation moves.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "misleading-history",
+  "lowConfidenceGroundTruth": false
+}

@@ -1,0 +1,34 @@
+{
+  "name": "board-control-appears-twice-after-panel-split",
+  "scenario": "A long-unstable board test now fails on every attempt because its target resolves to two nodes.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › the toolbar control opens the editor",
+      "title": "board › the toolbar control opens the editor",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 3120,
+      "annotations": [],
+      "error": {
+        "message": "Error: strict mode violation: getByTestId('open-editor') resolved to 2 elements:\n    1) <button data-testid=\"open-editor\">Edit</button>\n    2) <button data-testid=\"open-editor\">Edit</button>",
+        "stack": "    at tests/e2e/board.spec.ts:26:45",
+        "snippet": "> await page.getByTestId('open-editor').click()"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › the toolbar control opens the editor",
+      "flakinessScore": 0.66,
+      "consecutiveFailures": 1,
+      "totalRuns": 188,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-09T20:44:51.000Z",
+      "statusHistory": "PFPPFPFPPFPPFPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/Board.tsx b/app/client/src/Board.tsx\n@@ -22,6 +22,7 @@ export function Board({ tasks }: BoardProps) {\n       <Toolbar onCreate={onCreate} />\n+      <SidePanel onCreate={onCreate} />\n     </div>\n",
+  "testSource": "test('the toolbar control opens the editor', async ({ page }) => {\n  await page.goto('/')\n  await page.getByTestId('open-editor').click()\n  await expect(page.getByRole('dialog')).toBeVisible()\n})\n"
+}
