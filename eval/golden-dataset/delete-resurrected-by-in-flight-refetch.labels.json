@@ -1,0 +1,10 @@
+{
+  "name": "delete-resurrected-by-in-flight-refetch",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The obvious reading is an unstable spec, because it passed on the second attempt. That is evidence about the product, not about the spec: the wait is a web-first count assertion with no fixed delay, and it is preceded by a confirmed starting count. A refresh started before the removal completes writes its older snapshot over the newer state, so the removed row returns until something triggers another fetch. Passing on retry is what a product defect that depends on interleaving looks like from the outside.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

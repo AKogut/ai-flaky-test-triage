@@ -1,0 +1,10 @@
+{
+  "name": "token-refresh-cancels-in-flight-save",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "Two consecutive failures suggest something settled, which is the reading to resist. Running the file on its own passes; the two failures are runs where the refresh happened to land inside the save's window, which the shared runner makes more likely under load. Blaming the spec for starting both at once is also tempting, but overlapping a refresh with a save is ordinary client behaviour. The refresh replaces the underlying request controller and aborts whatever it was carrying, and the abort is swallowed rather than retried.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

@@ -1,0 +1,10 @@
+{
+  "name": "counter-drifts-when-updates-interleave",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The alternative is that the heading simply needs longer, making this a synchronisation problem in the spec. The assertion already waits five seconds and the list settles at five items well inside that window, so more waiting changes nothing. The heading is derived from a counter kept beside the list rather than from the list itself, and two creations that resolve together increment it once. The two views stay out of step until a reload, which is a defect in the product regardless of how long anyone waits.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

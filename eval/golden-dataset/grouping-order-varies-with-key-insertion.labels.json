@@ -1,0 +1,10 @@
+{
+  "name": "grouping-order-varies-with-key-insertion",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The tempting alternative is that a spec should not depend on key order at all. The endpoint documents a fixed section order, so asserting it is exactly what this spec is for. The instability is data-driven rather than timing-driven: grouping builds a plain object keyed by status, so section order follows whichever status appears first in the rows, which in turn follows insertion order. Two consecutive failures look settled but reflect two runs that seeded in the same order; reseeding the other way passes.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

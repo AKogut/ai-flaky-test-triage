@@ -1,0 +1,33 @@
+{
+  "name": "debounced-save-skips-final-keystroke",
+  "scenario": "The last character typed before leaving the editor is missing from the saved title.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/editor.spec.ts›editor › keeps every character typed before closing",
+      "title": "editor › keeps every character typed before closing",
+      "file": "tests/e2e/editor.spec.ts",
+      "status": "timedOut",
+      "attempts": 2,
+      "flakyWithinRun": true,
+      "durationMs": 8890,
+      "annotations": [],
+      "error": {
+        "message": "Error: Timed out 5000ms waiting for expect(locator).toHaveText(expected)\n\nLocator: getByTestId('task-1-title')\nExpected string: \"Quarterly report\"\nReceived string: \"Quarterly repor\"\n\nCall log:\n  - expect.toHaveText with timeout 5000ms",
+        "stack": "    at tests/e2e/editor.spec.ts:38:47",
+        "snippet": "  await page.getByRole('button', { name: 'Done' }).click()\n> await expect(page.getByTestId('task-1-title')).toHaveText('Quarterly report')"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/editor.spec.ts›editor › keeps every character typed before closing",
+      "flakinessScore": 0.4,
+      "consecutiveFailures": 1,
+      "totalRuns": 88,
+      "firstSeenAt": "2026-04-02T07:31:19.000Z",
+      "lastPassedAt": "2026-08-10T09:01:48.000Z",
+      "statusHistory": "PPFPPFPPPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/useDebouncedSave.ts b/app/client/src/useDebouncedSave.ts\n@@ -10,7 +10,7 @@ export function useDebouncedSave(save: Save) {\n   useEffect(() => {\n     const timer = setTimeout(() => save(value), 300)\n-    return () => { clearTimeout(timer); save.flush() }\n+    return () => clearTimeout(timer)\n   }, [value])\n"
+}

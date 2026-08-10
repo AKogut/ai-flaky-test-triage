@@ -1,0 +1,10 @@
+{
+  "name": "debounced-save-skips-final-keystroke",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The alternative is that the spec closes the editor too quickly and should wait for the save to settle. There is nothing observable to wait for: the interface gives no saving indicator, and the final assertion already waits five seconds for the value to appear. The cleanup now cancels the pending timer without flushing it, so a close that lands inside the debounce window discards the last change. It depends on typing speed relative to the window, which is why the retry passed.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

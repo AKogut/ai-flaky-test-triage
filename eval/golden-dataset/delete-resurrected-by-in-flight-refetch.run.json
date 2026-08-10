@@ -1,0 +1,33 @@
+{
+  "name": "delete-resurrected-by-in-flight-refetch",
+  "scenario": "A task removed while the list is refreshing reappears until the next reload.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › a deleted task stays deleted",
+      "title": "board › a deleted task stays deleted",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "failed",
+      "attempts": 2,
+      "flakyWithinRun": true,
+      "durationMs": 7180,
+      "annotations": [],
+      "error": {
+        "message": "Error: expect(locator).toHaveCount(expected)\n\nLocator: getByTestId('task-card')\nExpected: 2\nReceived: 3\n\nCall log:\n  - expect.toHaveCount with timeout 5000ms\n  - waiting for getByTestId('task-card')",
+        "stack": "    at tests/e2e/board.spec.ts:96:44",
+        "snippet": "  await deleteTask(page, 'Beta')\n> await expect(page.getByTestId('task-card')).toHaveCount(2)"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › a deleted task stays deleted",
+      "flakinessScore": 0.44,
+      "consecutiveFailures": 0,
+      "totalRuns": 83,
+      "firstSeenAt": "2026-04-02T07:31:19.000Z",
+      "lastPassedAt": "2026-08-10T07:55:31.000Z",
+      "statusHistory": "PFPPFPPPFP",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "test('a deleted task stays deleted', async ({ page }) => {\n  await page.goto('/')\n  await expect(page.getByTestId('task-card')).toHaveCount(3)\n  await deleteTask(page, 'Beta')\n  await expect(page.getByTestId('task-card')).toHaveCount(2)\n})\n"
+}
