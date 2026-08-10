@@ -1,0 +1,10 @@
+{
+  "name": "port-still-held-by-the-previous-job",
+  "owner": "environment",
+  "determinism": "deterministic",
+  "justification": "This is the one in the group where the obvious reading and the correct one agree, which is why it is here: a bucket of nothing but traps teaches a classifier that anything touching product source in an infrastructure failure must be environment. The bind failed before any assertion, so rule 1 settles it. The commit is genuinely implicated in making the suite fragile — a fixed port instead of an ephemeral one — but the failure is still the host's, and the fix belongs in CI isolation as much as in this line.",
+  "ruleApplied": "rule-1-no-assertion-reached",
+  "provenance": "synthetic",
+  "bucket": "environment-as-regression",
+  "lowConfidenceGroundTruth": false
+}

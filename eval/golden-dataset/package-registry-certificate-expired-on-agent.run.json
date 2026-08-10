@@ -1,0 +1,33 @@
+{
+  "name": "package-registry-certificate-expired-on-agent",
+  "scenario": "Every test in the file fails during setup while the agent cannot validate a certificate.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.client.test.ts›client › fetches the task list",
+      "title": "client › fetches the task list",
+      "file": "tests/unit/tasks.client.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 1804,
+      "annotations": [],
+      "error": {
+        "message": "FetchError: request to https://registry.internal/api failed, reason: certificate has expired\n    at ClientRequest.<anonymous> (node_modules/node-fetch/lib/index.js:1491:11)",
+        "stack": "    at ClientRequest.<anonymous> (node_modules/node-fetch/lib/index.js:1491:11)\n    at setupClient (app/client/src/api.ts:14:20)",
+        "snippet": "> const client = await setupClient()"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.client.test.ts›client › fetches the task list",
+      "flakinessScore": 0.07,
+      "consecutiveFailures": 3,
+      "totalRuns": 118,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-08T07:12:44.000Z",
+      "statusHistory": "PPPPPPPFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/api.ts b/app/client/src/api.ts\n@@ -11,7 +11,7 @@ export async function setupClient(): Promise<Client> {\n-  const base = process.env.API_URL ?? 'http://localhost:3001'\n+  const base = process.env.API_URL ?? 'https://registry.internal/api'\n   return createClient(base)\n"
+}

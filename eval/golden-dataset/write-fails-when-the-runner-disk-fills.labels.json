@@ -1,0 +1,10 @@
+{
+  "name": "write-fails-when-the-runner-disk-fills",
+  "owner": "environment",
+  "determinism": "intermittent",
+  "justification": "Everything points at the commit: it changes the insert statement, and the stack names the very line it changed. That is the misleading feature. No assertion ran — the write never completed because the storage layer reported the disk exhausted, which rule 1 settles before the diff is worth reading. The changed statement is valid and passes everywhere else; the run happened to land on an agent another job had filled.",
+  "ruleApplied": "rule-1-no-assertion-reached",
+  "provenance": "synthetic",
+  "bucket": "environment-as-regression",
+  "lowConfidenceGroundTruth": false
+}

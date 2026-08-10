@@ -1,0 +1,33 @@
+{
+  "name": "timestamps-serialised-without-an-offset",
+  "scenario": "A long-unstable serialisation test fails on every attempt after the date formatter changed.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.serialise.test.ts›serialise › emits an offset with every timestamp",
+      "title": "serialise › emits an offset with every timestamp",
+      "file": "tests/unit/tasks.serialise.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 15,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected '2026-08-10 09:15:00' to match /\\+\\d{2}:\\d{2}|Z$/",
+        "stack": "    at tests/unit/tasks.serialise.test.ts:11:38",
+        "snippet": "> expect(serialiseTask(task).createdAt).toMatch(/\\+\\d{2}:\\d{2}|Z$/)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.serialise.test.ts›serialise › emits an offset with every timestamp",
+      "flakinessScore": 0.68,
+      "consecutiveFailures": 1,
+      "totalRuns": 203,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-09T13:52:29.000Z",
+      "statusHistory": "PFPPFPFPPFPFPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/serialise.ts b/app/server/tasks/serialise.ts\n@@ -8,7 +8,7 @@ export function serialiseTask(task: Task) {\n-    createdAt: task.createdAt.toISOString(),\n+    createdAt: formatLocal(task.createdAt),\n }\n"
+}

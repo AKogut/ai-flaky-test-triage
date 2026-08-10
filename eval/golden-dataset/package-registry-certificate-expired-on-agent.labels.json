@@ -1,0 +1,10 @@
+{
+  "name": "package-registry-certificate-expired-on-agent",
+  "owner": "environment",
+  "determinism": "deterministic",
+  "justification": "The diff changes the default endpoint and the stack names that function, so blaming the commit is the natural reading, and it is what makes this hard. The transport never completed: the agent rejected an expired certificate, so no request was answered and no assertion ran, which rule 1 settles first. The certificate belongs to the host's trust store, not to this repository, and every job on that agent failed the same way in the same window.",
+  "ruleApplied": "rule-1-no-assertion-reached",
+  "provenance": "synthetic",
+  "bucket": "environment-as-regression",
+  "lowConfidenceGroundTruth": false
+}

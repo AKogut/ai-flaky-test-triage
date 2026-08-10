@@ -1,0 +1,10 @@
+{
+  "name": "board-control-appears-twice-after-panel-split",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "Two features mislead at once. The long alternating history invites treating this as more noise, and the commit touches product source, which invites blaming the panel that was added. Both are wrong. The panel is a deliberate feature and works; the spec identifies its target by an attribute that was never unique by contract, so it stops being a valid detector the moment a second control appears. It now fails on every attempt, so nothing about it is unsettled any more.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "misleading-history",
+  "lowConfidenceGroundTruth": false
+}

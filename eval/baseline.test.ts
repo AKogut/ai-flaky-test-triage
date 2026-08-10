@@ -229,14 +229,42 @@ describe('scored against the committed dataset', () => {
     expect(docsOnly?.predicted.evidence.join(' ')).not.toContain('README.md')
   })
 
+  it('is defeated by the adversarial buckets, which is what they are for (#22)', () => {
+    // One of the eight is deliberately not a trap: an EADDRINUSE failure inside
+    // a commit that touches the server bootstrap, where the obvious reading and
+    // the correct one agree. A bucket of nothing but traps would teach the
+    // opposite reflex — that anything infrastructure-shaped near a product diff
+    // must be environment.
+    const adversarial = scored.filter(
+      (s) =>
+        s.labels.bucket === 'misleading-history' || s.labels.bucket === 'environment-as-regression',
+    )
+    const missed = adversarial.filter(
+      (s) =>
+        s.predicted.owner !== s.labels.owner || s.predicted.determinism !== s.labels.determinism,
+    )
+    expect(adversarial.length).toBe(8)
+    expect(missed.length).toBe(7)
+  })
+
+  it('reads every misleading-history fixture as unstable when it has settled', () => {
+    // The determinism rule keys on a consecutive-failure streak. These have a
+    // new cause that reproduces every time but only one run old, so the streak
+    // is short and the months of alternation behind it are irrelevant.
+    for (const s of scored.filter((s) => s.labels.bucket === 'misleading-history')) {
+      expect(s.labels.determinism, s.name).toBe('deterministic')
+      expect(s.predicted.determinism, s.name).toBe('intermittent')
+    }
+  })
+
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
     // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(14 / 25, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(18 / 33, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {
     expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(
-      22 / 25,
+      26 / 33,
       5,
     )
   })

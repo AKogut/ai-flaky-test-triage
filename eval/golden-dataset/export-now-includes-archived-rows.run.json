@@ -1,0 +1,33 @@
+{
+  "name": "export-now-includes-archived-rows",
+  "scenario": "A long-unstable export test fails on every attempt since a filter was dropped from the query.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.export.test.ts›export › contains only rows the board shows",
+      "title": "export › contains only rows the board shows",
+      "file": "tests/unit/tasks.export.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 52,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 7 to be 4 // Object.is equality\n\nrows.length",
+        "stack": "    at tests/unit/tasks.export.test.ts:19:26",
+        "snippet": "  const rows = await exportTasks()\n> expect(rows.length).toBe(4)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.export.test.ts›export › contains only rows the board shows",
+      "flakinessScore": 0.64,
+      "consecutiveFailures": 1,
+      "totalRuns": 176,
+      "firstSeenAt": "2026-02-11T09:03:47.000Z",
+      "lastPassedAt": "2026-08-09T16:38:12.000Z",
+      "statusHistory": "FPPFPFPPFPFPPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/export.ts b/app/server/tasks/export.ts\n@@ -7,7 +7,7 @@ export async function exportTasks(): Promise<Row[]> {\n-  return db.all('SELECT * FROM tasks WHERE archived = 0')\n+  return db.all('SELECT * FROM tasks')\n }\n"
+}
