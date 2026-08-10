@@ -73,21 +73,19 @@ const CONFIDENCE = {
   noHistory: 0.3,
 } as const
 
-/** Paths in the diff, split into product source and test source. */
-function changedPaths(diff: string): { product: string[]; test: string[] } {
-  const paths = [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)].map((m) => m[1] ?? '')
-  return {
-    product: paths.filter(
+/** Product-source paths in the diff. Test and non-code paths are dropped. */
+function changedProductPaths(diff: string): string[] {
+  return [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)]
+    .map((m) => m[1] ?? '')
+    .filter(
       (p) => p !== '' && SOURCE_EXTENSION.test(p) && !TEST_PATH.test(p) && !NOT_PRODUCT.test(p),
-    ),
-    test: paths.filter((p) => p !== '' && TEST_PATH.test(p)),
-  }
+    )
 }
 
 export function classifyWithBaseline(payload: FixturePayload): Classification {
   const { result, signal } = payload.subject
   const message = `${result.error?.message ?? ''}\n${result.error?.stack ?? ''}`
-  const changed = changedPaths(payload.diff ?? '')
+  const changedProduct = changedProductPaths(payload.diff ?? '')
 
   const evidence: string[] = []
   let owner: Classification['owner']
@@ -100,11 +98,11 @@ export function classifyWithBaseline(payload: FixturePayload): Classification {
     ownerConfidence = CONFIDENCE.infrastructure
     ownerReason = 'the failure names an infrastructure error, so no assertion was reached'
     evidence.push(firstLine(message))
-  } else if (changed.product.length > 0) {
+  } else if (changedProduct.length > 0) {
     owner = 'app_code'
     ownerConfidence = CONFIDENCE.productDiff
     ownerReason = 'the commit changes product source'
-    evidence.push(`diff touches ${changed.product.slice(0, 3).join(', ')}`)
+    evidence.push(`diff touches ${changedProduct.slice(0, 3).join(', ')}`)
   } else if (LOCATOR_OR_WAIT.test(message)) {
     owner = 'test_code'
     ownerConfidence = CONFIDENCE.locator
