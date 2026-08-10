@@ -71,6 +71,18 @@ describe('owner rules, in order', () => {
     expect(classifyWithBaseline(payload({ diff: productDiff })).owner).toBe('app_code')
   })
 
+  it.each([
+    ['documentation', 'diff --git a/README.md b/README.md\n'],
+    ['CI configuration', 'diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n'],
+    ['the wiki', 'diff --git a/wiki/Home.md b/wiki/Home.md\n'],
+    ['a lockfile', 'diff --git a/package-lock.json b/package-lock.json\n'],
+    ['tooling config', 'diff --git a/eslint.config.js b/eslint.config.js\n'],
+  ])('does not treat a change to %s as product source (#112)', (_label, diff) => {
+    const withDocs = classifyWithBaseline(payload({ diff }))
+    const withNone = classifyWithBaseline(payload({}))
+    expect(withDocs.reasoning).toBe(withNone.reasoning)
+  })
+
   it('does not let a test-only diff fire the product-change rule', () => {
     // Both land on app_code — the second rule and the fallback share a label —
     // so asserting on the label alone would pass whether or not the rule fired.
@@ -205,21 +217,21 @@ describe('scored against the committed dataset', () => {
         s.predicted.owner !== s.labels.owner || s.predicted.determinism !== s.labels.determinism,
     )
     expect(hard.length).toBe(10)
-    expect(missed.length).toBe(6)
+    expect(missed.length).toBe(7)
   })
 
-  it('counts documentation and CI files as product source, right for the wrong reason', () => {
-    // A weakness of the rule as specified, not a defect: "any non-test path"
-    // includes README.md. One hard-quadrant fixture has a docs-only diff and is
-    // classified app_code because of it. Kept visible rather than tidied away.
-    const byDocsDiff = scored.find((s) => s.name === 'reorder-reconciliation-overwrites-later-drag')
-    expect(byDocsDiff?.predicted.owner).toBe('app_code')
-    expect(byDocsDiff?.predicted.evidence.join(' ')).toContain('README.md')
+  it('does not read a documentation-only commit as a product change (#112)', () => {
+    // This fixture used to come back app_code because its diff touches
+    // README.md and a workflow file. Right answer, wrong reason — and the wrong
+    // reason was hiding one more miss on the quadrant that matters.
+    const docsOnly = scored.find((s) => s.name === 'reorder-reconciliation-overwrites-later-drag')
+    expect(docsOnly?.predicted.owner).toBe('test_code')
+    expect(docsOnly?.predicted.evidence.join(' ')).not.toContain('README.md')
   })
 
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
     // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(15 / 25, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(14 / 25, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {

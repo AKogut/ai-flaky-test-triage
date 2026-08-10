@@ -35,14 +35,19 @@ the spec suggests `test_code`, while a diff touching the implementation suggests
 heuristic cannot map a test to its implementation, so the rule is stated as written above: any
 changed non-test path counts.
 
-It has two consequences, both left in deliberately. Every fixture in the `stale-test` bucket has a
-product diff, so the baseline calls all of them `app_code` and gets all of them wrong. And "non-test
-path" includes `README.md` and CI configuration, so a commit that changes only documentation reads
-as a product change — which occasionally makes the baseline right for the wrong reason.
+"Source file" means a path with a code extension, outside `.github/`, `docs/` and `wiki/`. An
+earlier version counted every non-test path, so a documentation-only commit read as a product
+change — the right answer for the wrong reason, fixed in #112.
 
-Patching around either would mean tuning the control against the dataset it is meant to control
-for. Both are asserted by tests, so a future change to the rules surfaces as a failure with a
-number in it rather than being absorbed silently.
+The rule's remaining crudeness is left in deliberately. Every fixture in the `stale-test` bucket
+has a genuine product diff, so the baseline calls all of them `app_code` and gets all of them
+wrong. Narrowing that would mean tuning the control against the dataset it exists to control for,
+and the distinction matters: excluding documentation makes the rule mean what this page says it
+means, while excluding "diffs that only look product-ish" would mean fitting the control to the
+answers.
+
+Per-bucket outcomes are asserted by tests, so a future change to the rules surfaces as a failure
+with a number in it rather than being absorbed silently.
 
 Roughly sixty lines. Every agent number is reported **alongside** the baseline on the same
 fixtures, and the headline metric is the _delta_, not the absolute.
