@@ -44,6 +44,18 @@ const LOCATOR_OR_WAIT =
 const TEST_PATH = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec)\.[cm]?[jt]sx?$/
 
 /**
+ * A changed path counts as product source only if it looks like code.
+ *
+ * Without this, a commit touching only `README.md` reads as a product change and
+ * the second rule fires — the right answer for entirely the wrong reason. That
+ * is different from the rule's *inherent* crudeness, which is left alone: a real
+ * product diff on a stale test still yields `app_code`, because narrowing that
+ * would be tuning the control against the dataset it exists to control for.
+ */
+const SOURCE_EXTENSION = /\.(ts|tsx|js|jsx|mjs|cjs|sql|css|html)$/i
+const NOT_PRODUCT = /^(\.github|docs|wiki)\/|\.config\.[cm]?js$/
+
+/**
  * Confidence per rule, from how specific the rule is.
  *
  * An infrastructure pattern names the failure outright, so it earns more than
@@ -65,7 +77,9 @@ const CONFIDENCE = {
 function changedPaths(diff: string): { product: string[]; test: string[] } {
   const paths = [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)].map((m) => m[1] ?? '')
   return {
-    product: paths.filter((p) => p !== '' && !TEST_PATH.test(p)),
+    product: paths.filter(
+      (p) => p !== '' && SOURCE_EXTENSION.test(p) && !TEST_PATH.test(p) && !NOT_PRODUCT.test(p),
+    ),
     test: paths.filter((p) => p !== '' && TEST_PATH.test(p)),
   }
 }
