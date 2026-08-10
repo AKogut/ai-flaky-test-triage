@@ -63,11 +63,17 @@ function(s) named in the stack trace.
 
 ```ts
 type RootCause = {
-  hypothesis: string          // <= 600 chars, plain prose
+  hypothesis: string // <= 600 chars, plain prose
   implicatedFiles: string[]
   implicatedSymbols: string[]
-  mechanism: 'race' | 'null_handling' | 'state_leak' | 'logic_error'
-            | 'api_contract' | 'timing' | 'other'
+  mechanism:
+    | 'race'
+    | 'null_handling'
+    | 'state_leak'
+    | 'logic_error'
+    | 'api_contract'
+    | 'timing'
+    | 'other'
   confidence: number
   alternativeHypothesis?: string
 }
@@ -87,11 +93,11 @@ makes uncertainty visible in the report rather than buried in a number.
 
 ```ts
 type FixSuggestion = {
-  summary: string             // one sentence
-  approach: string            // prose, <= 800 chars
-  patch?: string              // unified-diff-style snippet, illustrative only
-  risks: string[]             // what this fix could break
-  testGap?: string            // what test would have caught this earlier
+  summary: string // one sentence
+  approach: string // prose, <= 800 chars
+  patch?: string // unified-diff-style snippet, illustrative only
+  risks: string[] // what this fix could break
+  testGap?: string // what test would have caught this earlier
 }
 ```
 
@@ -150,6 +156,6 @@ hunks — all attacker-controllable in a fork PR. Defences:
    bounded strings.
 3. The report escapes agent output before writing markdown, so injected HTML/markdown cannot
    forge report structure.
-4. Nothing downstream *executes* agent output. The worst achievable outcome is a wrong label and
+4. Nothing downstream _executes_ agent output. The worst achievable outcome is a wrong label and
    a misleading comment — bad, but not an escalation.
 5. Fork PRs have no API key at all, which removes most of the surface by construction.

@@ -5,11 +5,11 @@
 
 ## Three agents, three single calls
 
-| Agent | Runs for | Produces |
-|---|---|---|
-| **Triage** | every failing or newly-flaky test | two-axis classification, confidence, quoted evidence |
-| **Root cause** | `app_code` above the calibrated threshold | a hypothesis, implicated files and symbols, a mechanism, a mandatory alternative when unsure |
-| **Fix suggestion** | root causes above threshold | prose approach, an illustrative patch, **risks**, and the missing test |
+| Agent              | Runs for                                  | Produces                                                                                     |
+| ------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **Triage**         | every failing or newly-flaky test         | two-axis classification, confidence, quoted evidence                                         |
+| **Root cause**     | `app_code` above the calibrated threshold | a hypothesis, implicated files and symbols, a mechanism, a mandatory alternative when unsure |
+| **Fix suggestion** | root causes above threshold               | prose approach, an illustrative patch, **risks**, and the missing test                       |
 
 No loops. No scratchpads. No self-critique passes. No tools beyond the structured-output schema.
 

@@ -1,29 +1,30 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
     commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
     groups:
       dev-tooling:
-        patterns: ["eslint*", "prettier*", "@typescript-eslint/*", "husky", "commitlint*", "lint-staged"]
+        patterns:
+          ['eslint*', 'prettier*', '@typescript-eslint/*', 'husky', 'commitlint*', 'lint-staged']
       testing:
-        patterns: ["vitest", "@vitest/*", "@playwright/*", "playwright"]
+        patterns: ['vitest', '@vitest/*', '@playwright/*', 'playwright']
       otel:
-        patterns: ["@opentelemetry/*"]
+        patterns: ['@opentelemetry/*']
     ignore:
       # The SDK version is pinned deliberately — a bump can move classifier behaviour,
       # so it is upgraded manually with an eval run attached to the PR.
-      - dependency-name: "@anthropic-ai/sdk"
+      - dependency-name: '@anthropic-ai/sdk'
 
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule:
       interval: monthly
     commit-message:
-      prefix: "ci(deps)"
+      prefix: 'ci(deps)'

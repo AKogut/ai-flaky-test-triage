@@ -1,7 +1,7 @@
-name: "Task"
-description: "A unit of implementation work belonging to a milestone"
-title: "[<area>] <short imperative summary>"
-labels: ["type: task", "status: backlog"]
+name: 'Task'
+description: 'A unit of implementation work belonging to a milestone'
+title: '[<area>] <short imperative summary>'
+labels: ['type: task', 'status: backlog']
 body:
   - type: markdown
     attributes:
@@ -14,7 +14,7 @@ body:
     attributes:
       label: Outcome
       description: What is true after this is done that is not true now? Describe the end state, not the activity.
-      placeholder: "`flakemetry-lib/history.ts` reads, merges and atomically writes `.flakemetry/history.json`, capped at N runs per test."
+      placeholder: '`flakemetry-lib/history.ts` reads, merges and atomically writes `.flakemetry/history.json`, capped at N runs per test.'
     validations:
       required: true
 
@@ -51,17 +51,17 @@ body:
     attributes:
       label: Depends on
       description: Issue numbers that must land first.
-      placeholder: "#12, #14"
+      placeholder: '#12, #14'
 
   - type: dropdown
     id: size
     attributes:
       label: Size
       options:
-        - "XS — under an hour"
-        - "S — a few hours"
-        - "M — about a day"
-        - "L — two or more days, consider splitting"
+        - 'XS — under an hour'
+        - 'S — a few hours'
+        - 'M — about a day'
+        - 'L — two or more days, consider splitting'
     validations:
       required: true
 

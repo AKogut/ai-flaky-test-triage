@@ -55,7 +55,7 @@ flowchart LR
 ### 1. Test execution → `results.json`
 
 Playwright's JSON reporter and Vitest's JSON reporter emit different shapes. Both are normalised
-into a single internal `TestRun` type at the boundary. The normaliser is the *only* place that
+into a single internal `TestRun` type at the boundary. The normaliser is the _only_ place that
 knows about reporter-specific fields, so a Playwright major bump breaks one file, loudly, with a
 Zod error — not silently, three stages downstream.
 
@@ -64,13 +64,13 @@ type TestRun = {
   runId: string
   commitSha: string
   branch: string
-  startedAt: string          // ISO 8601
+  startedAt: string // ISO 8601
   durationMs: number
   results: TestResult[]
 }
 
 type TestResult = {
-  testId: string             // stable: file path + full title
+  testId: string // stable: file path + full title
   title: string
   file: string
   status: 'passed' | 'failed' | 'timedOut' | 'skipped'
@@ -89,13 +89,13 @@ signal:
 ```ts
 type FlakySignal = {
   testId: string
-  flakinessScore: number     // 0..1, EWMA of pass/fail alternation
+  flakinessScore: number // 0..1, EWMA of pass/fail alternation
   consecutiveFailures: number
   totalRuns: number
   firstSeenAt: string
   lastPassedAt: string | null
-  statusHistory: string      // e.g. "PPPFPFPPF" — most recent last
-  isNew: boolean             // first run in which this test exists
+  statusHistory: string // e.g. "PPPFPFPPF" — most recent last
+  isNew: boolean // first run in which this test exists
 }
 ```
 
@@ -106,15 +106,15 @@ Writes are atomic (write temp, rename) so an interrupted job cannot leave a trun
 
 For each failing or newly-flaky test the orchestrator assembles a **context bundle**:
 
-| Field | Source | Why the agent needs it |
-|---|---|---|
-| Error message + stack | test report | primary evidence |
-| Code snippet at failure | test report | distinguishes assertion from infrastructure failure |
-| Flakiness score + status history | flakemetry-lib | separates deterministic from intermittent |
-| `isNew`, `consecutiveFailures` | flakemetry-lib | a brand-new always-failing test is a different story |
-| Diff of files touched in this commit | `simple-git` | separates app regression from test drift |
-| Whether the diff touches the file under test | derived | the single strongest heuristic signal |
-| Test source | filesystem | detects missing waits, shared state |
+| Field                                        | Source         | Why the agent needs it                               |
+| -------------------------------------------- | -------------- | ---------------------------------------------------- |
+| Error message + stack                        | test report    | primary evidence                                     |
+| Code snippet at failure                      | test report    | distinguishes assertion from infrastructure failure  |
+| Flakiness score + status history             | flakemetry-lib | separates deterministic from intermittent            |
+| `isNew`, `consecutiveFailures`               | flakemetry-lib | a brand-new always-failing test is a different story |
+| Diff of files touched in this commit         | `simple-git`   | separates app regression from test drift             |
+| Whether the diff touches the file under test | derived        | the single strongest heuristic signal                |
+| Test source                                  | filesystem     | detects missing waits, shared state                  |
 
 Context assembly is a pure function with no I/O of its own (paths are read by callers and passed
 in) so it is unit-testable without a git repo or a network.
@@ -133,13 +133,13 @@ it in place instead of appending a new one on every push.
 
 ## State between runs
 
-| What | Where | Why |
-|---|---|---|
-| Test-run history | `actions/cache` keyed on branch, restore-key falls back to `main` | Survives across runs; cache is keyed, unlike artifacts |
-| Golden dataset | Committed to the repo | It is source, not state |
-| Recorded LLM cassettes | Committed under `agents/replay/cassettes/` | Makes the demo reproducible |
-| Eval baseline scores | Committed to `eval/report.md` | Regressions become visible in the diff |
-| OTel spans | Job artifact | Diagnostic only, disposable |
+| What                   | Where                                                             | Why                                                    |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
+| Test-run history       | `actions/cache` keyed on branch, restore-key falls back to `main` | Survives across runs; cache is keyed, unlike artifacts |
+| Golden dataset         | Committed to the repo                                             | It is source, not state                                |
+| Recorded LLM cassettes | Committed under `agents/replay/cassettes/`                        | Makes the demo reproducible                            |
+| Eval baseline scores   | Committed to `eval/report.md`                                     | Regressions become visible in the diff                 |
+| OTel spans             | Job artifact                                                      | Diagnostic only, disposable                            |
 
 **Concurrency hazard:** two PR runs finishing at once both read the same history and both write.
 The loser's update is lost. Mitigations, in order of preference: (a) only the `main` branch job
@@ -150,14 +150,14 @@ document it. Option (a) is the plan — see ADR-0004.
 
 The pipeline never fails the build because of its own problems. It degrades:
 
-| Failure | Behaviour |
-|---|---|
-| No API key (fork PR) | Baseline heuristic only, comment states it |
-| API error / rate limit | Retry with backoff; on exhaustion, that test is reported `unclassified` |
-| Token budget exceeded | Stop fanning out, report what was classified, note the truncation |
-| No history file | Treat every test as `isNew`, reduce confidence in intermittency judgements |
-| Malformed test report | Zod error, pipeline step fails loudly — this one *should* be noisy |
-| Zero failures | Skip the agent stage entirely, post nothing |
+| Failure                | Behaviour                                                                  |
+| ---------------------- | -------------------------------------------------------------------------- |
+| No API key (fork PR)   | Baseline heuristic only, comment states it                                 |
+| API error / rate limit | Retry with backoff; on exhaustion, that test is reported `unclassified`    |
+| Token budget exceeded  | Stop fanning out, report what was classified, note the truncation          |
+| No history file        | Treat every test as `isNew`, reduce confidence in intermittency judgements |
+| Malformed test report  | Zod error, pipeline step fails loudly — this one _should_ be noisy         |
+| Zero failures          | Skip the agent stage entirely, post nothing                                |
 
 ## What is deliberately not here
 

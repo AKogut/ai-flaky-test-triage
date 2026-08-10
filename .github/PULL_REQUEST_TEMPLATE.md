@@ -15,6 +15,7 @@ Closes #
 <!-- Not "tests pass" — what did you actually check, and how would a reviewer reproduce it? -->
 
 ```bash
+
 ```
 
 ## Eval impact
@@ -22,15 +23,15 @@ Closes #
 <!-- REQUIRED when this PR touches agents/, eval/, prompts/, or the golden dataset.
      Paste the before/after table from eval/report.md. Delete this section otherwise. -->
 
-| Metric | Before | After | Δ |
-|---|---|---|---|
-| Joint accuracy (95% CI lower bound) | | | |
-| `owner` accuracy | | | |
-| `determinism` accuracy | | | |
-| Hard-quadrant recall (`app_code` + `intermittent`) | | | |
-| Self-consistency | | | |
-| Cost per fixture | | | |
-| vs. baseline heuristic | | | |
+| Metric                                             | Before | After | Δ   |
+| -------------------------------------------------- | ------ | ----- | --- |
+| Joint accuracy (95% CI lower bound)                |        |       |     |
+| `owner` accuracy                                   |        |       |     |
+| `determinism` accuracy                             |        |       |     |
+| Hard-quadrant recall (`app_code` + `intermittent`) |        |       |     |
+| Self-consistency                                   |        |       |     |
+| Cost per fixture                                   |        |       |     |
+| vs. baseline heuristic                             |        |       |     |
 
 <!-- Prompt version: -->
 <!-- Dataset revision: -->

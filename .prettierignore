@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+package-lock.json
+
+# Pipeline outputs — generated, never hand-edited.
+results.json
+analysis.json
+report.md
+otel-spans.json
+
+# Recorded model responses. Reformatting them would change their content hash
+# and invalidate every cassette.
+agents/replay/cassettes/
+
+# Golden-dataset fixtures are byte-compared against reporter output; formatting
+# them would make them stop resembling the thing they are fixtures of.
+eval/golden-dataset/

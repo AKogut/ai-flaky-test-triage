@@ -1,7 +1,7 @@
-name: "Architecture decision"
-description: "Propose a decision that needs to be recorded as an ADR"
-title: "[adr] <decision to be made>"
-labels: ["type: adr", "area: docs", "status: backlog"]
+name: 'Architecture decision'
+description: 'Propose a decision that needs to be recorded as an ADR'
+title: '[adr] <decision to be made>'
+labels: ['type: adr', 'area: docs', 'status: backlog']
 body:
   - type: markdown
     attributes:
@@ -41,7 +41,7 @@ body:
     id: supersedes
     attributes:
       label: Supersedes
-      placeholder: "ADR-0004"
+      placeholder: 'ADR-0004'
 
   - type: textarea
     id: reversibility

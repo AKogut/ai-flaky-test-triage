@@ -2,101 +2,101 @@
 # Every issue carries exactly one `type:`, one `area:`, one `priority:`, and one `status:`.
 
 # --- type ---------------------------------------------------------------
-- name: "type: task"
-  color: "1d76db"
-  description: "Implementation work"
-- name: "type: bug"
-  color: "d73a4a"
-  description: "Something behaves incorrectly"
-- name: "type: experiment"
-  color: "8a63d2"
-  description: "Measured investigation; may close as not adopted"
-- name: "type: dataset"
-  color: "0e8a16"
-  description: "Golden-dataset fixture work"
-- name: "type: adr"
-  color: "5319e7"
-  description: "Architecture decision to record"
-- name: "type: docs"
-  color: "0075ca"
-  description: "Documentation"
-- name: "type: chore"
-  color: "cfd3d7"
-  description: "Tooling, dependencies, repository config"
+- name: 'type: task'
+  color: '1d76db'
+  description: 'Implementation work'
+- name: 'type: bug'
+  color: 'd73a4a'
+  description: 'Something behaves incorrectly'
+- name: 'type: experiment'
+  color: '8a63d2'
+  description: 'Measured investigation; may close as not adopted'
+- name: 'type: dataset'
+  color: '0e8a16'
+  description: 'Golden-dataset fixture work'
+- name: 'type: adr'
+  color: '5319e7'
+  description: 'Architecture decision to record'
+- name: 'type: docs'
+  color: '0075ca'
+  description: 'Documentation'
+- name: 'type: chore'
+  color: 'cfd3d7'
+  description: 'Tooling, dependencies, repository config'
 
 # --- area ---------------------------------------------------------------
-- name: "area: app"
-  color: "fbca04"
-  description: "TaskFlow application"
-- name: "area: tests"
-  color: "fbca04"
-  description: "Unit and E2E test suites"
-- name: "area: flakemetry"
-  color: "fbca04"
-  description: "flakemetry-lib analysis and history"
-- name: "area: agents"
-  color: "fbca04"
-  description: "Triage, root-cause, fix-suggestion, orchestration"
-- name: "area: prompts"
-  color: "fbca04"
-  description: "Prompt files and rubric"
-- name: "area: eval"
-  color: "fbca04"
-  description: "Evaluation harness, metrics, dataset"
-- name: "area: ci"
-  color: "fbca04"
-  description: "GitHub Actions workflow"
-- name: "area: observability"
-  color: "fbca04"
-  description: "OpenTelemetry, cost and token tracking"
-- name: "area: docs"
-  color: "fbca04"
-  description: "Documentation and wiki"
+- name: 'area: app'
+  color: 'fbca04'
+  description: 'TaskFlow application'
+- name: 'area: tests'
+  color: 'fbca04'
+  description: 'Unit and E2E test suites'
+- name: 'area: flakemetry'
+  color: 'fbca04'
+  description: 'flakemetry-lib analysis and history'
+- name: 'area: agents'
+  color: 'fbca04'
+  description: 'Triage, root-cause, fix-suggestion, orchestration'
+- name: 'area: prompts'
+  color: 'fbca04'
+  description: 'Prompt files and rubric'
+- name: 'area: eval'
+  color: 'fbca04'
+  description: 'Evaluation harness, metrics, dataset'
+- name: 'area: ci'
+  color: 'fbca04'
+  description: 'GitHub Actions workflow'
+- name: 'area: observability'
+  color: 'fbca04'
+  description: 'OpenTelemetry, cost and token tracking'
+- name: 'area: docs'
+  color: 'fbca04'
+  description: 'Documentation and wiki'
 
 # --- priority -----------------------------------------------------------
-- name: "priority: critical"
-  color: "b60205"
-  description: "Blocks the milestone"
-- name: "priority: high"
-  color: "d93f0b"
-  description: "Next up"
-- name: "priority: medium"
-  color: "fbca04"
-  description: "Planned"
-- name: "priority: low"
-  color: "c2e0c6"
-  description: "Nice to have"
+- name: 'priority: critical'
+  color: 'b60205'
+  description: 'Blocks the milestone'
+- name: 'priority: high'
+  color: 'd93f0b'
+  description: 'Next up'
+- name: 'priority: medium'
+  color: 'fbca04'
+  description: 'Planned'
+- name: 'priority: low'
+  color: 'c2e0c6'
+  description: 'Nice to have'
 
 # --- status -------------------------------------------------------------
-- name: "status: backlog"
-  color: "ededed"
-  description: "Not started, not yet refined"
-- name: "status: ready"
-  color: "c5def5"
-  description: "Refined; acceptance criteria are clear enough to start"
-- name: "status: in progress"
-  color: "0e8a16"
-  description: "Actively being worked on"
-- name: "status: in review"
-  color: "5319e7"
-  description: "PR open"
-- name: "status: blocked"
-  color: "b60205"
-  description: "Waiting on something; the blocker is named in the issue"
+- name: 'status: backlog'
+  color: 'ededed'
+  description: 'Not started, not yet refined'
+- name: 'status: ready'
+  color: 'c5def5'
+  description: 'Refined; acceptance criteria are clear enough to start'
+- name: 'status: in progress'
+  color: '0e8a16'
+  description: 'Actively being worked on'
+- name: 'status: in review'
+  color: '5319e7'
+  description: 'PR open'
+- name: 'status: blocked'
+  color: 'b60205'
+  description: 'Waiting on something; the blocker is named in the issue'
 
 # --- cross-cutting ------------------------------------------------------
-- name: "guardrail"
-  color: "e99695"
-  description: "Touches a safety property; needs the PR guardrail checklist"
-- name: "breaking"
-  color: "b60205"
-  description: "Breaks a committed schema or the script contract"
-- name: "good first issue"
-  color: "7057ff"
-  description: "Self-contained, well specified, low context required"
-- name: "help wanted"
-  color: "008672"
-  description: "Input from others especially welcome"
-- name: "spike"
-  color: "d4c5f9"
-  description: "Time-boxed investigation; output is a decision, not code"
+- name: 'guardrail'
+  color: 'e99695'
+  description: 'Touches a safety property; needs the PR guardrail checklist'
+- name: 'breaking'
+  color: 'b60205'
+  description: 'Breaks a committed schema or the script contract'
+- name: 'good first issue'
+  color: '7057ff'
+  description: 'Self-contained, well specified, low context required'
+- name: 'help wanted'
+  color: '008672'
+  description: 'Input from others especially welcome'
+- name: 'spike'
+  color: 'd4c5f9'
+  description: 'Time-boxed investigation; output is a decision, not code'

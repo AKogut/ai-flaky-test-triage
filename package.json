@@ -21,11 +21,31 @@
     "eval"
   ],
   "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --build",
     "typecheck:clean": "tsc --build --clean"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.5",
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "9.1.0",
+    "globals": "15.14.0",
+    "lint-staged": "15.5.2",
+    "prettier": "3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "8.46.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

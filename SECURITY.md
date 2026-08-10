@@ -15,8 +15,8 @@ rather than a public issue. Expect an initial response within 7 days.
 ## What is in scope
 
 - Anything allowing a pull request to obtain repository secrets or a write-scoped token.
-- Prompt injection that escalates beyond a wrong label — i.e. causes the pipeline to *do*
-  something, rather than *say* something wrong.
+- Prompt injection that escalates beyond a wrong label — i.e. causes the pipeline to _do_
+  something, rather than _say_ something wrong.
 - Paths by which an agent could write to the filesystem, push to git, or approve/merge a PR.
 - Leakage of secrets into prompts, logs, spans, or the posted PR comment.
 - Dependency vulnerabilities reachable from the pipeline's execution path.

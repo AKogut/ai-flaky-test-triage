@@ -13,7 +13,7 @@ real_bug | flaky_infra | stale_test | race_condition
 ```
 
 It reads fine and it does not survive contact with real failures. `race_condition` names a
-*mechanism*; `real_bug` names *ownership*. A race in a product's optimistic-update path is both, so
+_mechanism_; `real_bug` names _ownership_. A race in a product's optimistic-update path is both, so
 the person labelling has to choose arbitrarily — and chooses differently a week later.
 
 That is not a cosmetic problem. Everything this project claims about itself rests on a hand-labelled
@@ -30,11 +30,11 @@ study, the calibration curve — all of them inherit the noise.
 Every failure gets exactly one value on each. The axes are independent: knowing something is
 intermittent tells you nothing about whether the product or the test is at fault.
 
-|                   | `deterministic` | `intermittent` |
-|-------------------|---|---|
-| **`app_code`**     | Regression | **Product race** |
-| **`test_code`**    | Stale test | Unsynchronised test |
-| **`environment`**  | Broken setup | Infra noise |
+|                   | `deterministic` | `intermittent`      |
+| ----------------- | --------------- | ------------------- |
+| **`app_code`**    | Regression      | **Product race**    |
+| **`test_code`**   | Stale test      | Unsynchronised test |
+| **`environment`** | Broken setup    | Infra noise         |
 
 ## Why these two questions
 
@@ -70,14 +70,14 @@ that out and say so.
 
 Each of these is in the golden dataset on purpose, because each defeats one tempting shortcut:
 
-| Case | Truth | What it defeats |
-|---|---|---|
-| Optimistic update races the API; test is correct and waits properly | `app_code` + `intermittent` | "Intermittent means flaky test" |
-| Test passes locally, fails on a slower CI runner; product is fine | `test_code` + `intermittent` | "Slower runner means environment" |
-| Selector matches two elements only when the list has ≥3 items | `test_code` + `intermittent` | "Intermittent means timing" |
-| Real regression in a commit that also bumps a dependency | `app_code` + `deterministic` | Diff-noise reasoning |
-| Test times out because a prior test left a modal open | `test_code` + `intermittent` | Single-test-in-isolation reasoning |
-| Long-flaky test failing today for a **new** reason | `app_code` + `deterministic` | Flakiness-score reasoning |
+| Case                                                                | Truth                        | What it defeats                    |
+| ------------------------------------------------------------------- | ---------------------------- | ---------------------------------- |
+| Optimistic update races the API; test is correct and waits properly | `app_code` + `intermittent`  | "Intermittent means flaky test"    |
+| Test passes locally, fails on a slower CI runner; product is fine   | `test_code` + `intermittent` | "Slower runner means environment"  |
+| Selector matches two elements only when the list has ≥3 items       | `test_code` + `intermittent` | "Intermittent means timing"        |
+| Real regression in a commit that also bumps a dependency            | `app_code` + `deterministic` | Diff-noise reasoning               |
+| Test times out because a prior test left a modal open               | `test_code` + `intermittent` | Single-test-in-isolation reasoning |
+| Long-flaky test failing today for a **new** reason                  | `app_code` + `deterministic` | Flakiness-score reasoning          |
 
 The last one is the sharpest. It punishes exactly the feature a history-only baseline is built on,
 which is what makes the baseline comparison meaningful rather than a straw man.

@@ -52,7 +52,7 @@ its confidence interval — or the finding that it does not is documented in the
 
 The system under test: React + TypeScript client, Express + SQLite API, task CRUD, status filter,
 drag-to-reorder, optimistic updates. Deliberately small. Includes a seedable nondeterminism layer
-so flakiness can be *emergent* rather than scripted.
+so flakiness can be _emergent_ rather than scripted.
 
 **Exit criterion:** `npm run dev` serves a working task board, and `SENTRA_CHAOS=<seed>` reproduces
 a specific interleaving of the optimistic-update race.

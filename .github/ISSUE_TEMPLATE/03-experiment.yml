@@ -1,7 +1,7 @@
-name: "Experiment"
-description: "A measured investigation — prompt change, ablation, model swap, heuristic tweak"
-title: "[exp] <hypothesis in one line>"
-labels: ["type: experiment", "area: eval", "status: backlog"]
+name: 'Experiment'
+description: 'A measured investigation — prompt change, ablation, model swap, heuristic tweak'
+title: '[exp] <hypothesis in one line>'
+labels: ['type: experiment', 'area: eval', 'status: backlog']
 body:
   - type: markdown
     attributes:
@@ -36,7 +36,7 @@ body:
     attributes:
       label: Decision metric and threshold
       description: Which number decides this, and what value counts as a win? Set this before running.
-      placeholder: "Joint accuracy on the held-out slice, lower bound of the 95% interval, +3pp or better."
+      placeholder: 'Joint accuracy on the held-out slice, lower bound of the 95% interval, +3pp or better.'
     validations:
       required: true
 

@@ -41,15 +41,15 @@ fair control rather than a straw man.
 
 Roughly 60 fixtures, weighted towards the cases that defeat obvious shortcuts:
 
-| Bucket | Share |
-|---|---|
-| Hard quadrant (`app_code` + `intermittent`) | ~20% |
-| Misleading history | ~10% |
-| Environment dressed as regression | ~10% |
-| Stale tests after refactors | ~15% |
-| Cross-file state leaks | ~10% |
-| Straightforward | ~25% |
-| Genuinely ambiguous (excluded from headline) | ~10% |
+| Bucket                                       | Share |
+| -------------------------------------------- | ----- |
+| Hard quadrant (`app_code` + `intermittent`)  | ~20%  |
+| Misleading history                           | ~10%  |
+| Environment dressed as regression            | ~10%  |
+| Stale tests after refactors                  | ~15%  |
+| Cross-file state leaks                       | ~10%  |
+| Straightforward                              | ~25%  |
+| Genuinely ambiguous (excluded from headline) | ~10%  |
 
 Fixtures carry their **provenance**: `synthetic` (hand-authored), `captured` (from a real CI run,
 labelled after the fact), `mutated` (a real run with an injected defect). Metrics are broken down by
