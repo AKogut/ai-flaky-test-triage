@@ -110,6 +110,40 @@ a prose justification for the label, and the rules from
 `mutated` (a captured run with an injected defect). Metrics are broken down by provenance —
 if the agent only performs on synthetic fixtures, that is visible.
 
+### Evidence the buckets do what they claim
+
+A bucket that says it "punishes diff-only reasoning" is a claim, not a fact, until something is
+measured against it. Scoring the baseline per bucket is that measurement:
+
+| Bucket                      |   n | Joint  | `owner` | `determinism` |
+| --------------------------- | --: | ------ | ------- | ------------- |
+| `straightforward`           |   8 | 100.0% | 100.0%  | 100.0%        |
+| `hard-quadrant`             |  10 | 30.0%  | 60.0%   | 70.0%         |
+| `stale-test`                |   7 | 0.0%   | 0.0%    | 100.0%        |
+| `misleading-history`        |   4 | 0.0%   | 75.0%   | 0.0%          |
+| `environment-as-regression` |   4 | 25.0%  | 25.0%   | 100.0%        |
+
+Each adversarial bucket defeats the baseline **on the axis it was built to attack, and only that
+axis**:
+
+- `stale-test` targets diff-only reasoning about ownership. Owner drops to 0%; determinism stays
+  at 100%.
+- `misleading-history` targets flakiness-score-only reasoning about stability. Determinism drops
+  to 0%; owner stays at a respectable 75%.
+- `environment-as-regression` targets diff-only reasoning again, from the other direction, and
+  takes owner to 25% while determinism is untouched.
+
+That orthogonality is the part worth noticing. Buckets that all failed together would mean the
+fixtures were simply hard, or simply badly written. Failing on precisely the intended axis is what
+distinguishes an adversarial dataset from a difficult one.
+
+`straightforward` at 100% is the control on the control: it says the baseline is a working
+classifier rather than a broken one, so the failures above are properties of the fixtures rather
+than of the code being measured.
+
+The full confusion matrices and quadrant table are regenerated into `eval/report.md`; the numbers
+here are pinned in `eval/confusion.test.ts`.
+
 ## 3. Reported uncertainty
 
 Two independent sources of noise, both measured.
