@@ -75,7 +75,13 @@ Husky `commit-msg` hook.
 **Types:** `feat`, `fix`, `docs`, `test`, `chore`, `refactor`, `perf`, `build`, `ci`, `revert`.
 
 **Scopes:** `app`, `client`, `server`, `tests`, `e2e`, `flakemetry`, `agents`, `triage`,
-`root-cause`, `fix-suggestion`, `eval`, `dataset`, `prompts`, `ci`, `docs`, `otel`, `deps`.
+`root-cause`, `fix-suggestion`, `eval`, `dataset`, `prompts`, `ci`, `docs`, `otel`, `deps`,
+`deps-dev`, `release`.
+
+The list is enforced by `commitlint.config.js` and mirrored by the `PR title convention` job in
+`.github/workflows/ci.yml`. All three have to agree: a commit that passes the local hook and then
+fails the CI check is worse than either gate on its own. `deps` and `deps-dev` exist because
+Dependabot is configured to emit them.
 
 ```
 feat(triage): classify on owner and determinism axes

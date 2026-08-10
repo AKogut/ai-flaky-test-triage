@@ -115,22 +115,31 @@ jobs:
           PY
 
   # ---------------------------------------------------------------------------
-  # PR title becomes the squash commit on main, so it must be a valid
-  # Conventional Commit. See docs/branching-strategy.md.
+  # The PR title becomes the squash commit on main, so it is validated by the
+  # same commitlint config the local commit-msg hook uses. Deliberately not a
+  # regex duplicated into this file: a second copy of the type and scope lists
+  # would drift, and the failure mode is a commit that passes the hook and then
+  # fails here, which is worse than either gate alone.
   # ---------------------------------------------------------------------------
   pr-title:
     name: PR title convention
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Check Conventional Commit format
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Lint the pull-request title
         env:
           TITLE: ${{ github.event.pull_request.title }}
         run: |
-          pattern='^(feat|fix|docs|test|chore|refactor|perf|build|ci|revert)(\([a-z0-9-]+\))?!?: .{1,72}$'
-          if [[ ! "$TITLE" =~ $pattern ]]; then
+          if ! printf '%s' "$TITLE" | npx --no -- commitlint; then
             echo "::error::PR title is not a valid Conventional Commit: '$TITLE'"
-            echo "Expected e.g. 'feat(triage): add two-axis output schema'"
+            echo "Allowed types and scopes: docs/branching-strategy.md"
+            echo "Example: feat(triage): add two-axis output schema"
             exit 1
           fi
           echo "ok: $TITLE"
