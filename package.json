@@ -14,6 +14,7 @@
     "node": ">=22"
   },
   "workspaces": [
+    "contracts",
     "app/client",
     "app/server",
     "flakemetry-lib",
@@ -71,5 +72,8 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "zod": "4.4.3"
   }
 }

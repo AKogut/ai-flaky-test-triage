@@ -55,7 +55,7 @@ flowchart LR
 ### 1. Test execution → `results.json`
 
 Playwright's JSON reporter and Vitest's JSON reporter emit different shapes. Both are normalised
-into a single internal `TestRun` type at the boundary. The normaliser is the _only_ place that
+into a single internal `TestRun` type at the boundary, defined in the `contracts/` workspace. The normaliser is the _only_ place that
 knows about reporter-specific fields, so a Playwright major bump breaks one file, loudly, with a
 Zod error — not silently, three stages downstream.
 
