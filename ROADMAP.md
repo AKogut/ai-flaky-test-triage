@@ -28,7 +28,7 @@ The type boundaries everything else is written against: `TestRun`, `TestResult`,
 `Classification`, and the fixture format. Zod schemas at every boundary so a reporter version bump
 fails loudly in one file instead of silently three stages downstream.
 
-**Status:** in progress
+**Status:** done
 
 **Exit criterion:** every artifact the pipeline reads or writes has a Zod schema, a TypeScript type
 inferred from it, and a round-trip test.
@@ -39,7 +39,7 @@ The measurement apparatus, built before the thing it measures. Hand-authored adv
 the non-LLM baseline heuristic, metrics with confidence intervals, confusion matrices, and the CI
 gate.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and
 writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model
