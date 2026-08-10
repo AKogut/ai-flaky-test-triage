@@ -1,0 +1,14 @@
+{
+  "name": "@sentra/taskflow-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TaskFlow API \u2014 the system under test. Express and SQLite, deliberately small.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./index.ts"
+    }
+  }
+}

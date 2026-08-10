@@ -1,0 +1,31 @@
+{
+  "name": "sentra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An AI triage layer for CI test failures — packaged as a pipeline step, not a service.",
+  "license": "MIT",
+  "author": "Andrii Kohut",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AKogut/ai-flaky-test-triage.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "app/client",
+    "app/server",
+    "flakemetry-lib",
+    "agents",
+    "eval"
+  ],
+  "scripts": {
+    "typecheck": "tsc --build",
+    "typecheck:clean": "tsc --build --clean"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
