@@ -105,6 +105,13 @@ jobs:
           npm ci --silent
           npm run docs:status:check
 
+      # Label leakage is the quietest way to inflate an accuracy number, so this
+      # runs on every push rather than only when the dataset changes — a leaked
+      # term arrives just as easily through an edit to the checker itself.
+      - name: Golden dataset hygiene
+        if: steps.detect.outputs.has-code == 'true'
+        run: npm run eval:lint
+
       - name: No internal doc links point at missing files
         run: |
           python3 - <<'PY'
