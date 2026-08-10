@@ -195,12 +195,37 @@ describe('scored against the committed dataset', () => {
     for (const s of stale) expect(s.predicted.owner, s.name).toBe('app_code')
   })
 
+  it('gets a majority of the hard quadrant wrong, which is why the dataset can discriminate', () => {
+    // The acceptance criterion for #21: if the control gets most of these right,
+    // the fixtures are not hard enough and the dataset cannot tell classifiers
+    // apart. Recorded as a number so tuning either side shows up here.
+    const hard = scored.filter((s) => s.labels.bucket === 'hard-quadrant')
+    const missed = hard.filter(
+      (s) =>
+        s.predicted.owner !== s.labels.owner || s.predicted.determinism !== s.labels.determinism,
+    )
+    expect(hard.length).toBe(10)
+    expect(missed.length).toBe(6)
+  })
+
+  it('counts documentation and CI files as product source, right for the wrong reason', () => {
+    // A weakness of the rule as specified, not a defect: "any non-test path"
+    // includes README.md. One hard-quadrant fixture has a docs-only diff and is
+    // classified app_code because of it. Kept visible rather than tidied away.
+    const byDocsDiff = scored.find((s) => s.name === 'reorder-reconciliation-overwrites-later-drag')
+    expect(byDocsDiff?.predicted.owner).toBe('app_code')
+    expect(byDocsDiff?.predicted.evidence.join(' ')).toContain('README.md')
+  })
+
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
     // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(8 / 15, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(15 / 25, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {
-    expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(1, 5)
+    expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(
+      22 / 25,
+      5,
+    )
   })
 })

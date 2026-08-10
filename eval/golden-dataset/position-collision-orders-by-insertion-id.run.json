@@ -1,0 +1,33 @@
+{
+  "name": "position-collision-orders-by-insertion-id",
+  "scenario": "Two tasks created in the same instant receive identical ordering values and swap between reads.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.ordering.test.ts›ordering › keeps creation order for tasks added together",
+      "title": "ordering › keeps creation order for tasks added together",
+      "file": "tests/unit/tasks.ordering.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 41,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected [ 'Second', 'First' ] to deeply equal [ 'First', 'Second' ]",
+        "stack": "    at tests/unit/tasks.ordering.test.ts:18:33",
+        "snippet": "  const [a, b] = await Promise.all([createTask('First'), createTask('Second')])\n> expect((await listTasks()).map((t) => t.title)).toEqual(['First', 'Second'])"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.ordering.test.ts›ordering › keeps creation order for tasks added together",
+      "flakinessScore": 0.31,
+      "consecutiveFailures": 1,
+      "totalRuns": 74,
+      "firstSeenAt": "2026-04-02T07:31:19.000Z",
+      "lastPassedAt": "2026-08-10T06:22:10.000Z",
+      "statusHistory": "PPPPFPPPPPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/position.ts b/app/server/tasks/position.ts\n@@ -3,7 +3,7 @@ export async function nextPosition(): Promise<number> {\n-  const max = await db.get('SELECT MAX(position) AS m FROM tasks')\n-  return (max?.m ?? 0) + 1\n+  return Math.floor(Date.now() / 1000)\n }\n"
+}

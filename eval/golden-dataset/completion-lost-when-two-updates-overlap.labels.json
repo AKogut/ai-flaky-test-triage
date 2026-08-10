@@ -1,0 +1,10 @@
+{
+  "name": "completion-lost-when-two-updates-overlap",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The tempting reading is that a three-run failure streak means this always fails, so it belongs on the deterministic side. It does not: rerunning the file alone passes, and the streak coincides with three busy runs on the shared runner where the two writes overlap more often. The other alternative is blaming the spec for issuing concurrent writes, but that is the behaviour under test and the assertion is on a value, not on timing. Each write reads the whole row and writes it back, so whichever finishes second discards the other's field.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

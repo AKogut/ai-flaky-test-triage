@@ -1,0 +1,33 @@
+{
+  "name": "completion-lost-when-two-updates-overlap",
+  "scenario": "Completing a task while its description is being saved leaves the completion unrecorded.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.concurrency.test.ts›updates › two overlapping writes both survive",
+      "title": "updates › two overlapping writes both survive",
+      "file": "tests/unit/tasks.concurrency.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 88,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 'active' to be 'completed' // Object.is equality\n\n- Expected\n+ Received\n\n- completed\n+ active",
+        "stack": "    at tests/unit/tasks.concurrency.test.ts:27:38",
+        "snippet": "  await Promise.all([updateTask(id, { description: 'x' }), completeTask(id)])\n> expect((await getTask(id)).status).toBe('completed')"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.concurrency.test.ts›updates › two overlapping writes both survive",
+      "flakinessScore": 0.29,
+      "consecutiveFailures": 3,
+      "totalRuns": 58,
+      "firstSeenAt": "2026-04-02T07:31:19.000Z",
+      "lastPassedAt": "2026-08-06T11:14:02.000Z",
+      "statusHistory": "PPPPPPPFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "it('two overlapping writes both survive', async () => {\n  const id = await seedTask()\n  await Promise.all([updateTask(id, { description: 'x' }), completeTask(id)])\n  expect((await getTask(id)).status).toBe('completed')\n})\n"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "counter-drifts-when-updates-interleave",
+  "scenario": "The heading and the list disagree about how many tasks exist after several quick edits.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › the heading agrees with the list after rapid edits",
+      "title": "board › the heading agrees with the list after rapid edits",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 5610,
+      "annotations": [],
+      "error": {
+        "message": "Error: expect(locator).toHaveText(expected)\n\nLocator: getByRole('heading', { level: 1 })\nExpected string: \"5 tasks\"\nReceived string: \"4 tasks\"\n\nCall log:\n  - expect.toHaveText with timeout 5000ms",
+        "stack": "    at tests/e2e/board.spec.ts:118:54",
+        "snippet": "  await Promise.all([createTask(page, 'D'), createTask(page, 'E')])\n> await expect(page.getByRole('heading', { level: 1 })).toHaveText('5 tasks')"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › the heading agrees with the list after rapid edits",
+      "flakinessScore": 0.33,
+      "consecutiveFailures": 1,
+      "totalRuns": 79,
+      "firstSeenAt": "2026-04-02T07:31:19.000Z",
+      "lastPassedAt": "2026-08-10T04:18:22.000Z",
+      "statusHistory": "PPFPPPPFPPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true
+}

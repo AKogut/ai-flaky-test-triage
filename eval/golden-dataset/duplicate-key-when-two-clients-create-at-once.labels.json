@@ -1,0 +1,10 @@
+{
+  "name": "duplicate-key-when-two-clients-create-at-once",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The alternative is that concurrent creation is an unreasonable thing for a spec to ask of a single-file database. It is not: the endpoint is called from a browser and two users can create tasks at once, so the guarantee is real. The change replaces the database's own identifier allocation with a read-then-write, and two callers that read before either writes compute the same value. It fails only when the two reads interleave, which is why the same spec passed on its retry.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

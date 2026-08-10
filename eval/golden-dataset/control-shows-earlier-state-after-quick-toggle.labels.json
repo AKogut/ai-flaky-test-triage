@@ -1,0 +1,10 @@
+{
+  "name": "control-shows-earlier-state-after-quick-toggle",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "A wait that expired on a locator invites the reading that the spec is badly synchronised. It is not: the starting state is asserted first, both interactions are awaited, and the final check is a web-first assertion with its own timeout. The control genuinely never reaches the expected state — the second update resolves against a snapshot taken before the first landed, so the earlier value wins whenever the two responses arrive close together. The timeout is the symptom, not the cause.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

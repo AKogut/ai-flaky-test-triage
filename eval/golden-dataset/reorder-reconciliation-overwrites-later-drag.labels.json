@@ -1,0 +1,10 @@
+{
+  "name": "reorder-reconciliation-overwrites-later-drag",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The plausible alternative is that the spec asserts before the list settles. It does not: every step is a web-first assertion with a timeout, there is no fixed wait anywhere, and the first reorder is confirmed before the second begins. The wait expired because the rendered order never converged, not because it was checked too early. The reconciliation applies whichever response arrives last rather than whichever reorder happened last, so a slow first response silently reverts the second — a defect in the product that a correct spec can only catch sometimes.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

@@ -1,0 +1,33 @@
+{
+  "name": "duplicate-key-when-two-clients-create-at-once",
+  "scenario": "Simultaneous creates occasionally hand back the same identifier to both callers.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.repository.test.ts›createTask › gives concurrent callers distinct identifiers",
+      "title": "createTask › gives concurrent callers distinct identifiers",
+      "file": "tests/unit/tasks.repository.test.ts",
+      "status": "failed",
+      "attempts": 2,
+      "flakyWithinRun": true,
+      "durationMs": 64,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 1 to be 2 // Object.is equality\n\nnew Set([a.id, b.id]).size",
+        "stack": "    at tests/unit/tasks.repository.test.ts:55:41",
+        "snippet": "  const [a, b] = await Promise.all([createTask('A'), createTask('B')])\n> expect(new Set([a.id, b.id]).size).toBe(2)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.repository.test.ts›createTask › gives concurrent callers distinct identifiers",
+      "flakinessScore": 0.36,
+      "consecutiveFailures": 0,
+      "totalRuns": 67,
+      "firstSeenAt": "2026-04-02T07:31:19.000Z",
+      "lastPassedAt": "2026-08-10T05:40:09.000Z",
+      "statusHistory": "PPPPFPFPPP",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/repository.ts b/app/server/tasks/repository.ts\n@@ -18,9 +18,10 @@ export async function createTask(title: string): Promise<Task> {\n-  const { lastID } = await db.run('INSERT INTO tasks (title) VALUES (?)', title)\n-  return getTask(lastID)\n+  const next = (await db.get('SELECT MAX(id) AS m FROM tasks')).m + 1\n+  await db.run('INSERT INTO tasks (id, title) VALUES (?, ?)', next, title)\n+  return getTask(next)\n }\n"
+}

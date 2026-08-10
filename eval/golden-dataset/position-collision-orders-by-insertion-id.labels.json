@@ -1,0 +1,10 @@
+{
+  "name": "position-collision-orders-by-insertion-id",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The alternative reading is that the spec should not create two records concurrently and then assume an order. But creation order is a documented guarantee of the endpoint, so asserting it is legitimate, and the spec does nothing else questionable. The instability comes from data rather than from timing: the new ordering value has one-second resolution, so two tasks created inside the same second collide and the read falls back to identifier order, which is stable only until it is not. Whether it fails depends on where the run lands in the second.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "synthetic",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

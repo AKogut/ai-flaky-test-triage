@@ -35,9 +35,14 @@ the spec suggests `test_code`, while a diff touching the implementation suggests
 heuristic cannot map a test to its implementation, so the rule is stated as written above: any
 changed non-test path counts.
 
-That is a real weakness, deliberately left in. Every fixture in the `stale-test` bucket has a
-product diff, so the baseline calls all of them `app_code` and gets all of them wrong. Patching
-around it would mean tuning the control against the dataset it is meant to control for.
+It has two consequences, both left in deliberately. Every fixture in the `stale-test` bucket has a
+product diff, so the baseline calls all of them `app_code` and gets all of them wrong. And "non-test
+path" includes `README.md` and CI configuration, so a commit that changes only documentation reads
+as a product change — which occasionally makes the baseline right for the wrong reason.
+
+Patching around either would mean tuning the control against the dataset it is meant to control
+for. Both are asserted by tests, so a future change to the rules surfaces as a failure with a
+number in it rather than being absorbed silently.
 
 Roughly sixty lines. Every agent number is reported **alongside** the baseline on the same
 fixtures, and the headline metric is the _delta_, not the absolute.
