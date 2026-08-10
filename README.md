@@ -6,7 +6,7 @@
 [![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/3?label=M2)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](package.json)
+[![Node](https://img.shields.io/badge/node-%3E%3D22.13-brightgreen)](package.json)
 
 <!-- status:start -->
 

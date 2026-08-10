@@ -67,13 +67,7 @@ type RootCause = {
   implicatedFiles: string[]
   implicatedSymbols: string[]
   mechanism:
-    | 'race'
-    | 'null_handling'
-    | 'state_leak'
-    | 'logic_error'
-    | 'api_contract'
-    | 'timing'
-    | 'other'
+    'race' | 'null_handling' | 'state_leak' | 'logic_error' | 'api_contract' | 'timing' | 'other'
   confidence: number
   alternativeHypothesis?: string
 }

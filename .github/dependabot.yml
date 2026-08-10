@@ -10,9 +10,25 @@ updates:
       prefix: 'chore(deps)'
       prefix-development: 'chore(deps-dev)'
     groups:
+      # Patterns are matched against the full package name, so a bare `eslint*` does
+      # not match `@eslint/js` and `@typescript-eslint/*` does not match the flat
+      # `typescript-eslint` meta-package. That gap split the linting stack across
+      # four separate PRs, none of which could install on its own: `@eslint/js@10`
+      # peers on `eslint@^10`, and `typescript-eslint@8.46` refused `eslint@10`.
+      # Scoped and unscoped forms are therefore both spelled out.
       dev-tooling:
         patterns:
-          ['eslint*', 'prettier*', '@typescript-eslint/*', 'husky', 'commitlint*', 'lint-staged']
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - '@typescript-eslint/*'
+          - 'typescript'
+          - 'prettier'
+          - 'globals'
+          - 'husky'
+          - '@commitlint/*'
+          - 'lint-staged'
       testing:
         patterns: ['vitest', '@vitest/*', '@playwright/*', 'playwright']
       otel:
@@ -21,6 +37,19 @@ updates:
       # The SDK version is pinned deliberately — a bump can move classifier behaviour,
       # so it is upgraded manually with an eval run attached to the PR.
       - dependency-name: '@anthropic-ai/sdk'
+
+      # typescript-eslint caps its peer range at `typescript <6.1.0`, and every
+      # type-aware rule — including the agent I/O guardrail — runs through it. A
+      # major TypeScript bump is unsatisfiable until that cap moves, so it is held
+      # rather than reopened weekly. Tracked in #124.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+
+      # lint-staged 17 requires Node >=22.22.1. A commit-hook helper should not set
+      # the runtime floor for a project that ships nothing depending on it; revisit
+      # when the repository moves to Node 24.
+      - dependency-name: 'lint-staged'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: '/'
