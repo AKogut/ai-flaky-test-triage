@@ -85,6 +85,30 @@ labelled after the fact), `mutated` (a real run with an injected defect). Metric
 provenance, so a classifier that only performs on invented failures is visible rather than
 flattered.
 
+### Evidence the buckets do what they claim
+
+"Punishes diff-only reasoning" is a claim, not a fact, until something is measured against it.
+Scoring the baseline per bucket is that measurement:
+
+| Bucket                      |   n | Joint  | `owner` | `determinism` |
+| --------------------------- | --: | ------ | ------- | ------------- |
+| `straightforward`           |   8 | 100.0% | 100.0%  | 100.0%        |
+| `hard-quadrant`             |  10 | 30.0%  | 60.0%   | 70.0%         |
+| `stale-test`                |   7 | 0.0%   | 0.0%    | 100.0%        |
+| `misleading-history`        |   4 | 0.0%   | 75.0%   | 0.0%          |
+| `environment-as-regression` |   4 | 25.0%  | 25.0%   | 100.0%        |
+
+Each adversarial bucket defeats the baseline **on the axis it was built to attack, and only that
+axis**. `stale-test` takes owner to 0% and leaves determinism at 100%. `misleading-history` is the
+mirror image — determinism to 0%, owner still at 75%.
+
+That orthogonality is the point. Buckets that all failed together would mean the fixtures were
+merely hard, or badly written. Failing on precisely the intended axis is what separates an
+adversarial dataset from a difficult one.
+
+`straightforward` at 100% is the control on the control: the baseline is a working classifier, so
+the failures above are properties of the fixtures rather than of the code being measured.
+
 ## 3. Reported uncertainty
 
 Two independent sources of noise, both measured rather than ignored.
