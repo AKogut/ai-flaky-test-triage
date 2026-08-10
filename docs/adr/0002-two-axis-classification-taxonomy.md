@@ -13,8 +13,8 @@ The initial specification used a flat enum:
 real_bug | flaky_infra | stale_test | race_condition
 ```
 
-These values are not mutually exclusive. `race_condition` names a *mechanism*; `real_bug` names
-*ownership*. A race in the product's optimistic-update path satisfies both, so the labeller
+These values are not mutually exclusive. `race_condition` names a _mechanism_; `real_bug` names
+_ownership_. A race in the product's optimistic-update path satisfies both, so the labeller
 chooses arbitrarily — and chooses differently on a different day.
 
 This is not a cosmetic problem. The entire evaluation strategy rests on a hand-labelled golden
@@ -72,5 +72,5 @@ between the human labelling process and the agent prompt.
 ### What would make us revisit this
 
 Evidence from the confusion matrices that a third axis is being smuggled into one of the existing
-ones — the most likely candidate being *severity* or *actionability*, currently intentionally
+ones — the most likely candidate being _severity_ or _actionability_, currently intentionally
 absent. A superseding ADR would add it as an axis rather than overloading `owner`.

@@ -15,8 +15,8 @@
 
 ## The problem
 
-Flaky-test detectors tell you *which* tests are unstable. They do not tell you *what to do
-about it*. After every red CI run somebody still has to open the trace, read the stack, look
+Flaky-test detectors tell you _which_ tests are unstable. They do not tell you _what to do
+about it_. After every red CI run somebody still has to open the trace, read the stack, look
 at the diff, and decide: is this a real bug, a badly written test, or the runner having a bad
 day? That decision is repetitive, requires context from several places at once, and is exactly
 the kind of work that gets skipped under deadline pressure — which is how a real regression
@@ -84,16 +84,16 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
 ## Classification taxonomy
 
 A single flat label list (`real_bug | flaky | stale | race_condition`) collapses under its own
-weight — a race condition in application code *is* a real bug, so the labels overlap and the
+weight — a race condition in application code _is_ a real bug, so the labels overlap and the
 ground truth stops being reproducible. Sentra classifies on **two orthogonal axes** instead:
 
-| | `deterministic` | `intermittent` |
-|---|---|---|
-| **`app_code`** | Genuine regression. Fails every run. | Race / ordering bug in the product. Fails sometimes. **The dangerous quadrant.** |
-| **`test_code`** | Stale test — selector or assertion drifted from the app. | Badly synchronised test — missing wait, shared state, ordering assumption. |
-| **`environment`** | Broken setup — missing dep, bad config, wrong Node version. | Infrastructure noise — runner timeout, port collision, network blip. |
+|                   | `deterministic`                                             | `intermittent`                                                                   |
+| ----------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **`app_code`**    | Genuine regression. Fails every run.                        | Race / ordering bug in the product. Fails sometimes. **The dangerous quadrant.** |
+| **`test_code`**   | Stale test — selector or assertion drifted from the app.    | Badly synchronised test — missing wait, shared state, ordering assumption.       |
+| **`environment`** | Broken setup — missing dep, bad config, wrong Node version. | Infrastructure noise — runner timeout, port collision, network blip.             |
 
-The first axis answers *who owns the fix*. The second answers *how it will behave on rerun*.
+The first axis answers _who owns the fix_. The second answers _how it will behave on rerun_.
 Neither is derivable from the other, and every failure has exactly one cell.
 
 Rationale, edge cases, and labelling rules: [`docs/taxonomy.md`](docs/taxonomy.md).
@@ -132,18 +132,18 @@ cat eval/report.md
 
 ### Script reference
 
-| Script | Milestone | What it does |
-|---|---|---|
-| `npm run dev` | M4 | Start TaskFlow (API + client) locally |
-| `npm run test:unit` | M5 | Vitest — API, flakemetry-lib, prompt builders |
-| `npm run test:e2e` | M5 | Playwright — TaskFlow UI flows incl. flaky specs |
-| `npm test` | M5 | Both, emits `results.json` |
-| `npm run flakemetry:analyze` | M6 | Test report + history → `analysis.json` |
-| `npm run agents:analyze` | M7 | `analysis.json` → `report.md` |
-| `npm run analyze` | M8 | flakemetry + agents in sequence |
-| `npm run eval` | M2 | Golden-dataset evaluation → `eval/report.md` |
-| `npm run eval:ablation` | M9 | Context-ablation study → `eval/ablation.md` |
-| `npm run demo` | M3 | Full pipeline in replay mode, no credentials |
+| Script                       | Milestone | What it does                                     |
+| ---------------------------- | --------- | ------------------------------------------------ |
+| `npm run dev`                | M4        | Start TaskFlow (API + client) locally            |
+| `npm run test:unit`          | M5        | Vitest — API, flakemetry-lib, prompt builders    |
+| `npm run test:e2e`           | M5        | Playwright — TaskFlow UI flows incl. flaky specs |
+| `npm test`                   | M5        | Both, emits `results.json`                       |
+| `npm run flakemetry:analyze` | M6        | Test report + history → `analysis.json`          |
+| `npm run agents:analyze`     | M7        | `analysis.json` → `report.md`                    |
+| `npm run analyze`            | M8        | flakemetry + agents in sequence                  |
+| `npm run eval`               | M2        | Golden-dataset evaluation → `eval/report.md`     |
+| `npm run eval:ablation`      | M9        | Context-ablation study → `eval/ablation.md`      |
+| `npm run demo`               | M3        | Full pipeline in replay mode, no credentials     |
 
 ---
 
@@ -230,22 +230,22 @@ Full write-up: [`docs/limitations-and-guardrails.md`](docs/limitations-and-guard
 ## Roadmap
 
 Work is tracked as milestones, dataset-first — the evaluation harness and a measurable
-classifier land *before* the demo app, so the core hypothesis is tested before time goes into
+classifier land _before_ the demo app, so the core hypothesis is tested before time goes into
 UI.
 
-| Milestone | Theme |
-|---|---|
-| **M0** | Foundations & repo hygiene |
-| **M1** | Contracts, schemas & taxonomy |
-| **M2** | Golden dataset, baseline & eval harness |
-| **M3** | Triage agent + replay mode |
-| **M4** | TaskFlow application |
-| **M5** | Test suite & emergent flakiness |
-| **M6** | flakemetry-lib integration |
-| **M7** | Root-cause & fix-suggestion agents |
-| **M8** | End-to-end CI & PR comment |
-| **M9** | Observability, ablation & cost |
-| **M10** | Documentation, wiki & v1.0 |
+| Milestone | Theme                                   |
+| --------- | --------------------------------------- |
+| **M0**    | Foundations & repo hygiene              |
+| **M1**    | Contracts, schemas & taxonomy           |
+| **M2**    | Golden dataset, baseline & eval harness |
+| **M3**    | Triage agent + replay mode              |
+| **M4**    | TaskFlow application                    |
+| **M5**    | Test suite & emergent flakiness         |
+| **M6**    | flakemetry-lib integration              |
+| **M7**    | Root-cause & fix-suggestion agents      |
+| **M8**    | End-to-end CI & PR comment              |
+| **M9**    | Observability, ablation & cost          |
+| **M10**   | Documentation, wiki & v1.0              |
 
 [Browse the milestones →](https://github.com/AKogut/ai-flaky-test-triage/milestones)
 

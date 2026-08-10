@@ -14,7 +14,7 @@ npm run wiki:publish        # or: ./scripts/publish-wiki.sh
 ```
 
 The script clones `…/ai-flaky-test-triage.wiki.git`, mirrors this directory into it, and pushes.
-Page names come from filenames: `Getting-Started.md` becomes the *Getting Started* page.
+Page names come from filenames: `Getting-Started.md` becomes the _Getting Started_ page.
 
 `_Sidebar.md` and `_Footer.md` are special — GitHub renders them on every page.
 
@@ -29,10 +29,10 @@ no API for creating that first page. Once, manually:
 
 ## What belongs here, and what does not
 
-| | Holds | Why |
-|---|---|---|
-| [`docs/`](../docs) | Normative specs: schemas, contracts, labelling rules, ADRs | Versioned with the code and must match it exactly |
-| `wiki/` | Orientation and narrative: how things fit, why decisions were made, what to read first | Free to be discursive; nothing here is a contract |
+|                    | Holds                                                                                  | Why                                               |
+| ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [`docs/`](../docs) | Normative specs: schemas, contracts, labelling rules, ADRs                             | Versioned with the code and must match it exactly |
+| `wiki/`            | Orientation and narrative: how things fit, why decisions were made, what to read first | Free to be discursive; nothing here is a contract |
 
 Nothing is duplicated. Wiki pages link into `docs/` rather than restating it — two copies of a
 specification means one of them is wrong, and it is never obvious which.

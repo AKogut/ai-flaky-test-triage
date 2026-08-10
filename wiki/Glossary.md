@@ -55,7 +55,7 @@ flakiness scripted into a test. Only the former produces a classification proble
 **EWMA** — exponentially weighted moving average, used for the flakiness score so that recent runs
 count more than old ones.
 
-**Flakiness score** — a 0..1 measure of how much a test *alternates*, not how often it fails. A test
+**Flakiness score** — a 0..1 measure of how much a test _alternates_, not how often it fails. A test
 that fails every time scores near zero: it is broken, not flaky.
 
 **Golden dataset** — the hand-labelled fixtures every metric in the project is computed against.

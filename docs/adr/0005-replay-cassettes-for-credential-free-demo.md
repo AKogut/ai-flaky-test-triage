@@ -19,11 +19,11 @@ every CI run.
 
 All model calls route through one wrapper supporting three modes:
 
-| Mode | Trigger | Behaviour |
-|---|---|---|
-| `live` | default, key present | Real API call |
-| `record` | `SENTRA_RECORD=1` | Real call; request/response written to a cassette |
-| `replay` | `SENTRA_REPLAY=1`, or no key present | Cassette lookup; no network |
+| Mode     | Trigger                              | Behaviour                                         |
+| -------- | ------------------------------------ | ------------------------------------------------- |
+| `live`   | default, key present                 | Real API call                                     |
+| `record` | `SENTRA_RECORD=1`                    | Real call; request/response written to a cassette |
+| `replay` | `SENTRA_REPLAY=1`, or no key present | Cassette lookup; no network                       |
 
 Cassettes live in `agents/replay/cassettes/`, are committed, and are keyed by a stable hash of
 (prompt version, model, normalised request body). A replay miss is a loud error, never a silent

@@ -2,7 +2,7 @@
 
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
-Flaky-test detectors tell you *which* tests are unstable. They do not tell you what to do about it.
+Flaky-test detectors tell you _which_ tests are unstable. They do not tell you what to do about it.
 After every red CI run somebody still has to open the trace, read the stack, look at the diff, and
 decide: is this a real bug, a badly written test, or the runner having a bad day? Sentra automates
 that decision and posts the result as a single pull-request comment.
@@ -35,10 +35,10 @@ code, including several where the easy answer was rejected.
 
 Two surfaces, one rule.
 
-| | Holds | Why |
-|---|---|---|
-| **[`docs/`](https://github.com/AKogut/ai-flaky-test-triage/tree/main/docs)** in the repository | Normative specifications: schemas, contracts, labelling rules, ADRs | Versioned with the code, so it must match the code exactly. A PR that changes behaviour changes these in the same commit. |
-| **This wiki** | Orientation and narrative: how the pieces fit, why decisions were made, what to read first | Free to be discursive; nothing here is a contract |
+|                                                                                                | Holds                                                                                      | Why                                                                                                                       |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **[`docs/`](https://github.com/AKogut/ai-flaky-test-triage/tree/main/docs)** in the repository | Normative specifications: schemas, contracts, labelling rules, ADRs                        | Versioned with the code, so it must match the code exactly. A PR that changes behaviour changes these in the same commit. |
+| **This wiki**                                                                                  | Orientation and narrative: how the pieces fit, why decisions were made, what to read first | Free to be discursive; nothing here is a contract                                                                         |
 
 Nothing is duplicated between them. The wiki links into `docs/` rather than restating it, because
 two copies of a specification means one of them is wrong.
@@ -49,13 +49,13 @@ two copies of a specification means one of them is wrong.
 
 Every test failure is classified on two orthogonal axes rather than a single flat label:
 
-| | `deterministic` | `intermittent` |
-|---|---|---|
-| **`app_code`** | Regression. Ship-blocking. | **Product race — the dangerous quadrant.** |
-| **`test_code`** | Stale test. | Unsynchronised test. |
-| **`environment`** | Broken setup. | Infrastructure noise. |
+|                   | `deterministic`            | `intermittent`                             |
+| ----------------- | -------------------------- | ------------------------------------------ |
+| **`app_code`**    | Regression. Ship-blocking. | **Product race — the dangerous quadrant.** |
+| **`test_code`**   | Stale test.                | Unsynchronised test.                       |
+| **`environment`** | Broken setup.              | Infrastructure noise.                      |
 
-The first axis answers *is this mine?* The second answers *will rerunning help?* Neither is
+The first axis answers _is this mine?_ The second answers _will rerunning help?_ Neither is
 derivable from the other, and that ambiguity is precisely where triage effort goes.
 
 Why not a single flat label: [Classification Taxonomy](Classification-Taxonomy).
@@ -67,7 +67,7 @@ Why not a single flat label: [Classification Taxonomy](Classification-Taxonomy).
 Three things, all of which are measured rather than claimed:
 
 1. **A non-LLM baseline.** A thirty-line heuristic classifies the same dataset. Every reported
-   number is the agent *relative to that*. If the heuristic wins, the README says the heuristic
+   number is the agent _relative to that_. If the heuristic wins, the README says the heuristic
    wins.
 2. **An adversarial dataset.** The fixtures deliberately over-weight cases designed to defeat the
    obvious shortcuts — real races that look like flakes, environment noise inside a suspicious

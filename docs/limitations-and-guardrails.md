@@ -5,14 +5,14 @@ be wrong. This page is a deliverable, not a disclaimer.
 
 ## Capability guardrails — enforced, not promised
 
-| Guardrail | How it is enforced |
-|---|---|
-| Agents never modify the working tree | No filesystem-write tool is registered on any agent. The orchestrator writes exactly one file (`report.md`) and does so itself. A unit test asserts no agent module imports `fs.write*`. |
-| Agents never push, tag, or open PRs | `simple-git` is wrapped in a read-only facade exposing `diff`, `log`, `show` only. |
-| Agents never approve or merge | The workflow's `GITHUB_TOKEN` is scoped `pull-requests: write, contents: read`. It cannot approve its own PRs or merge. |
-| Fix suggestions are never applied | `patch` is a string rendered inside a fenced code block. No code path reaches an apply step. |
-| Cost cannot run away | Per-run token budget; the orchestrator stops dispatching and reports truncation. |
-| The pipeline cannot fail the build on its own errors | The agent job is `continue-on-error`. Only the test job and the eval gate can fail CI. |
+| Guardrail                                            | How it is enforced                                                                                                                                                                       |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agents never modify the working tree                 | No filesystem-write tool is registered on any agent. The orchestrator writes exactly one file (`report.md`) and does so itself. A unit test asserts no agent module imports `fs.write*`. |
+| Agents never push, tag, or open PRs                  | `simple-git` is wrapped in a read-only facade exposing `diff`, `log`, `show` only.                                                                                                       |
+| Agents never approve or merge                        | The workflow's `GITHUB_TOKEN` is scoped `pull-requests: write, contents: read`. It cannot approve its own PRs or merge.                                                                  |
+| Fix suggestions are never applied                    | `patch` is a string rendered inside a fenced code block. No code path reaches an apply step.                                                                                             |
+| Cost cannot run away                                 | Per-run token budget; the orchestrator stops dispatching and reports truncation.                                                                                                         |
+| The pipeline cannot fail the build on its own errors | The agent job is `continue-on-error`. Only the test job and the eval gate can fail CI.                                                                                                   |
 
 ## What the system genuinely cannot do
 
@@ -50,16 +50,16 @@ Measured, published in `eval/report.md`, and expected:
 content in test names, assertion messages, source comments, or diff hunks — all of which flow
 into a prompt.
 
-| Concern | Position |
-|---|---|
-| Secrets in fork PRs | GitHub does not expose secrets to fork-triggered workflows. That is correct and is not worked around. `pull_request_target` is **not** used — it would run untrusted code with a write-scoped token. |
-| Degraded mode on forks | With no API key the pipeline runs the baseline heuristic only and the comment says so explicitly. |
-| Prompt injection | Untrusted text is delimited, capped, and introduced as data. Output is schema-constrained, so the model can emit enum values and bounded strings, not instructions. |
-| Injection impact ceiling | Nothing executes agent output. The worst outcome is a wrong label and a misleading comment. |
-| Markdown/HTML injection in the report | Agent output is escaped before rendering, so injected content cannot forge report structure or embed hidden markers. |
-| Data leaving the repository | Source snippets and diff hunks are sent to the Anthropic API. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it. |
-| Secret leakage into prompts | Context assembly runs a secret-pattern scrub over diffs and source before they enter a prompt. Best-effort, not a guarantee. |
-| Token scope | Least privilege: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope. |
+| Concern                               | Position                                                                                                                                                                                                    |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secrets in fork PRs                   | GitHub does not expose secrets to fork-triggered workflows. That is correct and is not worked around. `pull_request_target` is **not** used — it would run untrusted code with a write-scoped token.        |
+| Degraded mode on forks                | With no API key the pipeline runs the baseline heuristic only and the comment says so explicitly.                                                                                                           |
+| Prompt injection                      | Untrusted text is delimited, capped, and introduced as data. Output is schema-constrained, so the model can emit enum values and bounded strings, not instructions.                                         |
+| Injection impact ceiling              | Nothing executes agent output. The worst outcome is a wrong label and a misleading comment.                                                                                                                 |
+| Markdown/HTML injection in the report | Agent output is escaped before rendering, so injected content cannot forge report structure or embed hidden markers.                                                                                        |
+| Data leaving the repository           | Source snippets and diff hunks are sent to the Anthropic API. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it. |
+| Secret leakage into prompts           | Context assembly runs a secret-pattern scrub over diffs and source before they enter a prompt. Best-effort, not a guarantee.                                                                                |
+| Token scope                           | Least privilege: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope.                                                                                                |
 
 ## Operational limitations
 

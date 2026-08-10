@@ -11,14 +11,14 @@ unusually clear about its own.
 The distinction that matters: these are not promises, they are **absent capabilities**, and an
 executable test suite asserts each one.
 
-| Guarantee | How it holds |
-|---|---|
-| Never modify the working tree | No agent has a filesystem-write tool. The orchestrator writes exactly one file. A static check fails the build if any module under `agents/` imports an `fs` write API. |
-| Never push, tag, or commit | `simple-git` is reachable only through a facade exposing `diff`, `log`, `show`. Importing it elsewhere is a lint error. |
-| Never approve or merge | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests. |
-| Fix suggestions are never applied | `patch` is a string rendered inside a fenced code block. There is no code path from it to an apply step. |
-| Cost cannot run away | A per-run token budget stops dispatch and reports the truncation. |
-| Cannot fail your build | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red. |
+| Guarantee                         | How it holds                                                                                                                                                            |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Never modify the working tree     | No agent has a filesystem-write tool. The orchestrator writes exactly one file. A static check fails the build if any module under `agents/` imports an `fs` write API. |
+| Never push, tag, or commit        | `simple-git` is reachable only through a facade exposing `diff`, `log`, `show`. Importing it elsewhere is a lint error.                                                 |
+| Never approve or merge            | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests.                                                           |
+| Fix suggestions are never applied | `patch` is a string rendered inside a fenced code block. There is no code path from it to an apply step.                                                                |
+| Cost cannot run away              | A per-run token budget stops dispatch and reports the truncation.                                                                                                       |
+| Cannot fail your build            | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red.                                                                              |
 
 A promise enforced by discipline is not a guardrail. A promise enforced by the absence of a
 capability holds in six months, in a hurry, when nobody is thinking about it.
@@ -62,7 +62,7 @@ means baseline-heuristic output, and the comment says so.
 
 **Injection has a low ceiling by construction.** Untrusted text is delimited and length-capped;
 output is schema-constrained, so the model can emit enum values and bounded strings but not
-instructions; output is escaped before rendering; and nothing downstream *executes* it. The worst
+instructions; output is escaped before rendering; and nothing downstream _executes_ it. The worst
 achievable outcome is a wrong label and a misleading comment.
 
 **One real egress path.** Source snippets and diff hunks are sent to the model API during the agent

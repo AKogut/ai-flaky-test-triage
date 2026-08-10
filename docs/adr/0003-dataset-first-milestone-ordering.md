@@ -12,14 +12,14 @@ build the AI layer on top of the traces they produce. It follows the data flow, 
 It has two problems. First, the least differentiated part of the project — a small CRUD app with
 drag-and-drop — is also the most time-consuming, and it sits in front of everything that carries
 the actual value. Second, and worse: it defers the only question that can invalidate the project.
-*Can a model classify these failures better than a thirty-line heuristic?* Learning the answer
+_Can a model classify these failures better than a thirty-line heuristic?_ Learning the answer
 after a week of React work is the expensive way to learn it.
 
 ## Decision
 
 The evaluation harness and a measurable triage agent land **before** the application. Fixtures for
 the golden dataset are hand-authored JSON, which requires no app to exist. The application arrives
-at M4, after the core hypothesis has been tested, and its role is then to *extend* the dataset
+at M4, after the core hypothesis has been tested, and its role is then to _extend_ the dataset
 with captured real-world runs rather than to bootstrap it.
 
 Order: contracts (M1) → dataset + baseline + eval (M2) → triage agent (M3) → app (M4) →

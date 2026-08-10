@@ -46,7 +46,7 @@ stages later.
 
 **Flakiness analysis.** Merges the current run against the stored history and produces per-test
 signal: an alternation-weighted flakiness score, a failure streak, whether the test is new. The
-scoring measures *alternation*, not failure rate — a test that fails 100% of the time is not flaky,
+scoring measures _alternation_, not failure rate — a test that fails 100% of the time is not flaky,
 it is broken, and conflating those would put every genuine regression in the `intermittent` bucket.
 
 **Context assembly.** The most consequential and least glamorous stage. It turns one entry in
@@ -92,7 +92,7 @@ So every failure mode degrades and announces itself: no API key on a fork PR →
 only; API error → that one test is `unclassified`; budget exhausted → stop dispatching and say how
 many were dropped; no history → reduced confidence, stated.
 
-The one exception is a malformed test report, which fails loudly. That one *should* be noisy — it
+The one exception is a malformed test report, which fails loudly. That one _should_ be noisy — it
 means a contract broke.
 
 ## What is deliberately absent

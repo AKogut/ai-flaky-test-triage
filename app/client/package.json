@@ -2,7 +2,7 @@
   "name": "@sentra/taskflow-client",
   "version": "0.1.0",
   "private": true,
-  "description": "TaskFlow UI \u2014 the system under test. React and TypeScript, deliberately plain.",
+  "description": "TaskFlow UI — the system under test. React and TypeScript, deliberately plain.",
   "license": "MIT",
   "type": "module",
   "exports": {

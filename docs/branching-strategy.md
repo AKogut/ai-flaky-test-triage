@@ -37,27 +37,27 @@ chore/03-eslint-flat-config
 exp/61-multistep-agent-ablation
 ```
 
-| Prefix | Use for |
-|---|---|
-| `feat/` | New capability |
-| `fix/` | Bug fix |
-| `docs/` | Documentation only |
-| `test/` | Tests only |
-| `chore/` | Tooling, deps, CI config |
-| `refactor/` | Behaviour-preserving change |
-| `perf/` | Performance |
-| `exp/` | Experiments and ablations that may never merge |
+| Prefix      | Use for                                        |
+| ----------- | ---------------------------------------------- |
+| `feat/`     | New capability                                 |
+| `fix/`      | Bug fix                                        |
+| `docs/`     | Documentation only                             |
+| `test/`     | Tests only                                     |
+| `chore/`    | Tooling, deps, CI config                       |
+| `refactor/` | Behaviour-preserving change                    |
+| `perf/`     | Performance                                    |
+| `exp/`      | Experiments and ablations that may never merge |
 
 Including the issue number makes the branch self-linking in the GitHub UI and makes stale
 branches traceable to closed work.
 
 ### Protected and special branches
 
-| Branch | Rule |
-|---|---|
-| `main` | Protected. No direct pushes, no force-push, no deletion. PR + green CI required. |
+| Branch               | Rule                                                                              |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `main`               | Protected. No direct pushes, no force-push, no deletion. PR + green CI required.  |
 | `flakemetry-history` | Orphan branch, machine-written only. Excluded from CI. Humans do not commit here. |
-| `gh-pages` | Reserved for a future published eval dashboard. |
+| `gh-pages`           | Reserved for a future published eval dashboard.                                   |
 
 ## Commit convention
 

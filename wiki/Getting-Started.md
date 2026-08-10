@@ -79,14 +79,14 @@ optimistic-update race is captured for the dataset rather than waited for.
 
 ## Where things end up
 
-| File | Written by | Committed? |
-|---|---|---|
-| `results.json` | the test run | no |
-| `analysis.json` | `flakemetry:analyze` | no |
-| `report.md` | `agents:analyze` | no |
-| `otel-spans.json` | the agents' instrumentation | no |
-| `eval/report.md` | `npm run eval` | **yes** — a regression shows up as a diff |
-| `.flakemetry/history.json` | CI, on `main` only | no — lives in the CI cache |
+| File                       | Written by                  | Committed?                                |
+| -------------------------- | --------------------------- | ----------------------------------------- |
+| `results.json`             | the test run                | no                                        |
+| `analysis.json`            | `flakemetry:analyze`        | no                                        |
+| `report.md`                | `agents:analyze`            | no                                        |
+| `otel-spans.json`          | the agents' instrumentation | no                                        |
+| `eval/report.md`           | `npm run eval`              | **yes** — a regression shows up as a diff |
+| `.flakemetry/history.json` | CI, on `main` only          | no — lives in the CI cache                |
 
 ## Common questions
 

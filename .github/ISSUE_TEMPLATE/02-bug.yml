@@ -1,26 +1,26 @@
-name: "Bug"
-description: "Something in the pipeline, the app, or the harness behaves incorrectly"
-title: "[bug] <what is wrong>"
-labels: ["type: bug", "status: backlog"]
+name: 'Bug'
+description: 'Something in the pipeline, the app, or the harness behaves incorrectly'
+title: '[bug] <what is wrong>'
+labels: ['type: bug', 'status: backlog']
 body:
   - type: dropdown
     id: component
     attributes:
       label: Component
       options:
-        - "app / server"
-        - "app / client"
-        - "tests / unit"
-        - "tests / e2e"
-        - "flakemetry-lib"
-        - "agents / triage"
-        - "agents / root-cause"
-        - "agents / fix-suggestion"
-        - "agents / orchestrator"
-        - "eval harness"
-        - "golden dataset"
-        - "CI workflow"
-        - "docs"
+        - 'app / server'
+        - 'app / client'
+        - 'tests / unit'
+        - 'tests / e2e'
+        - 'flakemetry-lib'
+        - 'agents / triage'
+        - 'agents / root-cause'
+        - 'agents / fix-suggestion'
+        - 'agents / orchestrator'
+        - 'eval harness'
+        - 'golden dataset'
+        - 'CI workflow'
+        - 'docs'
     validations:
       required: true
 
@@ -58,16 +58,16 @@ body:
     id: run-link
     attributes:
       label: CI run
-      placeholder: "https://github.com/AKogut/ai-flaky-test-triage/actions/runs/..."
+      placeholder: 'https://github.com/AKogut/ai-flaky-test-triage/actions/runs/...'
 
   - type: dropdown
     id: severity
     attributes:
       label: Severity
       options:
-        - "Blocks the pipeline / CI is red"
-        - "Wrong output, pipeline still completes"
-        - "Cosmetic or docs"
+        - 'Blocks the pipeline / CI is red'
+        - 'Wrong output, pipeline still completes'
+        - 'Cosmetic or docs'
     validations:
       required: true
 
@@ -76,5 +76,5 @@ body:
     attributes:
       label: Before filing
       options:
-        - label: "I checked whether this is the classifier being wrong (expected, see eval/report.md) rather than a defect"
+        - label: 'I checked whether this is the classifier being wrong (expected, see eval/report.md) rather than a defect'
           required: true

@@ -11,7 +11,7 @@ study measuring what each piece of context contributes, is the part that is not 
 
 ## How is this different from Flakemetry or similar tools?
 
-Those detect *which* tests are unstable. This decides *what to do about a specific failure* — is it
+Those detect _which_ tests are unstable. This decides _what to do about a specific failure_ — is it
 the product, the test, or the runner, and will rerunning help. Flakemetry-style analysis is consumed
 here as a library; this project is the layer above it.
 
@@ -29,7 +29,7 @@ Once ground truth stops being reproducible, every metric built on it is decorati
 Yes — `npm run demo` runs the whole pipeline against recorded model responses, offline and free. The
 test suite and the evaluation harness also run in replay mode.
 
-You need a key only to classify a *new* failure with a live model.
+You need a key only to classify a _new_ failure with a live model.
 
 ## Why is the accuracy number not higher?
 

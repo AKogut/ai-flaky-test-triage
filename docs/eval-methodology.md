@@ -26,7 +26,7 @@ else                                                          → intermittent
 ```
 
 Roughly thirty lines. Every agent number is reported **alongside** the baseline on the same
-fixtures, and the headline metric is the *delta*, not the absolute.
+fixtures, and the headline metric is the _delta_, not the absolute.
 
 This has two good outcomes and no bad one. If the agent wins, there is evidence the LLM earns its
 cost. If the baseline wins, that is a genuinely interesting finding that goes in the README, and
@@ -36,15 +36,15 @@ the project demonstrates something rarer than a working classifier: a willingnes
 
 `eval/golden-dataset/` targets **≥60 fixtures**, hand-labelled, with this composition:
 
-| Bucket | Share | Purpose |
-|---|---|---|
-| Hard quadrant: `app_code` + `intermittent` | ~20% | The case the project exists for |
-| Misleading history (long-flaky test failing for a new reason) | ~10% | Punishes flakiness-score-only reasoning |
-| Environment failures dressed as regressions | ~10% | Punishes diff-only reasoning |
-| Stale tests after refactors | ~15% | Common in practice, easy to over-call as `app_code` |
-| Cross-file state leaks | ~10% | Cause and symptom in different files |
-| Straightforward cases | ~25% | Sanity floor; a classifier that fails these is broken |
-| `lowConfidenceGroundTruth` | ~10% | Genuinely ambiguous; excluded from headline metrics, reported separately |
+| Bucket                                                        | Share | Purpose                                                                  |
+| ------------------------------------------------------------- | ----- | ------------------------------------------------------------------------ |
+| Hard quadrant: `app_code` + `intermittent`                    | ~20%  | The case the project exists for                                          |
+| Misleading history (long-flaky test failing for a new reason) | ~10%  | Punishes flakiness-score-only reasoning                                  |
+| Environment failures dressed as regressions                   | ~10%  | Punishes diff-only reasoning                                             |
+| Stale tests after refactors                                   | ~15%  | Common in practice, easy to over-call as `app_code`                      |
+| Cross-file state leaks                                        | ~10%  | Cause and symptom in different files                                     |
+| Straightforward cases                                         | ~25%  | Sanity floor; a classifier that fails these is broken                    |
+| `lowConfidenceGroundTruth`                                    | ~10%  | Genuinely ambiguous; excluded from headline metrics, reported separately |
 
 Each fixture is a `TestRun`-shaped JSON file plus a sibling `.labels.json` carrying ground truth,
 a prose justification for the label, and the rules from
@@ -106,14 +106,14 @@ bin, producing a reliability curve and an **Expected Calibration Error**. Two co
 
 `npm run eval` runs on every PR that touches `agents/`, `eval/`, or `prompts/`. It fails when:
 
-| Condition | Threshold |
-|---|---|
-| Joint accuracy lower bound drops below the recorded main-branch value | −5pp |
-| Joint accuracy lower bound below absolute floor | 0.65 |
-| Agent fails to beat the baseline on joint accuracy | any regression |
-| Self-consistency below floor | 0.80 |
-| Hard-quadrant recall below floor | 0.50 |
-| Cost per fixture rises sharply | +50% |
+| Condition                                                             | Threshold      |
+| --------------------------------------------------------------------- | -------------- |
+| Joint accuracy lower bound drops below the recorded main-branch value | −5pp           |
+| Joint accuracy lower bound below absolute floor                       | 0.65           |
+| Agent fails to beat the baseline on joint accuracy                    | any regression |
+| Self-consistency below floor                                          | 0.80           |
+| Hard-quadrant recall below floor                                      | 0.50           |
+| Cost per fixture rises sharply                                        | +50%           |
 
 Thresholds start permissive and ratchet as the dataset grows. A gate that blocks on noise gets
 disabled by whoever is on call, so the initial values are chosen to be survivable.
@@ -122,16 +122,16 @@ disabled by whoever is on call, so the initial values are chosen to be survivabl
 
 `npm run eval:ablation` re-runs the dataset with parts of the context removed:
 
-| Variant | Question it answers |
-|---|---|
-| Full context | Reference |
-| No history | How much does the flakiness signal contribute? |
-| No diff | How much does git context contribute? |
-| No test source | Does reading the test matter? |
-| Error message only | How far does the trivial input get? |
-| Baseline heuristic | Is the LLM needed at all? |
+| Variant                  | Question it answers                              |
+| ------------------------ | ------------------------------------------------ |
+| Full context             | Reference                                        |
+| No history               | How much does the flakiness signal contribute?   |
+| No diff                  | How much does git context contribute?            |
+| No test source           | Does reading the test matter?                    |
+| Error message only       | How far does the trivial input get?              |
+| Baseline heuristic       | Is the LLM needed at all?                        |
 | Multi-step agent variant | Does a loop beat one call? (see agent-design.md) |
-| Smaller model | What does the capability tier buy? |
+| Smaller model            | What does the capability tier buy?               |
 
 Results go to `eval/ablation.md`. This is the section that turns "I built an AI classifier" into
 "I measured which parts of it work" — and it is also how the context bundle gets pruned, since a
