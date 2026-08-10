@@ -15,17 +15,31 @@ Four mechanisms keep the numbers honest.
 `eval/baseline.ts` implements a deliberately simple heuristic:
 
 ```
-if the run produced no assertion (crash/bind/install error)   → environment
-else if the diff touches the file under test                  → app_code
-else if the error is a locator/timeout error                  → test_code
-else                                                          → app_code
+owner:
+if the failure names an infrastructure error (bind / connect /  → environment
+    missing module / browser launch / OOM), so no assertion ran
+else if the commit changes any non-test source file             → app_code
+else if the failure names a selector or a wait, not a value     → test_code
+else                                                            → app_code
 
 determinism:
-if all attempts failed and history shows an unbroken streak   → deterministic
-else                                                          → intermittent
+if there was no pass on retry and the recent history shows an   → deterministic
+    unbroken failure streak of two or more
+else                                                            → intermittent
 ```
 
-Roughly thirty lines. Every agent number is reported **alongside** the baseline on the same
+The second rule deserves a note, because an earlier wording of it — "the diff touches the file
+under test" — is ambiguous in a way that changes the classifier. It could mean the _test_ file or
+the _implementation_ the test exercises, and the two point in opposite directions: a diff touching
+the spec suggests `test_code`, while a diff touching the implementation suggests `app_code`. A
+heuristic cannot map a test to its implementation, so the rule is stated as written above: any
+changed non-test path counts.
+
+That is a real weakness, deliberately left in. Every fixture in the `stale-test` bucket has a
+product diff, so the baseline calls all of them `app_code` and gets all of them wrong. Patching
+around it would mean tuning the control against the dataset it is meant to control for.
+
+Roughly sixty lines. Every agent number is reported **alongside** the baseline on the same
 fixtures, and the headline metric is the _delta_, not the absolute.
 
 This has two good outcomes and no bad one. If the agent wins, there is evidence the LLM earns its
