@@ -132,18 +132,23 @@ cat eval/report.md
 
 ### Script reference
 
-| Script                       | Milestone | What it does                                     |
-| ---------------------------- | --------- | ------------------------------------------------ |
-| `npm run dev`                | M4        | Start TaskFlow (API + client) locally            |
-| `npm run test:unit`          | M5        | Vitest — API, flakemetry-lib, prompt builders    |
-| `npm run test:e2e`           | M5        | Playwright — TaskFlow UI flows incl. flaky specs |
-| `npm test`                   | M5        | Both, emits `results.json`                       |
-| `npm run flakemetry:analyze` | M6        | Test report + history → `analysis.json`          |
-| `npm run agents:analyze`     | M7        | `analysis.json` → `report.md`                    |
-| `npm run analyze`            | M8        | flakemetry + agents in sequence                  |
-| `npm run eval`               | M2        | Golden-dataset evaluation → `eval/report.md`     |
-| `npm run eval:ablation`      | M9        | Context-ablation study → `eval/ablation.md`      |
-| `npm run demo`               | M3        | Full pipeline in replay mode, no credentials     |
+| Script                       | Milestone | What it does                                               |
+| ---------------------------- | --------- | ---------------------------------------------------------- |
+| `npm run help`               | M0        | Annotated listing of every pipeline command and its status |
+| `npm run dev`                | M4 🚧     | Start TaskFlow (API + client) locally                      |
+| `npm run build`              | M4 🚧     | Build the TaskFlow client bundle                           |
+| `npm run test:unit`          | M0        | Vitest — API, flakemetry-lib, prompt builders, contracts   |
+| `npm run test:e2e`           | M5 🚧     | Playwright — TaskFlow UI flows including the flaky specs   |
+| `npm test`                   | M5 🚧     | Unit and E2E together; emits results.json                  |
+| `npm run flakemetry:analyze` | M6 🚧     | Test report + history → analysis.json                      |
+| `npm run agents:analyze`     | M7 🚧     | analysis.json → report.md                                  |
+| `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                          |
+| `npm run eval`               | M2 🚧     | Golden-dataset evaluation → eval/report.md                 |
+| `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                  |
+| `npm run demo`               | M3 🚧     | Full pipeline in replay mode, no credentials               |
+
+🚧 marks a script that is not implemented yet; running it says so and names its issue.
+Everything else runs today. `npm run help` prints this table from the terminal.
 
 ---
 
