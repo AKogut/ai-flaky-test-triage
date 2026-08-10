@@ -1,0 +1,10 @@
+{
+  "name": "expectation-assumes-flat-response-body",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "A response arrived and was inspected, so the run reached its assertion and rule 1 is out. Rule 2 applies: the spec reads a shape the release changed on purpose, adding an envelope with paging metadata. Reading this as a product defect is tempting because a field vanished, but the change is intentional and documented in the same commit; the expectation simply was not updated.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

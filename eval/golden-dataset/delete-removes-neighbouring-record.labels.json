@@ -1,0 +1,10 @@
+{
+  "name": "delete-removes-neighbouring-record",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "An assertion was reached and disagreed on the surviving rows, so this is not rule 1. The spec creates its own records and refers to them by returned identifier rather than by position, so it makes no unsafe assumption under rule 2. The diff switches the delete predicate from the primary key to rowid, which coincide only until a row is removed — exactly the observed effect.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

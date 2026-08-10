@@ -1,0 +1,10 @@
+{
+  "name": "button-lookup-uses-superseded-label",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The page rendered and the wait ran to its limit rather than the browser dying, so rule 1 does not apply. Rule 2 applies: the spec matches on visible wording that the redesign shortened, and the control still exists with an accessible name and a working handler. The behaviour under test is intact; only the string the spec searches for is stale.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

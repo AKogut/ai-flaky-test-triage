@@ -1,0 +1,34 @@
+{
+  "name": "locator-still-uses-retired-test-id",
+  "scenario": "A board spec cannot find its element since the markup was reworked; the interface behaves correctly by hand.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › opens the editor for a task",
+      "title": "board › opens the editor for a task",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "timedOut",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 30012,
+      "annotations": [],
+      "error": {
+        "message": "Error: locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByTestId('task-row-edit')\n  - locator resolved to 0 elements",
+        "stack": "    at tests/e2e/board.spec.ts:44:48",
+        "snippet": "> await page.getByTestId('task-row-edit').click()"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › opens the editor for a task",
+      "flakinessScore": 0.02,
+      "consecutiveFailures": 4,
+      "totalRuns": 91,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPPPPFFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/TaskCard.tsx b/app/client/src/TaskCard.tsx\n@@ -28,7 +28,7 @@ export function TaskCard({ task }: { task: Task }) {\n-      <button data-testid=\"task-row-edit\" onClick={onEdit}>Edit</button>\n+      <button data-testid=\"task-card-edit\" onClick={onEdit}>Edit</button>\n",
+  "testSource": "test('opens the editor for a task', async ({ page }) => {\n  await page.goto('/')\n  await page.getByTestId('task-row-edit').click()\n  await expect(page.getByRole('dialog')).toBeVisible()\n})\n"
+}

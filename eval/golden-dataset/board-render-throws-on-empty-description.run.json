@@ -1,0 +1,33 @@
+{
+  "name": "board-render-throws-on-empty-description",
+  "scenario": "The board fails to render whenever a task carries no description, on every run.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › renders every task in the list",
+      "title": "board › renders every task in the list",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 4210,
+      "annotations": [],
+      "error": {
+        "message": "TypeError: Cannot read properties of null (reading 'slice')\n    at TaskCard (app/client/src/TaskCard.tsx:22:38)",
+        "stack": "    at TaskCard (app/client/src/TaskCard.tsx:22:38)\n    at renderWithHooks (react-dom.development.js:15486:18)\n    at tests/e2e/board.spec.ts:19:5",
+        "snippet": "  await page.goto('/')\n> await expect(page.getByTestId('task-card')).toHaveCount(3)"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › renders every task in the list",
+      "flakinessScore": 0.03,
+      "consecutiveFailures": 3,
+      "totalRuns": 88,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPPPPFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/TaskCard.tsx b/app/client/src/TaskCard.tsx\n@@ -19,7 +19,7 @@ export function TaskCard({ task }: { task: Task }) {\n-      <p className=\"summary\">{(task.description ?? '').slice(0, 80)}</p>\n+      <p className=\"summary\">{task.description.slice(0, 80)}</p>\n"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "assertion-pins-reworded-empty-state",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The element rendered and its text was read, so the run reached the assertion and rule 1 is out. Rule 2 applies: the spec asserts on exact wording that carries no behavioural meaning, so it stops being a valid detector the moment copy is edited. The product change is deliberate and improves the message; only the expectation is out of date.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

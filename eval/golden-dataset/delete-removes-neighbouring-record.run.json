@@ -1,0 +1,33 @@
+{
+  "name": "delete-removes-neighbouring-record",
+  "scenario": "Deleting the second task leaves the wrong record behind on every run after an indexing change.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.api.test.ts›DELETE /api/tasks/:id › removes only the requested task",
+      "title": "DELETE /api/tasks/:id › removes only the requested task",
+      "file": "tests/unit/tasks.api.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 57,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected [ 'Buy milk', 'File taxes' ] to deeply equal [ 'Buy milk', 'Walk the dog' ]",
+        "stack": "    at tests/unit/tasks.api.test.ts:88:41",
+        "snippet": "  await request(app).delete(`/api/tasks/${ids[1]}`)\n> expect(titles(await listTasks())).toEqual(['Buy milk', 'Walk the dog'])"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.api.test.ts›DELETE /api/tasks/:id › removes only the requested task",
+      "flakinessScore": 0.02,
+      "consecutiveFailures": 2,
+      "totalRuns": 71,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPPPFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/repository.ts b/app/server/tasks/repository.ts\n@@ -44,7 +44,7 @@ export async function deleteTask(id: number): Promise<void> {\n-  await db.run('DELETE FROM tasks WHERE id = ?', id)\n+  await db.run('DELETE FROM tasks WHERE rowid = ?', id)\n }\n"
+}

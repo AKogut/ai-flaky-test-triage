@@ -1,0 +1,10 @@
+{
+  "name": "locator-still-uses-retired-test-id",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The browser launched and the page loaded before the wait expired, so the run was healthy and rule 1 does not apply. Rule 2 fires: the spec pins an implementation detail that the product is free to change, and the diff shows the attribute was renamed with the button, the handler and the behaviour all intact. Blaming the product is tempting because the diff touches it, but nothing a user can observe changed.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

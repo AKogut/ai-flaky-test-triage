@@ -1,0 +1,33 @@
+{
+  "name": "create-task-returns-ok-instead-of-created",
+  "scenario": "Creating a task answers with 200 where the suite expects 201, on every run since a routing change.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.api.test.ts›POST /api/tasks › answers 201 with the created task",
+      "title": "POST /api/tasks › answers 201 with the created task",
+      "file": "tests/unit/tasks.api.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 48,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 200 to be 201 // Object.is equality\n\n- Expected\n+ Received\n\n- 201\n+ 200",
+        "stack": "    at tests/unit/tasks.api.test.ts:34:29\n    at file:///repo/node_modules/@vitest/runner/dist/index.js:146:14",
+        "snippet": "  const response = await request(app).post('/api/tasks').send({ title: 'Write the report' })\n> expect(response.status).toBe(201)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.api.test.ts›POST /api/tasks › answers 201 with the created task",
+      "flakinessScore": 0.04,
+      "consecutiveFailures": 3,
+      "totalRuns": 61,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPPFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/routes/tasks.ts b/app/server/routes/tasks.ts\n@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {\n   const task = await createTask(parsed.data)\n-  res.status(201).json(task)\n+  res.json(task)\n })\n"
+}

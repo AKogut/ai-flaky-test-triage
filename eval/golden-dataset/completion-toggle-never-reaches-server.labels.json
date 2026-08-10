@@ -1,0 +1,10 @@
+{
+  "name": "completion-toggle-never-reaches-server",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The page loaded and the locator resolved before the expectation timed out, so the browser and the server were both healthy and rule 1 is out. The spec reloads and then waits on state, which is the correct way to check persistence, so rule 2 does not apply. The diff drops the call that sends the change to the server while keeping the local update, so the interface is right until the page is reloaded — the exact shape of the failure.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

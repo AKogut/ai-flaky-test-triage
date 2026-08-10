@@ -1,0 +1,34 @@
+{
+  "name": "expectation-assumes-flat-response-body",
+  "scenario": "A spec reads fields from the top level of a response that now wraps its payload.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.api.test.ts›GET /api/tasks › returns tasks with titles",
+      "title": "GET /api/tasks › returns tasks with titles",
+      "file": "tests/unit/tasks.api.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 24,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected undefined to be an instance of Array",
+        "stack": "    at tests/unit/tasks.api.test.ts:22:34",
+        "snippet": "  const response = await request(app).get('/api/v1/tasks')\n> expect(response.body.tasks).toBeInstanceOf(Array)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.api.test.ts›GET /api/tasks › returns tasks with titles",
+      "flakinessScore": 0.04,
+      "consecutiveFailures": 3,
+      "totalRuns": 48,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/routes/tasks.ts b/app/server/routes/tasks.ts\n@@ -8,7 +8,7 @@ router.get('/', async (_req, res) => {\n   const tasks = await listTasks()\n-  res.json({ tasks })\n+  res.json({ data: { tasks }, meta: { total: tasks.length } })\n })\n",
+  "testSource": "it('returns tasks with titles', async () => {\n  const response = await request(app).get('/api/v1/tasks')\n  expect(response.body.tasks).toBeInstanceOf(Array)\n})\n"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "bulk-insert-reuses-identifier",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The call returned and the assertion compared a computed size, so the run reached its check and rule 1 is out. The spec depends only on its own inputs and asserts a property that must always hold, so rule 2 does not apply. The diff replaces per-row insertion with a single identifier reused across every returned task, which is exactly the collapse the set size reports.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

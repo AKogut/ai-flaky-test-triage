@@ -1,0 +1,33 @@
+{
+  "name": "completion-toggle-never-reaches-server",
+  "scenario": "Marking a task done survives in the interface but is absent after a reload, on every run.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › completion survives a reload",
+      "title": "board › completion survives a reload",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 5120,
+      "annotations": [],
+      "error": {
+        "message": "Error: Timed out 5000ms waiting for expect(locator).toBeChecked()\n\nLocator: getByTestId('task-1-complete')\nExpected: checked\nReceived: unchecked",
+        "stack": "    at tests/e2e/board.spec.ts:63:44",
+        "snippet": "  await page.reload()\n> await expect(page.getByTestId('task-1-complete')).toBeChecked()"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › completion survives a reload",
+      "flakinessScore": 0.04,
+      "consecutiveFailures": 4,
+      "totalRuns": 77,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPPFFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/useTasks.ts b/app/client/src/useTasks.ts\n@@ -48,8 +48,7 @@ export function useTasks() {\n   const complete = (id: number) => {\n     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'completed' } : t)))\n-    return api.completeTask(id)\n   }\n"
+}

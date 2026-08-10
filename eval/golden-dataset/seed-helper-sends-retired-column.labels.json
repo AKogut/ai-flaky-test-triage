@@ -1,0 +1,10 @@
+{
+  "name": "seed-helper-sends-retired-column",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The server answered with a validation error, so it was running and rule 1 is out. Rule 2 applies: the helper sends a field the release removed on purpose, and the strict schema is doing its job by rejecting it. The product change is deliberate and the error message names the offending key; the fixture helper is what needs editing.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

@@ -1,0 +1,33 @@
+{
+  "name": "bulk-insert-reuses-identifier",
+  "scenario": "Creating several tasks in one request yields two records sharing an identifier, every run.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.repository.test.ts›createMany › assigns a distinct identifier to every task",
+      "title": "createMany › assigns a distinct identifier to every task",
+      "file": "tests/unit/tasks.repository.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 22,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 2 to be 3 // Object.is equality\n\nnew Set(ids).size",
+        "stack": "    at tests/unit/tasks.repository.test.ts:41:31",
+        "snippet": "  const created = await createMany(['a', 'b', 'c'])\n> expect(new Set(created.map((t) => t.id)).size).toBe(3)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.repository.test.ts›createMany › assigns a distinct identifier to every task",
+      "flakinessScore": 0.06,
+      "consecutiveFailures": 2,
+      "totalRuns": 33,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/tasks/repository.ts b/app/server/tasks/repository.ts\n@@ -60,8 +60,8 @@ export async function createMany(titles: string[]): Promise<Task[]> {\n-  const rows = await Promise.all(titles.map((title) => insertTask(title)))\n-  return rows\n+  const id = await nextId()\n+  return titles.map((title) => ({ id, title, status: 'active', position: 0 }))\n"
+}

@@ -1,0 +1,33 @@
+{
+  "name": "editing-title-clears-board-position",
+  "scenario": "Renaming a task moves it to the end of the board on every run since the update handler changed.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.api.test.ts›PATCH /api/tasks/:id › leaves ordering untouched when only the title changes",
+      "title": "PATCH /api/tasks/:id › leaves ordering untouched when only the title changes",
+      "file": "tests/unit/tasks.api.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 63,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 0 to be 2 // Object.is equality",
+        "stack": "    at tests/unit/tasks.api.test.ts:112:35",
+        "snippet": "  await request(app).patch(`/api/tasks/${id}`).send({ title: 'Renamed' })\n> expect((await getTask(id)).position).toBe(2)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.api.test.ts›PATCH /api/tasks/:id › leaves ordering untouched when only the title changes",
+      "flakinessScore": 0.05,
+      "consecutiveFailures": 2,
+      "totalRuns": 39,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/routes/tasks.ts b/app/server/routes/tasks.ts\n@@ -31,7 +31,7 @@ router.patch('/:id', async (req, res) => {\n-  const updated = await updateTask(id, { ...existing, ...parsed.data })\n+  const updated = await updateTask(id, { ...parsed.data })\n   res.json(updated)\n"
+}
