@@ -136,8 +136,17 @@ covered by a test; is it the smallest change that works.
 Pre-1.0, the public surface is the CLI script contract and the `analysis.json` / fixture schemas.
 `v1.0.0` ships when the Definition of Done in the README is met end to end.
 
-Releases are cut from `main` by tagging. `CHANGELOG.md` is generated from Conventional Commits and
-committed as part of the release. GitHub Releases carry the changelog section plus the current
+Releases are cut from `main` by tagging. `CHANGELOG.md` is generated from Conventional Commits by
+`npm run changelog`.
+
+**When it is regenerated: at every milestone close, and at every release.** Deliberately not on
+every merge — that would make every open pull request conflict on `CHANGELOG.md`, and the cure
+would be worse than a file a few commits behind. Deliberately not never, either: "not per merge"
+without a stated alternative decays into "not at all", which is exactly what happened between M0
+and M2 (#117).
+
+`npm run changelog:check` fails when the committed file is behind `main`. It is run by hand at
+those two moments rather than in per-PR CI, for the same conflict reason. GitHub Releases carry the changelog section plus the current
 `eval/report.md` headline numbers — **the accuracy of the classifier is part of the release
 notes.**
 
