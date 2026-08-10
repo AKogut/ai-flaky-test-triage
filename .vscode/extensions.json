@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "editorconfig.editorconfig",
+    "github.vscode-github-actions",
+    "bierner.markdown-mermaid"
+  ]
+}
