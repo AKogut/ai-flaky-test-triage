@@ -1,0 +1,148 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import {
+  normalisePlaywrightReport,
+  normaliseVitestReport,
+  TestRunSchema,
+  type TestRun,
+} from '@sentra/contracts'
+
+/**
+ * The contract between this repository and the two test runners it consumes.
+ *
+ * The failure these tests exist to prevent is the quiet one. A reporter renames
+ * a field, the normaliser reads `undefined`, every test looks like it passed
+ * once, and the flakiness signal degrades with no error anywhere — worse than a
+ * crash, and far harder to notice, because `analysis.json` still parses and the
+ * report still renders.
+ *
+ * The fixtures are real output from the pinned versions. Regenerating them is
+ * deliberately manual: a version bump should be a conscious update with the new
+ * output committed, not a lockfile refresh nobody reads.
+ */
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+const fixtureDir = join(root, 'tests/fixtures/reporters')
+
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+  devDependencies: Record<string, string>
+}
+
+const read = (file: string): unknown => JSON.parse(readFileSync(join(fixtureDir, file), 'utf8'))
+
+const meta = { runId: 'run-1', commitSha: 'abc1234', branch: 'main' }
+
+describe('pinned reporter versions', () => {
+  /**
+   * Fixtures are named for the version that produced them. If the dependency
+   * moves and the fixture does not, this fails — which is the point: it forces
+   * whoever bumps the version to regenerate the fixture and look at the diff.
+   */
+  it.each([
+    ['@playwright/test', 'playwright-'],
+    ['vitest', 'vitest-'],
+  ])('%s matches a committed fixture', (dependency, prefix) => {
+    const pinned = packageJson.devDependencies[dependency]
+    expect(pinned, `${dependency} must be pinned exactly, not a range`).toMatch(/^\d+\.\d+\.\d+$/)
+
+    const fixtures = readdirSync(fixtureDir).filter((f) => f.startsWith(prefix))
+    expect(
+      fixtures,
+      `No fixture for ${dependency}@${pinned ?? '?'}. Regenerate it and commit the output — ` +
+        `see tests/fixtures/reporters/README.md.`,
+    ).toContain(`${prefix}${pinned ?? ''}.json`)
+  })
+})
+
+const runs: [label: string, run: TestRun][] = [
+  ['playwright', normalisePlaywrightReport(read('playwright-1.62.1.json'), meta)],
+  [
+    'vitest',
+    normaliseVitestReport(read('vitest-4.1.10.json'), { ...meta, repositoryRoot: '/repo' }),
+  ],
+]
+
+describe.each(runs)('%s normalisation', (_label, run) => {
+  it('produces a schema-valid TestRun', () => {
+    expect(() => TestRunSchema.parse(run)).not.toThrow()
+  })
+
+  it('produces at least one result — an empty run would pass every other assertion', () => {
+    expect(run.results.length).toBeGreaterThan(0)
+  })
+
+  it('leaves no required field undefined', () => {
+    // The exact shape a renamed source field takes on the way through.
+    for (const result of run.results) {
+      for (const key of [
+        'testId',
+        'title',
+        'file',
+        'status',
+        'attempts',
+        'flakyWithinRun',
+        'durationMs',
+        'annotations',
+      ] as const) {
+        expect(result[key], `${result.title}.${key}`).toBeDefined()
+      }
+    }
+  })
+
+  it('gives every test a unique id', () => {
+    const ids = run.results.map((r) => r.testId)
+    expect(new Set(ids).size, 'duplicate testIds would merge two tests into one history').toBe(
+      ids.length,
+    )
+  })
+
+  it('uses repository-relative paths with no host directories', () => {
+    for (const result of run.results) {
+      expect(result.file).not.toMatch(/^\/|^[A-Za-z]:/)
+      expect(result.file).not.toContain('\\')
+    }
+  })
+
+  it('attaches an error to every failure and to none of the passes', () => {
+    for (const result of run.results) {
+      if (result.status === 'failed' || result.status === 'timedOut') {
+        expect(result.error?.message, `${result.title} failed with no error`).toBeTruthy()
+      }
+      if (result.status === 'skipped') {
+        expect(result.error, `${result.title} was skipped but carries an error`).toBeUndefined()
+      }
+    }
+  })
+
+  it('reports durations that are finite and non-negative', () => {
+    expect(Number.isFinite(run.durationMs)).toBe(true)
+    for (const result of run.results) {
+      expect(result.durationMs).toBeGreaterThanOrEqual(0)
+      expect(Number.isFinite(result.durationMs)).toBe(true)
+    }
+  })
+})
+
+describe('the two reporters agree on shape', () => {
+  it('produces results with identical key sets, ignoring optional fields', () => {
+    // Nothing downstream branches on `source`, so a field present from one
+    // reporter and absent from the other would be a silent asymmetry.
+    const required = (run: TestRun): string[] =>
+      Object.keys(run.results[0] ?? {})
+        .filter((k) => k !== 'error')
+        .sort()
+
+    const [playwright, vitest] = runs.map(([, run]) => required(run))
+    expect(playwright).toEqual(vitest)
+  })
+
+  it('derives ids the same way from the same file and title', () => {
+    const [playwrightRun, vitestRun] = runs.map(([, run]) => run)
+    const sample = playwrightRun?.results[0]
+    const other = vitestRun?.results[0]
+    expect(sample?.testId.includes('›')).toBe(true)
+    expect(other?.testId.includes('›')).toBe(true)
+  })
+})

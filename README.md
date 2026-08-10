@@ -3,16 +3,16 @@
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
 [![CI](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml)
-[![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/2?label=M1)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
+[![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/3?label=M2)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](package.json)
 
 <!-- status:start -->
 
-> **Project status: M1 — Contracts, schemas & taxonomy.**
-> 1 of 11 milestones complete.
-> Current exit criterion: every artifact the pipeline reads or writes has a Zod schema, a TypeScript type inferred from it, and a round-trip test.
+> **Project status: M2 — Golden dataset, baseline & eval harness.**
+> 2 of 11 milestones complete.
+> Current exit criterion: `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model involved.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
 > Commands marked 🚧 in the script table are not implemented yet and say so when run.
