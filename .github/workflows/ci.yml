@@ -99,6 +99,12 @@ jobs:
           print(f"{len(files)} ADRs indexed")
           PY
 
+      - name: README status banner matches ROADMAP.md
+        if: steps.detect.outputs.has-code == 'true'
+        run: |
+          npm ci --silent
+          npm run docs:status:check
+
       - name: No internal doc links point at missing files
         run: |
           python3 - <<'PY'

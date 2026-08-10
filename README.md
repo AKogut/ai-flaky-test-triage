@@ -3,13 +3,21 @@
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
 [![CI](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml)
+[![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/1?label=M0)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
+[![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](package.json)
 
-> **Project status: Phase M0 — scaffolding.** The repository currently contains the
-> specification, documentation, and the full task breakdown. Code lands milestone by
-> milestone; see the [Roadmap](#roadmap) and the [issue tracker](https://github.com/AKogut/ai-flaky-test-triage/issues).
-> Commands marked 🚧 below are not implemented yet.
+<!-- status:start -->
+
+> **Project status: M0 — Foundations & repository hygiene.**
+> 0 of 11 milestones complete.
+> Current exit criterion: `npm ci && npm run lint && npm run typecheck` passes on a clean clone, and CI enforces it on every PR.
+>
+> Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
+> Commands marked 🚧 in the script table are not implemented yet and say so when run.
+
+<!-- status:end -->
 
 ---
 
