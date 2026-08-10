@@ -1,0 +1,10 @@
+{
+  "name": "completed-filter-omits-most-recent-item",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The assertion ran and compared collections, so the failure is not an infrastructure one and rule 1 is out. The spec seeds its own data and asserts on the return value of a pure function, so there is no unsafe assumption for rule 2 to catch. The diff introduces a slice on the filtering path that drops the final element, which matches the observed difference exactly.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

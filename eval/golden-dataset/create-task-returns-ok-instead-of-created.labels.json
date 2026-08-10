@@ -1,0 +1,10 @@
+{
+  "name": "create-task-returns-ok-instead-of-created",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The suite reached its assertion and disagreed on a value, so rule 1 does not apply, and the spec makes no timing or ordering assumption, so rule 2 does not apply either. The diff removes the explicit status on the create handler, which is the exact value asserted. The tempting alternative is calling the expectation outdated, but nothing in the change suggests 200 was intended: the response body is unchanged and no other caller was updated.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

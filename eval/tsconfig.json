@@ -5,5 +5,10 @@
     "outDir": "dist"
   },
   "include": ["**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../contracts"
+    }
+  ]
 }

@@ -1,0 +1,34 @@
+{
+  "name": "assertion-pins-reworded-empty-state",
+  "scenario": "An empty-board assertion compares against copy that was rewritten in the same release.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board.spec.ts›board › explains what to do when there are no tasks",
+      "title": "board › explains what to do when there are no tasks",
+      "file": "tests/e2e/board.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 2870,
+      "annotations": [],
+      "error": {
+        "message": "Error: expect(locator).toHaveText(expected)\n\nExpected string: \"No tasks yet\"\nReceived string: \"Nothing here yet — add your first task\"",
+        "stack": "    at tests/e2e/board.spec.ts:78:47",
+        "snippet": "> await expect(page.getByTestId('empty-state')).toHaveText('No tasks yet')"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board.spec.ts›board › explains what to do when there are no tasks",
+      "flakinessScore": 0.03,
+      "consecutiveFailures": 3,
+      "totalRuns": 52,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/client/src/EmptyState.tsx b/app/client/src/EmptyState.tsx\n@@ -2,5 +2,5 @@ export function EmptyState() {\n-  return <p data-testid=\"empty-state\">No tasks yet</p>\n+  return <p data-testid=\"empty-state\">Nothing here yet — add your first task</p>\n",
+  "testSource": "test('explains what to do when there are no tasks', async ({ page }) => {\n  await page.goto('/?filter=completed')\n  await expect(page.getByTestId('empty-state')).toHaveText('No tasks yet')\n})\n"
+}

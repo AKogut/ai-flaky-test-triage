@@ -1,0 +1,10 @@
+{
+  "name": "board-render-throws-on-empty-description",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The browser started and the page navigated, so the run itself was healthy and rule 1 does not apply. The spec waits on a locator rather than a timer and makes no ordering assumption, so rule 2 is out. The stack points into product source, and the diff on that exact line removes the fallback for a nullable column, which the seeded data exercises.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

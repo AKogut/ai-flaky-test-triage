@@ -1,0 +1,10 @@
+{
+  "name": "client-calls-unversioned-endpoint-path",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The server started and answered, so nothing environmental interfered and rule 1 is out. Rule 2 applies: the spec hard-codes a path that the release moved deliberately, and the diff shows the client was updated in the same commit while the spec was not. The product is behaving as designed at the new path; only this expectation was left behind.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

@@ -1,0 +1,34 @@
+{
+  "name": "client-calls-unversioned-endpoint-path",
+  "scenario": "An API spec requests a path that was moved behind a version prefix, and receives nothing.",
+  "subject": {
+    "result": {
+      "testId": "tests/unit/tasks.api.test.ts›GET /api/tasks › lists the seeded tasks",
+      "title": "GET /api/tasks › lists the seeded tasks",
+      "file": "tests/unit/tasks.api.test.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 19,
+      "annotations": [],
+      "error": {
+        "message": "AssertionError: expected 404 to be 200 // Object.is equality",
+        "stack": "    at tests/unit/tasks.api.test.ts:14:29",
+        "snippet": "  const response = await request(app).get('/api/tasks')\n> expect(response.status).toBe(200)"
+      }
+    },
+    "signal": {
+      "testId": "tests/unit/tasks.api.test.ts›GET /api/tasks › lists the seeded tasks",
+      "flakinessScore": 0.02,
+      "consecutiveFailures": 4,
+      "totalRuns": 67,
+      "firstSeenAt": "2026-05-14T08:12:04.000Z",
+      "lastPassedAt": "2026-08-07T09:41:12.000Z",
+      "statusHistory": "PPPPPPPPFFFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "diff": "diff --git a/app/server/index.ts b/app/server/index.ts\n@@ -12,7 +12,8 @@ const app = express()\n-app.use('/api/tasks', tasksRouter)\n+app.use('/api/v1/tasks', tasksRouter)\n+app.use('/api/tasks', deprecationNotice)\ndiff --git a/app/client/src/api.ts b/app/client/src/api.ts\n@@ -1,3 +1,3 @@\n-const BASE = '/api/tasks'\n+const BASE = '/api/v1/tasks'\n",
+  "testSource": "it('lists the seeded tasks', async () => {\n  const response = await request(app).get('/api/tasks')\n  expect(response.status).toBe(200)\n})\n"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "editing-title-clears-board-position",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The request completed and the follow-up read returned a value, so nothing environmental blocked the assertion and rule 1 is out. The spec asserts on a field it never sets, which is a reasonable expectation rather than an unsafe assumption, so rule 2 does not apply. The diff stops merging the existing record before the update, so unspecified columns fall back to their defaults — which is precisely what the failure shows.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

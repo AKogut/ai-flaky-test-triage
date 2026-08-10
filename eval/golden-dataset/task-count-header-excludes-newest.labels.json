@@ -1,0 +1,10 @@
+{
+  "name": "task-count-header-excludes-newest",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The heading rendered and its text was compared, so nothing prevented the assertion and rule 1 is out. The spec creates the fourth task through the interface and then waits on the heading, so it does not assume timing and rule 2 does not apply. The diff subtracts one from the rendered count, which matches the observed difference for any list length.",
+  "ruleApplied": "rule-4-default-app-code",
+  "provenance": "synthetic",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

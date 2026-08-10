@@ -1,0 +1,10 @@
+{
+  "name": "spec-asserts-withdrawn-legacy-field",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The endpoint answered and the body was inspected, so rule 1 does not apply. Rule 2 applies: the spec asserts on a field the product announced it would withdraw, and the diff removes it with the deprecation note that had been in the source since June. The replacement field is present and already covered elsewhere, so this expectation is redundant as well as out of date.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "synthetic",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}
