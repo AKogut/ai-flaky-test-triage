@@ -1,0 +1,33 @@
+{
+  // Use the workspace TypeScript, not the editor's bundled copy. A version skew
+  // between the two produces errors that do not reproduce in CI, which is an
+  // expensive kind of confusion in a repository about diagnosing test failures.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  "eslint.useFlatConfig": true,
+  "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  "search.exclude": {
+    "**/dist": true,
+    "**/coverage": true,
+    "**/node_modules": true,
+    "package-lock.json": true
+  },
+
+  // Generated pipeline output. Visible on disk, never edited by hand.
+  "files.readonlyInclude": {
+    "analysis.json": true,
+    "results.json": true,
+    "otel-spans.json": true
+  }
+}
