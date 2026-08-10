@@ -20,6 +20,21 @@ import { readFileSync, writeFileSync } from 'node:fs'
 const START = '<!-- status:start -->'
 const END = '<!-- status:end -->'
 
+/**
+ * Every page that carries a status banner.
+ *
+ * The wiki needs one for the same reason the README does, and more urgently: it
+ * is the more public surface, and it described unbuilt commands in the present
+ * tense until #116. One generator, so the two cannot disagree about what exists.
+ */
+const TARGETS: readonly { file: string; variant: Variant }[] = [
+  { file: 'README.md', variant: 'readme' },
+  { file: 'wiki/Home.md', variant: 'wiki' },
+  { file: 'wiki/Getting-Started.md', variant: 'wiki' },
+]
+
+export type Variant = 'readme' | 'wiki'
+
 const REPO = 'https://github.com/AKogut/ai-flaky-test-triage'
 
 export type MilestoneStatus = 'done' | 'in progress' | 'planned'
@@ -92,7 +107,7 @@ export function parseRoadmap(markdown: string): Milestone[] {
   return milestones
 }
 
-export function renderBanner(milestones: Milestone[]): string {
+export function renderBanner(milestones: Milestone[], variant: Variant = 'readme'): string {
   const done = milestones.filter((m) => m.status === 'done')
   const active = milestones.find((m) => m.status === 'in progress')
   const total = milestones.length
@@ -114,7 +129,12 @@ export function renderBanner(milestones: Milestone[]): string {
     `> Current exit criterion: ${active.exitCriterion}`,
     `>`,
     `> Progress is tracked as [milestones](${REPO}/milestones), not dates.`,
-    `> Commands marked 🚧 in the script table are not implemented yet and say so when run.`,
+    variant === 'readme'
+      ? `> Commands marked 🚧 in the script table are not implemented yet and say so when run.`
+      : `> Commands marked 🚧 below are not implemented yet. Running one names the milestone it`,
+    ...(variant === 'readme'
+      ? []
+      : [`> arrives in rather than failing with a missing-script error.`]),
   ].join('\n')
 }
 
@@ -131,20 +151,29 @@ function main(): void {
   const milestones = parseRoadmap(readFileSync('ROADMAP.md', 'utf8'))
   if (milestones.length === 0) throw new Error('ROADMAP.md: no milestones parsed')
 
-  const readme = readFileSync('README.md', 'utf8')
-  const next = splice(readme, renderBanner(milestones))
+  const check = process.argv.includes('--check')
+  const stale: string[] = []
 
-  if (process.argv.includes('--check')) {
-    if (next !== readme) {
-      console.error('README status banner is out of date with ROADMAP.md. Run: npm run docs:status')
+  for (const { file, variant } of TARGETS) {
+    const current = readFileSync(file, 'utf8')
+    const next = splice(current, renderBanner(milestones, variant))
+    if (next === current) continue
+    if (check) stale.push(file)
+    else writeFileSync(file, next)
+  }
+
+  if (check) {
+    if (stale.length > 0) {
+      console.error(
+        `Status banner is out of date with ROADMAP.md in: ${stale.join(', ')}. Run: npm run docs:status`,
+      )
       process.exit(1)
     }
-    console.log(`README status banner is up to date (${String(milestones.length)} milestones)`)
+    console.log(`Status banners are up to date (${String(milestones.length)} milestones)`)
     return
   }
 
-  writeFileSync('README.md', next)
-  console.log('README status banner regenerated')
+  console.log(`Status banners regenerated in ${String(TARGETS.length)} files`)
 }
 
 if (process.argv[1]?.endsWith('status-banner.ts') === true) main()
