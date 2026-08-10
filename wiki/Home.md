@@ -2,6 +2,18 @@
 
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
+<!-- status:start -->
+
+> **Project status: M2 — Golden dataset, baseline & eval harness.**
+> 2 of 11 milestones complete.
+> Current exit criterion: `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model involved.
+>
+> Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
+> Commands marked 🚧 below are not implemented yet. Running one names the milestone it
+> arrives in rather than failing with a missing-script error.
+
+<!-- status:end -->
+
 Flaky-test detectors tell you _which_ tests are unstable. They do not tell you what to do about it.
 After every red CI run somebody still has to open the trace, read the stack, look at the diff, and
 decide: is this a real bug, a badly written test, or the runner having a bad day? Sentra automates

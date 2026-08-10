@@ -7,6 +7,12 @@ happens to be logged in.
 
 **Do not edit the wiki in the browser.** The next publish overwrites it.
 
+`Home.md` and `Getting-Started.md` carry a status banner generated from `ROADMAP.md` by
+`npm run docs:status`, the same generator the README uses. Do not hand-edit the block between the
+`<!-- status:start -->` markers; CI checks it. Commands that are not implemented yet are marked
+🚧 with the milestone and issue they arrive in — the wiki is the more public surface of the two,
+so it gets the stricter convention, not an exemption from it.
+
 ## Publishing
 
 ```bash

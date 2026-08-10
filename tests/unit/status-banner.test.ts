@@ -94,10 +94,26 @@ describe('splice', () => {
   })
 })
 
-describe('the committed README', () => {
-  it('matches what generation produces', () => {
-    const readme = readFileSync(join(root, 'README.md'), 'utf8')
-    const banner = renderBanner(parseRoadmap(readFileSync(join(root, 'ROADMAP.md'), 'utf8')))
-    expect(splice(readme, banner)).toBe(readme)
+describe('the committed pages', () => {
+  const milestones = parseRoadmap(readFileSync(join(root, 'ROADMAP.md'), 'utf8'))
+
+  it.each([
+    ['README.md', 'readme'],
+    ['wiki/Home.md', 'wiki'],
+    ['wiki/Getting-Started.md', 'wiki'],
+  ] as const)('%s matches what generation produces', (file, variant) => {
+    const page = readFileSync(join(root, file), 'utf8')
+    expect(splice(page, renderBanner(milestones, variant))).toBe(page)
+  })
+
+  it('marks every unimplemented pipeline command in the wiki quickstart (#116)', () => {
+    // The wiki described npm run demo in the present tense while it was a
+    // placeholder. It is the more public of the two surfaces, so it needs the
+    // README's convention rather than an exemption from it.
+    const page = readFileSync(join(root, 'wiki/Getting-Started.md'), 'utf8')
+    for (const command of ['npm run demo', 'npm run dev', 'npm run eval', 'npm test']) {
+      const line = page.split('\n').find((l) => l.includes(command) && l.includes('🚧'))
+      expect(line, `${command} is described without a 🚧 marker`).toBeTruthy()
+    }
   })
 })

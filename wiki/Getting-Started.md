@@ -1,8 +1,20 @@
 # Getting Started
 
+<!-- status:start -->
+
+> **Project status: M2 — Golden dataset, baseline & eval harness.**
+> 2 of 11 milestones complete.
+> Current exit criterion: `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model involved.
+>
+> Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
+> Commands marked 🚧 below are not implemented yet. Running one names the milestone it
+> arrives in rather than failing with a missing-script error.
+
+<!-- status:end -->
+
 ## Requirements
 
-Node ≥ 22. Nothing else. No Docker, no database, no API key for the default path.
+Node ≥ 22. Nothing else. No Docker, no database, and no API key for anything that works today.
 
 ## Clone and run
 
@@ -10,20 +22,38 @@ Node ≥ 22. Nothing else. No Docker, no database, no API key for the default pa
 git clone https://github.com/AKogut/ai-flaky-test-triage.git
 cd ai-flaky-test-triage
 npm install
-npm run demo
+npm run help
 ```
 
-`npm run demo` runs the entire pipeline — flakiness analysis, triage, root cause, fix suggestion,
-report generation — against a bundled fixture run, using **recorded model responses**. No network
-call is made and no credentials are needed.
+`npm run help` prints every pipeline command, what it does, and — for the ones that do not exist
+yet — which milestone it arrives in. It is the honest version of `npm run` on a project that is
+still being built.
 
-It finishes in well under a minute and writes a `report.md` that is the same document a real pull
-request would receive.
+### What runs today
 
-### What replay mode does and does not prove
+```bash
+npm run test:unit     # the full suite, including the dataset's own tests
+npm run eval:lint     # golden-dataset composition and label-leakage check
+npm run typecheck
+```
 
-It proves the pipeline works end to end: parsing, analysis, orchestration, schema validation,
-report assembly. It does **not** prove what the model would say today, because the responses were
+### What does not, and why it is described anyway
+
+```bash
+npm run demo          # 🚧 M3 · #39
+```
+
+The intent: run the entire pipeline — flakiness analysis, triage, root cause, fix suggestion,
+report generation — against a bundled fixture run, using **recorded model responses**, with no
+network call and no credentials.
+
+That is the claim the Definition of Done rests on, which is why it is written down before it is
+built rather than after. Running it today prints the milestone it arrives in and exits.
+
+#### What replay mode will and will not prove
+
+It will prove the pipeline works end to end: parsing, analysis, orchestration, schema validation,
+report assembly. It will **not** prove what the model would say today, because the responses were
 recorded earlier. The demo says so in its own output rather than implying a live classification
 just happened.
 
@@ -32,7 +62,7 @@ Rationale: [ADR-0005](https://github.com/AKogut/ai-flaky-test-triage/blob/main/d
 ## Check the classifier's accuracy yourself
 
 ```bash
-npm run eval
+npm run eval        # 🚧 M2 · #27
 cat eval/report.md
 ```
 
@@ -50,8 +80,8 @@ suspicious outcome.
 ```bash
 cp .env.example .env
 # add ANTHROPIC_API_KEY
-npm test          # runs the suite, writes results.json
-npm run analyze   # flakemetry + agents, writes report.md
+npm test          # 🚧 M5 · #50 — runs the suite, writes results.json
+npm run analyze   # 🚧 M8 · #71 — flakemetry + agents, writes report.md
 ```
 
 `npm test` deliberately includes tests that fail intermittently. That is the point — they are the
@@ -61,7 +91,7 @@ happens to their output.
 ## Running the demo application
 
 ```bash
-npm run dev
+npm run dev        # 🚧 M4 · #48
 ```
 
 TaskFlow is a small task board: create, edit, delete, complete, filter, drag-to-reorder. It exists
@@ -71,7 +101,7 @@ product, and it is deliberately not good software.
 To reproduce a specific race:
 
 ```bash
-SENTRA_CHAOS=<seed> npm run dev
+SENTRA_CHAOS=<seed> npm run dev   # 🚧 M4 · #47
 ```
 
 Seeded latency injection makes a particular interleaving reproducible, which is how the
