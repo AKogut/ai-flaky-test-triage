@@ -1,0 +1,14 @@
+{
+  "name": "@sentra/flakemetry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Flakiness scoring and run history. Reads a normalised test run plus the stored history and emits a per-test signal.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./index.ts"
+    }
+  }
+}

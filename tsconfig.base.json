@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Project references. Declarations only — nothing in this repository is
+    // executed from compiled JavaScript. CLIs run through tsx and tests through
+    // vitest, both of which read the TypeScript sources directly, so emitting
+    // JavaScript would produce a second copy of the code that nothing consumes.
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "sourceMap": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "useUnknownInCatchVariables": true,
+
+    // ESM is the only module format here. verbatimModuleSyntax forces explicit
+    // `import type`, which keeps type-only imports from surviving into runtime
+    // graphs and makes the distinction visible at the call site.
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

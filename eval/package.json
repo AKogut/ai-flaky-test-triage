@@ -1,0 +1,14 @@
+{
+  "name": "@sentra/eval",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Golden-dataset evaluation: the baseline heuristic, the metrics, and the harness that scores a classifier against ground truth.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./index.ts"
+    }
+  }
+}
