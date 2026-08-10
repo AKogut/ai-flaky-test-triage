@@ -3,6 +3,9 @@
   "files": [],
   "references": [
     {
+      "path": "./scripts"
+    },
+    {
       "path": "./flakemetry-lib"
     },
     {
