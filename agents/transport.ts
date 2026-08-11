@@ -23,6 +23,15 @@ export interface ModelRequest {
   /** Names the shape in the response format; surfaces in errors and telemetry. */
   schemaName: string
   jsonSchema: JsonSchemaObject
+  /**
+   * Which prompt file produced this.
+   *
+   * Carried on the request rather than only on the call options because it is
+   * part of the cassette key: the same input under a reworded prompt is a
+   * different question, and replaying yesterday's answer to it would be a lie
+   * that looks exactly like a passing test.
+   */
+  promptVersion: string
 }
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'

@@ -19,11 +19,19 @@ every CI run.
 
 All model calls route through one wrapper supporting three modes:
 
-| Mode     | Trigger                              | Behaviour                                         |
-| -------- | ------------------------------------ | ------------------------------------------------- |
-| `live`   | default, key present                 | Real API call                                     |
-| `record` | `SENTRA_RECORD=1`                    | Real call; request/response written to a cassette |
-| `replay` | `SENTRA_REPLAY=1`, or no key present | Cassette lookup; no network                       |
+| Mode     | Trigger                                 | Behaviour                                         |
+| -------- | --------------------------------------- | ------------------------------------------------- |
+| `live`   | `SENTRA_LIVE=1`, or credentials present | Real API call                                     |
+| `record` | `SENTRA_RECORD=1`                       | Real call; request/response written to a cassette |
+| `replay` | `SENTRA_REPLAY=1`, or no credentials    | Cassette lookup; no network                       |
+
+Setting more than one of the three is refused rather than resolved. Any silent winner is a trap:
+somebody who meant to re-record and got replay sees stale answers and concludes the model changed.
+
+"No credentials" is judged from `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` together — and even
+then it can be wrong, because the SDK also accepts an `ant auth login` profile that leaves nothing
+in the environment to detect. Somebody authenticated that way would silently get replay, which is
+what `SENTRA_LIVE=1` exists to override.
 
 Cassettes live in `agents/replay/cassettes/`, are committed, and are keyed by a stable hash of
 (prompt version, model, normalised request body). A replay miss is a loud error, never a silent
