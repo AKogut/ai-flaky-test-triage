@@ -11,6 +11,7 @@ import {
   renderReport,
   unsupported,
   UsageError,
+  REPORT_PATHS,
   type EvaluatedFixture,
   type Options,
 } from './run-eval.js'
@@ -84,21 +85,61 @@ describe('capabilities that do not exist yet', () => {
     expect(unsupported(DEFAULTS)).toBeNull()
   })
 
-  it.each([
-    ['the agent classifier', { classifier: 'agent' as const }, '35'],
-    ['the dev slice', { slice: 'dev' as const }, '28'],
-    ['the holdout slice', { slice: 'holdout' as const }, '28'],
-  ])('refuses %s and names the issue that lands it', (_case, over, issue) => {
-    const message = unsupported(options(over))
+  it('refuses the agent classifier and names the issue that lands it', () => {
+    const message = unsupported(options({ classifier: 'agent' }))
     expect(message).toContain('not implemented yet')
-    expect(message).toContain(`issues/${issue}`)
+    expect(message).toContain('issues/35')
     expect(message).toContain('What works today')
   })
 
-  it('reports the classifier before the slice, since it is the bigger gap', () => {
-    expect(unsupported(options({ classifier: 'agent', slice: 'dev' }))).toContain(
-      'The agent classifier',
-    )
+  it.each(['dev', 'holdout', 'all'] as const)(
+    'accepts --slice=%s, which #28 implemented',
+    (slice) => {
+      expect(unsupported(options({ slice }))).toBeNull()
+    },
+  )
+})
+
+describe('slice wiring', () => {
+  it('defaults to the development slice', () => {
+    // The single most load-bearing default in the CLI. Anything that runs
+    // habitually — the CI gate, a check before pushing — must not touch the
+    // held-out fixtures, or they stop being held out.
+    expect(DEFAULTS.slice).toBe('dev')
+    expect(parseArgs([]).slice).toBe('dev')
+  })
+
+  it('sends each slice to its own file', () => {
+    expect(parseArgs([]).out).toBe(REPORT_PATHS.dev)
+    expect(parseArgs(['--slice=holdout']).out).toBe(REPORT_PATHS.holdout)
+    expect(parseArgs(['--slice=all']).out).toBe(REPORT_PATHS.all)
+  })
+
+  it('never writes a held-out number into the file the gate checks', () => {
+    // One file per slice is what lets `--gate` distinguish an out-of-date report
+    // from a differently-sliced one.
+    expect(new Set(Object.values(REPORT_PATHS)).size).toBe(3)
+  })
+
+  it('lets --out override, in either order', () => {
+    expect(parseArgs(['--out=/tmp/x.md', '--slice=holdout']).out).toBe('/tmp/x.md')
+    expect(parseArgs(['--slice=holdout', '--out=/tmp/x.md']).out).toBe('/tmp/x.md')
+  })
+
+  it('scores only the requested slice', () => {
+    const dev = evaluate({ ...DEFAULTS, slice: 'dev' }).fixtures.length
+    const holdout = evaluate({ ...DEFAULTS, slice: 'holdout' }).fixtures.length
+    expect(dev + holdout).toBe(evaluate({ ...DEFAULTS, slice: 'all' }).fixtures.length)
+    expect(holdout).toBeGreaterThan(0)
+  })
+
+  it('reports the whole dataset composition whichever slice ran', () => {
+    // A reader of the dev report has to be able to answer "what did this number
+    // not see" without opening the other file.
+    const total = (e: ReturnType<typeof evaluate>): number =>
+      e.composition.reduce((n, row) => n + row.total, 0)
+    expect(total(evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(33)
+    expect(total(evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(33)
   })
 })
 
@@ -164,8 +205,9 @@ describe('evaluating the committed dataset', () => {
   const evaluation = evaluate(DEFAULTS)
 
   it('runs end to end with no model and no network', () => {
-    expect(evaluation.fixtures).toHaveLength(33)
-    expect(evaluation.metrics.n).toBe(33)
+    // 22, not 33 — the default slice is `dev` and 11 fixtures are held out.
+    expect(evaluation.fixtures).toHaveLength(22)
+    expect(evaluation.metrics.n).toBe(22)
   })
 
   it('orders fixtures by name, so a regenerated report diffs cleanly', () => {

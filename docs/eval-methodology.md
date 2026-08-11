@@ -226,6 +226,57 @@ Results go to `eval/ablation.md`. This is the section that turns "I built an AI 
 "I measured which parts of it work" — and it is also how the context bundle gets pruned, since a
 field that contributes nothing is cost with no return.
 
+## Development and held-out slices
+
+Iterating prompts against every fixture fits them to it. After twenty revisions the number measures
+how hard the author tried, not how well the classifier generalises. `npm run eval` therefore
+defaults to `--slice=dev`, and the held-out fixtures are scored separately by
+`--slice=holdout`.
+
+**The split is a pure function of the fixture name** — the first 32 bits of its SHA-256 over 2³²,
+held out below 20%. Nothing about the rest of the dataset enters into it, so adding, removing or
+renaming any other fixture cannot move it.
+
+That property is not negotiable, and it is worth being explicit about what it costs. A stratified
+split with exact per-bucket counts has to look at the other fixtures in the bucket, and then
+inserting one reshuffles the boundary and silently moves an existing fixture across it. Every
+held-out number published before that moment would then have been computed on a different set,
+with nothing going red. Poor stratification is visible and self-correcting; a moving split is
+neither.
+
+So the per-bucket balance is **best-effort and measured**, not guaranteed:
+
+| Bucket                      | Total | Dev | Held out |
+| --------------------------- | ----: | --: | -------: |
+| `environment-as-regression` |     4 |   3 |        1 |
+| `hard-quadrant`             |    10 |   6 |        4 |
+| `misleading-history`        |     4 |   3 |        1 |
+| `stale-test`                |     7 |   5 |        2 |
+| `straightforward`           |     8 |   5 |        3 |
+| **Total**                   |    33 |  22 |   **11** |
+
+11 of 33 is 33%, not 20%. That is ordinary binomial variance at this size — the expected count is
+6.6 with a standard deviation of 2.3 — and it narrows as the dataset grows towards 60. A bucket of
+four has a 41% chance of receiving no held-out fixture at all; none is currently empty, but the
+report states which are rather than letting a reader assume the split guarantees coverage.
+
+One methodological note, since this is a document about not fooling yourself. Two reasonable
+constructions exist for turning a hash into a uniform value — dividing by 2³², and the slightly
+biased `hash % 100` — and on these 33 fixtures they produce **different splits**, 11 held out
+against 6. Choosing between them after seeing that would be picking a test set by how convenient it
+looks. The unbiased one is used; the result is reported, not selected.
+
+### The usage budget
+
+A held-out set consulted freely is a development set with extra steps. `eval/holdout-log.json`
+records every evaluation and is committed, so the record cannot be quietly reset by deleting a file
+nobody reviews. Past **three evaluations in 30 days** the harness warns, in the terminal and in the
+report itself.
+
+`--slice=all` counts as a consultation. It reads the held-out fixtures just as surely as asking for
+them by name, and a rule that only caught `--slice=holdout` would be bypassed by choosing the more
+innocuous-sounding flag.
+
 ## Threats to validity
 
 Stated plainly, because a methodology doc that claims none is not credible:
@@ -237,7 +288,7 @@ Stated plainly, because a methodology doc that claims none is not credible:
 - **Distribution shift.** TaskFlow's failure modes are not every codebase's failure modes. Nothing
   here claims to generalise beyond the repository it ships in.
 - **Prompt overfitting.** Iterating prompts against the same 60 fixtures fits them. Mitigation: a
-  held-out slice (~20%) that is not consulted during prompt development and is reported
-  separately.
+  held-out slice, scored separately and budgeted — see above. Partial, not complete: the budget
+  limits how often the slice is consulted, not how much each consultation leaks.
 - **Label leakage.** Fixture filenames and annotations must not encode the answer. A lint step
   checks that no ground-truth term appears in the fixture payload.
