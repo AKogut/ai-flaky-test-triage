@@ -14,7 +14,8 @@ Every agent call goes through `agents/model-client.ts`, which provides:
   failure, because a bare "try again" re-runs the same misunderstanding at the same price.
 - **Input sanitisation.** Test names, error messages, and diff hunks are untrusted text. They are
   length-capped, fenced inside explicit delimiters, and prefixed with a standing instruction that
-  content inside the delimiters is data, never instruction.
+  content inside the delimiters is data, never instruction. `agents/sanitise.ts`; see
+  [Prompt-injection considerations](#prompt-injection-considerations).
 - **Replay/record.** A decorator around the transport, so replay has no opinion about the SDK and
   the SDK adapter has none about replay. `SENTRA_REPLAY=1` serves from
   `agents/replay/cassettes/`; `SENTRA_RECORD=1` writes there; with no credentials replay is the
@@ -189,13 +190,48 @@ cost, the result becomes an ADR and the architecture changes. Until then, the si
 ## Prompt-injection considerations
 
 Hostile content can enter through test titles, assertion messages, source comments, and diff
-hunks — all attacker-controllable in a fork PR. Defences:
+hunks — all attacker-controllable in a fork PR. The honest framing is that none of this prevents
+the model from being persuaded; what it does is make persuasion structurally cheap to survive.
 
-1. Untrusted content lives inside delimiters and is introduced as data.
-2. Output is schema-constrained: the model cannot emit an instruction, only enum values and
-   bounded strings.
-3. The report escapes agent output before writing markdown, so injected HTML/markdown cannot
+`agents/sanitise.ts` prepares every untrusted field in a fixed order — **normalise, redact,
+escape, cap** — and the order is the design:
+
+1. **Normalise.** ANSI sequences are stripped as whole sequences rather than by their escape byte,
+   which would leave `[31m` sitting in an assertion message looking like something the test
+   printed. Bidirectional overrides and zero-width characters are removed outright: they are the
+   Trojan Source family, and their only use here is to make a rendered line say something other
+   than what it contains — first to whoever reviews the input, then to whoever reads the report
+   that quotes it back.
+2. **Redact.** A secret-pattern scrub, shared with the cassette writer so there is one list rather
+   than two. Before the cap, never after: truncating first can slice a credential past its own
+   pattern, leaving a partial key in the prompt and a redaction count of zero to say all was well.
+3. **Escape.** The three markers the harness owns — the two fences and the truncation notice — are
+   replaced wherever they occur in content, case-insensitively. No input can close its own block
+   and continue as though it were the harness talking, and no input can fake a notice that
+   evidence was withheld.
+4. **Cap.** Per-field, configurable, and a hard bound on rendered length rather than an intention:
+   the truncation notice is budgeted _inside_ the cap. Truncation keeps both ends, because a stack
+   names its origin at the top and an assertion puts expected-versus-actual at the bottom.
+
+Then the guarantees that hold whatever the model does with the text:
+
+5. **Truncation is never silent.** `[... truncated N characters ...]` appears in the prompt, and
+   the same numbers reach the report, so neither the model nor the reader mistakes partial
+   evidence for complete evidence.
+6. **The total is bounded by construction.** A test sums the caps against the budget, so no
+   combination of adversarial inputs can produce an oversized prompt — the runtime check exists
+   for the caller who overrides a cap later, not for the defaults.
+7. **Output is schema-constrained.** A fully persuaded model still has to answer in the
+   `Classification` shape; anything else is a `SchemaViolationError`, not a result. A test asserts
+   exactly that, because it is what caps the blast radius.
+8. The report escapes agent output before writing markdown, so injected HTML/markdown cannot
    forge report structure.
-4. Nothing downstream _executes_ agent output. The worst achievable outcome is a wrong label and
+9. Nothing downstream _executes_ agent output. The worst achievable outcome is a wrong label and
    a misleading comment — bad, but not an escalation.
-5. Fork PRs have no API key at all, which removes most of the surface by construction.
+10. Fork PRs have no API key at all, which removes most of the surface by construction.
+
+The test suite carries a corpus of injection attempts — forged terminators in three casings, a
+nested block, a terminator flood, an override hidden behind ANSI, another hidden behind a
+right-to-left mark, a fake conversation turn, a fake tool result. Each one is asserted against a
+property rather than a snapshot: the model sees exactly one opening and one closing marker per
+field, whatever the content tried to add.

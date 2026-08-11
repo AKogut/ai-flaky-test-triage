@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
+import { scrub } from './redact.js'
 import {
   TransportError,
   type ModelRequest,
@@ -173,43 +174,6 @@ const schemaDigest = (request: ModelRequest): string =>
 /** `triage.v1.a1b2c3d4e5f6a7b8.json` — sorts by prompt version, unique by request. */
 export const cassetteFile = (request: ModelRequest): string =>
   `${request.promptVersion}.${cassetteKey(request)}.json`
-
-// ---------------------------------------------------------------------------
-// Scrubbing
-// ---------------------------------------------------------------------------
-
-/**
- * Patterns that must never reach a committed file.
- *
- * A cassette is written from a live response and then committed forever, so
- * this is the last point at which a leaked credential can be caught. Deliberately
- * broad: a false positive costs an unreadable cassette, a false negative costs a
- * key in public git history.
- */
-const SECRETS: readonly RegExp[] = [
-  /sk-ant-[A-Za-z0-9_-]{8,}/g,
-  /\bBearer\s+[A-Za-z0-9._~+/-]{12,}=*/gi,
-  /\bghp_[A-Za-z0-9]{20,}/g,
-  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
-  /\bAKIA[0-9A-Z]{16}\b/g,
-  /\bxox[baprs]-[A-Za-z0-9-]{10,}/g,
-]
-
-export const REDACTED = '[redacted]'
-
-/** Walks strings only; keys are left alone because a key name is not a secret. */
-export function scrub<T>(value: T): T {
-  if (typeof value === 'string') {
-    return SECRETS.reduce<string>((text, pattern) => text.replace(pattern, REDACTED), value) as T
-  }
-  if (Array.isArray(value)) return (value as unknown[]).map((item) => scrub(item)) as T
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, scrub(v)]),
-    ) as T
-  }
-  return value
-}
 
 // ---------------------------------------------------------------------------
 // The transport decorator

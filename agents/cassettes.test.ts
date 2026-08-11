@@ -9,10 +9,9 @@ import {
   CassetteTransport,
   listCassettes,
   ModeError,
-  REDACTED,
   resolveMode,
-  scrub,
 } from './cassettes.js'
+import { REDACTED } from './redact.js'
 import {
   TransportError,
   type ModelRequest,
@@ -144,41 +143,6 @@ describe('the cassette key', () => {
 
   it('names files so a directory sorts by prompt version', () => {
     expect(cassetteFile(request())).toMatch(/^triage\.v1\.[0-9a-f]{16}\.json$/)
-  })
-})
-
-describe('scrubbing', () => {
-  it.each([
-    ['an Anthropic key', 'key sk-ant-api03-AbCdEfGh12345678 here'],
-    ['a bearer token', 'Authorization: Bearer abcdefghijklmnop123'],
-    ['a GitHub token', 'ghp_abcdefghijklmnopqrstuvwxyz0123'],
-    ['a fine-grained GitHub token', 'github_pat_11ABCDEFG0abcdefghijklmn'],
-    ['an AWS access key', 'AKIAIOSFODNN7EXAMPLE'],
-    ['a Slack token', 'xoxb-123456789012-abcdefghijkl'],
-  ])('removes %s', (_case, text) => {
-    expect(scrub(text)).toContain(REDACTED)
-    expect(scrub(text)).not.toMatch(
-      /sk-ant-api03-A|abcdefghijklmnop123|ghp_abcdef|AKIAIOSF|xoxb-123/,
-    )
-  })
-
-  it('reaches into nested structures, where a leak would actually hide', () => {
-    const scrubbed = scrub({ a: [{ b: 'sk-ant-api03-SECRETVALUE123' }] })
-    expect(JSON.stringify(scrubbed)).toContain(REDACTED)
-    expect(JSON.stringify(scrubbed)).not.toContain('SECRETVALUE')
-  })
-
-  it('leaves ordinary text alone', () => {
-    const text = 'expected 3 to equal 4 at board.spec.ts:42'
-    expect(scrub(text)).toBe(text)
-  })
-
-  it('does not touch keys, since a key name is not a secret', () => {
-    expect(scrub({ ANTHROPIC_API_KEY: 'ordinary' })).toEqual({ ANTHROPIC_API_KEY: 'ordinary' })
-  })
-
-  it('passes non-strings through unchanged', () => {
-    expect(scrub({ n: 1, b: true, z: null })).toEqual({ n: 1, b: true, z: null })
   })
 })
 

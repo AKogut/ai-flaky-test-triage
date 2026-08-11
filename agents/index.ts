@@ -11,3 +11,5 @@
 export * from './transport.js'
 export * from './model-client.js'
 export * from './cassettes.js'
+export * from './redact.js'
+export * from './sanitise.js'
