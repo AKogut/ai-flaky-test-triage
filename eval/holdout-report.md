@@ -144,7 +144,7 @@ dataset grows towards the 60 fixtures the methodology targets.
 
 ## Held-out usage
 
-Last evaluated: **2026-08-11** · 1 evaluation(s) in the last 30 days · limit 3
+Last evaluated: **2026-08-11** · 2 evaluation(s) in the last 30 days · limit 3
 
 Every run is appended to [`eval/holdout-log.json`](holdout-log.json), which is committed. A log kept
 outside version control would be advisory in the worst way — absent on a fresh clone, and

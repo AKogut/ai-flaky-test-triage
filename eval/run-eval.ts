@@ -13,6 +13,7 @@ import {
   type ScoredFixture,
 } from './confusion.js'
 import { DATASET_DIR, listFixtures, loadLabels, loadPayload } from './dataset.js'
+import { readReferenceSnapshot, renderGateReport, runGate, snapshot } from './gate.js'
 import { formatProportion, score, type Metrics } from './metrics.js'
 import {
   appendHoldoutRun,
@@ -54,9 +55,11 @@ export interface Options {
   classifier: 'baseline' | 'agent'
   slice: SliceSelector
   samples: number
-  /** Verify the committed report is current instead of rewriting it. */
+  /** Verify the committed report is current, and hold the numbers to the thresholds. */
   gate: boolean
   out: string
+  /** Git ref holding the metrics a regression is measured against. */
+  reference: string
 }
 
 /**
@@ -74,6 +77,20 @@ export const REPORT_PATHS: Record<SliceSelector, string> = {
 }
 
 /**
+ * The machine-readable half, written beside each report.
+ *
+ * The gate has to read the values recorded on `main`, and parsing prose for
+ * numbers turns a formatting change into a silent gate failure. Two artefacts
+ * for one run is the cost of not having a regex over a markdown table decide
+ * what merges.
+ */
+export const METRICS_PATHS: Record<SliceSelector, string> = {
+  dev: 'eval/metrics.json',
+  holdout: 'eval/holdout-metrics.json',
+  all: 'eval/metrics-all.json',
+}
+
+/**
  * The default slice is `dev`, not `all`.
  *
  * This is the whole discipline in one line. Anything that runs habitually — the
@@ -86,6 +103,7 @@ export const DEFAULTS: Options = {
   samples: 1,
   gate: false,
   out: REPORT_PATHS.dev,
+  reference: 'origin/main',
 }
 
 /** Capabilities the CLI accepts but cannot do yet, with the issue that will land them. */
@@ -124,6 +142,10 @@ export function parseArgs(argv: string[]): Options {
         break
       case 'gate':
         options.gate = true
+        break
+      case 'reference':
+        if (value === undefined || value === '') throw new UsageError(`--reference needs a git ref`)
+        options.reference = value
         break
       case 'out':
         if (value === undefined || value === '') throw new UsageError(`--out needs a path`)
@@ -600,7 +622,9 @@ const USAGE = `
     --classifier=baseline|agent   which classifier to score   (default: baseline)
     --slice=dev|holdout|all       which fixtures to use       (default: all)
     --n=<number>                  samples per fixture         (default: 1)
-    --gate                        verify the committed report is current, write nothing
+    --gate                        verify the committed report is current and hold it to
+                                  the thresholds in eval/gate.ts; writes nothing
+    --reference=<git-ref>         what a regression is measured against (default: origin/main)
     --out=<path>                  where to write              (default: eval/report.md)
 `
 
@@ -663,11 +687,33 @@ async function main(argv: string[]): Promise<number> {
     )
   }
 
+  const current = snapshot(
+    evaluation.metrics,
+    quadrantBreakdown(
+      evaluation.fixtures.filter((f) => !f.labels.lowConfidenceGroundTruth).map((f) => f.judgement),
+    ),
+    {
+      classifier: options.classifier,
+      slice: options.slice,
+      datasetRevision: evaluation.datasetRevision,
+    },
+  )
+  const metricsPath = metricsPathFor(options)
+
   if (options.gate) {
     const committed = readCommitted(options.out)
     if (committed === report) {
       console.log(`\n  ${options.out} is up to date.\n`)
-      return 0
+
+      // Freshness only says the report matches the code. The thresholds say
+      // whether the numbers it contains are allowed to merge.
+      const gate = runGate({
+        current,
+        reference: readReferenceSnapshot(metricsPath, options.reference),
+      })
+      console.log(`  Thresholds against \`${options.reference}\`:\n`)
+      console.log(`${renderGateReport(gate)}\n`)
+      return gate.failed ? 1 : 0
     }
     const cause =
       committed === null
@@ -694,8 +740,16 @@ async function main(argv: string[]): Promise<number> {
   }
 
   writeFileSync(options.out, report)
-  console.log(`\n  Wrote ${options.out}\n`)
+  writeFileSync(metricsPath, `${JSON.stringify(current, null, 2)}\n`)
+  console.log(`\n  Wrote ${options.out} and ${metricsPath}\n`)
   return 0
+}
+
+/** Follows `--out` when it was given, so a redirected run does not clobber the committed pair. */
+function metricsPathFor(options: Options): string {
+  return options.out === REPORT_PATHS[options.slice]
+    ? METRICS_PATHS[options.slice]
+    : options.out.replace(/\.md$/, '.metrics.json')
 }
 
 function readCommitted(path: string): string | null {

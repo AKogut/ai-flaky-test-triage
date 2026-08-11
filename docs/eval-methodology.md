@@ -193,19 +193,45 @@ bin, producing a reliability curve and an **Expected Calibration Error**. Two co
 
 ## CI gate
 
-`npm run eval` runs on every PR that touches `agents/`, `eval/`, or `prompts/`. It fails when:
+`npm run eval -- --gate` runs on every pull request. It does two things: verifies the committed
+report and metrics match a fresh run, and holds those numbers to the thresholds below. The values
+live in `eval/gate.ts`, one file, each with the reason it has the value it does.
 
-| Condition                                                             | Threshold      |
-| --------------------------------------------------------------------- | -------------- |
-| Joint accuracy lower bound drops below the recorded main-branch value | −5pp           |
-| Joint accuracy lower bound below absolute floor                       | 0.65           |
-| Agent fails to beat the baseline on joint accuracy                    | any regression |
-| Self-consistency below floor                                          | 0.80           |
-| Hard-quadrant recall below floor                                      | 0.50           |
-| Cost per fixture rises sharply                                        | +50%           |
+| Condition                                                           | Threshold      | Active |
+| ------------------------------------------------------------------- | -------------- | ------ |
+| Joint accuracy lower bound drops below the value recorded on `main` | −5pp           | yes    |
+| Joint accuracy lower bound below absolute floor                     | 0.65           | M3     |
+| Agent fails to beat the baseline on joint accuracy                  | any regression | M3     |
+| Self-consistency below floor                                        | 0.80           | M3     |
+| Hard-quadrant accuracy lower bound below floor                      | 0.50           | M3     |
+| Cost per fixture rises sharply                                      | +50%           | M3     |
 
-Thresholds start permissive and ratchet as the dataset grows. A gate that blocks on noise gets
-disabled by whoever is on call, so the initial values are chosen to be survivable.
+**Comparisons use interval lower bounds, never point estimates.** At n=22 a point estimate moves
+several percentage points between two classifiers that are indistinguishable, so gating on it
+would fire on the dice. The lower bound fires when the evidence supports a regression.
+
+**Five of the six are targets for the agent, not descriptions of the baseline.** The baseline's
+joint accuracy lower bound is 0.197 against a floor of 0.65; its hard-quadrant lower bound is 0.097
+against 0.50. Enabling those today would make `main` permanently red on facts everybody already
+knows, and a permanently red gate is one people learn to merge past. They are implemented, printed
+in every run with the current distance to the target, and each names the condition that switches it
+on.
+
+That leaves one active check, plus freshness. It is the one that matters today: nothing may make
+the classifier measurably worse than what is recorded on `main`.
+
+Thresholds start permissive and ratchet as the dataset grows. Ratcheting means editing `gate.ts` in
+a reviewable commit — the gate has no runtime override, because a gate you can wave through at 3am
+is not a gate.
+
+### Why the job always runs
+
+The gate is a required status check. A required check that skips leaves a pull request waiting
+forever for a status that never arrives, so the job runs on every PR regardless of what changed.
+Whether anything under `agents/`, `eval/` or `prompts/` changed is detected and exported as
+`SENTRA_EVAL_SCOPE_CHANGED`; today the whole evaluation is free — no model, no network — so it runs
+either way. From M3 that flag is what stops a documentation-only change from paying for a model
+run.
 
 ## Ablation study
 
@@ -276,6 +302,12 @@ report itself.
 `--slice=all` counts as a consultation. It reads the held-out fixtures just as surely as asking for
 them by name, and a rule that only caught `--slice=holdout` would be bypassed by choosing the more
 innocuous-sounding flag.
+
+The log counts **runs, not insights**, and over-counts deliberately. Regenerating the held-out
+report after a formatting change teaches nobody anything and in a strict sense should not spend
+budget — but the tool cannot tell that from a real consultation, and any flag meaning "this one
+does not count" is a flag for never counting. Erring towards over-counting costs an occasional
+early warning; erring the other way costs the mechanism.
 
 ## Threats to validity
 

@@ -43,3 +43,4 @@ npm-debug.log*
 yarn-error.log*
 .eslintcache
 /eval/report-all.md
+/eval/metrics-all.json
