@@ -4,9 +4,9 @@
 
 <!-- status:start -->
 
-> **Project status: M2 — Golden dataset, baseline & eval harness.**
-> 2 of 11 milestones complete.
-> Current exit criterion: `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model involved.
+> **Project status: M3 — Triage agent & replay mode.**
+> 3 of 11 milestones complete.
+> Current exit criterion: the triage agent beats the baseline on joint accuracy by a margin that survives its confidence interval — or the finding that it does not is documented in the README. Either way, `npm run demo` runs the classifier end to end with no API key.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
 > Commands marked 🚧 below are not implemented yet. Running one names the milestone it

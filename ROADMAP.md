@@ -39,7 +39,7 @@ The measurement apparatus, built before the thing it measures. Hand-authored adv
 the non-LLM baseline heuristic, metrics with confidence intervals, confusion matrices, and the CI
 gate.
 
-**Status:** in progress
+**Status:** done
 
 **Exit criterion:** `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and
 writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model
@@ -50,7 +50,7 @@ involved.
 The first model call. Structured output, the shared rubric, prompt versioning, cassette
 record/replay, calibration measurement, and self-consistency sampling.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** the triage agent beats the baseline on joint accuracy by a margin that survives
 its confidence interval — or the finding that it does not is documented in the README. Either way,

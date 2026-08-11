@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -117,8 +118,7 @@ describe('the committed pages', () => {
    * `eval:ablation` or `analyze`. A guard that has to be remembered is a guard
    * that eventually lies.
    */
-  describe('unimplemented commands in the wiki quickstart (#116)', () => {
-    const page = readFileSync(join(root, 'wiki/Getting-Started.md'), 'utf8')
+  describe('unimplemented commands in every document that shows one (#116, #134)', () => {
     const manifest = JSON.parse(
       readFileSync(join(root, 'scripts/script-manifest.json'), 'utf8'),
     ) as { scripts: { name: string; status: 'implemented' | 'pending' }[] }
@@ -126,30 +126,70 @@ describe('the committed pages', () => {
     /** `test:unit` → `npm run test:unit`; `test` → `npm test`. */
     const invocation = (name: string): string => (name === 'test' ? 'npm test' : `npm run ${name}`)
 
-    /** Lines that invoke the command, excluding longer names that contain it. */
-    const mentions = (command: string): string[] =>
-      page
-        .split('\n')
-        .filter((line) => new RegExp(`${command}(?![\\w:-])`).test(line) && line.includes('#'))
+    /**
+     * Every tracked document, rather than the one page somebody remembered.
+     *
+     * The first version named `wiki/Getting-Started.md` alone, and
+     * `CONTRIBUTING.md` — the file a contributor reads immediately before
+     * typing the commands, so the worst place for a false one — described
+     * `npm run demo` and a whole evaluation section in the present tense the
+     * entire time (#134).
+     */
+    const documents = execSync('git ls-files "*.md"', { cwd: root, encoding: 'utf8' })
+      .split('\n')
+      .filter((file) => file !== '')
+
+    /**
+     * Lines that present a command with an inline annotation.
+     *
+     * The `#` is what separates "here is a command to run" from prose that
+     * happens to name one. A sentence explaining why `npm test` will eventually
+     * contain flaky specs is not a promise that it runs today.
+     */
+    const annotatedMentions = (command: string): { file: string; line: string }[] =>
+      documents.flatMap((file) =>
+        readFileSync(join(root, file), 'utf8')
+          .split('\n')
+          .filter((line) => new RegExp(`${command}(?![\\w:-])`).test(line) && line.includes('#'))
+          .map((line) => ({ file, line })),
+      )
 
     it.each(manifest.scripts.filter((s) => s.status === 'pending').map((s) => s.name))(
-      'npm run %s is shown with a marker',
+      '%s is shown with a marker wherever it is annotated',
       (name) => {
-        for (const line of mentions(invocation(name))) {
-          expect(line, `"${line.trim()}" describes a pending command with no 🚧`).toContain('🚧')
-        }
-      },
-    )
-
-    it.each(manifest.scripts.filter((s) => s.status === 'implemented').map((s) => s.name))(
-      'npm run %s is not marked as pending',
-      (name) => {
-        for (const line of mentions(invocation(name))) {
-          expect(line, `"${line.trim()}" marks an implemented command as pending`).not.toContain(
+        for (const { file, line } of annotatedMentions(invocation(name))) {
+          expect(line, `${file}: "${line.trim()}" shows a pending command with no 🚧`).toContain(
             '🚧',
           )
         }
       },
     )
+
+    it.each(manifest.scripts.filter((s) => s.status === 'implemented').map((s) => s.name))(
+      '%s is never marked as pending',
+      (name) => {
+        for (const { file, line } of annotatedMentions(invocation(name))) {
+          expect(
+            line,
+            `${file}: "${line.trim()}" marks an implemented command as pending`,
+          ).not.toContain('🚧')
+        }
+      },
+    )
+
+    it('marks the README script table in step with the manifest', () => {
+      // The table is the canonical listing, and its milestone column carries the
+      // marker separately from the quickstart blocks above it.
+      const readme = readFileSync(join(root, 'README.md'), 'utf8')
+      for (const entry of manifest.scripts) {
+        const row = readme
+          .split('\n')
+          .find((line) => new RegExp(`^\\| \`${invocation(entry.name)}\`(?![\\w:-])`).test(line))
+        expect(row, `${entry.name} has no row in the README table`).toBeTruthy()
+        expect(row?.includes('🚧'), `${entry.name} is marked ${entry.status} in the manifest`).toBe(
+          entry.status === 'pending',
+        )
+      }
+    })
   })
 })

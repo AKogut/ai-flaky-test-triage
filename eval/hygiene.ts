@@ -183,8 +183,13 @@ export function runHygiene(dir: string = DATASET_DIR): HygieneReport {
 
 const pct = (n: number): string => `${(n * 100).toFixed(0)}%`
 
-function main(): void {
-  const report = runHygiene()
+/**
+ * Returns the exit code rather than calling `process.exit`, so the failure path
+ * is testable. A guard whose only untested branch is the one that fails the
+ * build is a guard nobody has watched work.
+ */
+export function main(dir: string = DATASET_DIR): number {
+  const report = runHygiene(dir)
 
   console.log(`\n  Golden dataset: ${String(report.fixtures)} fixtures\n`)
   console.log('  bucket                       count   share   target')
@@ -207,9 +212,10 @@ function main(): void {
     console.error(
       `\n  ${String(report.errors.length)} problem(s). See eval/golden-dataset/README.md.\n`,
     )
-    process.exit(1)
+    return 1
   }
   console.log('\n  No leakage or pairing problems found.\n')
+  return 0
 }
 
-if (process.argv[1]?.endsWith('hygiene.ts') === true) main()
+if (process.argv[1]?.endsWith('hygiene.ts') === true) process.exitCode = main()

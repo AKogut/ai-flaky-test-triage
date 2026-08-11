@@ -628,7 +628,7 @@ const USAGE = `
     --out=<path>                  where to write              (default: eval/report.md)
 `
 
-async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[]): Promise<number> {
   let options: Options
   try {
     options = parseArgs(argv)

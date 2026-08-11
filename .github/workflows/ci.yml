@@ -191,7 +191,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      - run: npm run test:unit -- --coverage
+      # test:coverage rather than `test:unit -- --coverage`, so the invocation CI
+      # runs is the one a contributor can run locally by name. The thresholds in
+      # vitest.config.ts fail the job on their own.
+      - run: npm run test:coverage
       - uses: actions/upload-artifact@v4
         if: always()
         with:

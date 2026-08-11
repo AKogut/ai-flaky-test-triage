@@ -19,12 +19,28 @@ someone else could pick up any issue and know exactly what "done" means.
 git clone https://github.com/AKogut/ai-flaky-test-triage.git
 cd ai-flaky-test-triage
 npm install
-npm run demo            # full pipeline in replay mode — no API key needed
+npm run help            # every command, what it does, and whether it exists yet
+```
+
+What runs today:
+
+```bash
+npm run test:coverage   # the full suite, with the coverage floor enforced
+npm run eval            # score the baseline against the golden dataset
+npm run eval:lint       # dataset composition and label-leakage check
+npm run lint && npm run typecheck
+```
+
+And what does not yet, with the milestone it arrives in:
+
+```bash
+npm run demo            # 🚧 M3 · #39 — full pipeline in replay mode, no API key
+npm run dev             # 🚧 M4 · #48 — start TaskFlow locally
+npm test                # 🚧 M5 · #50 — unit and e2e together
 ```
 
 Requires Node ≥ 22.13 — the floor ESLint 10 sets, not an arbitrary one. An `ANTHROPIC_API_KEY` is
-only needed for live model calls; everything else,
-including the whole test suite, runs in replay mode.
+only needed for live model calls; nothing that works today needs one.
 
 ```bash
 cp .env.example .env    # optional, for live runs
@@ -106,14 +122,26 @@ The highest-leverage and easiest-to-fool area of the project.
 ## Running the evaluation
 
 ```bash
-npm run eval                      # full dataset, N=5 samples per fixture
-npm run eval -- --slice=dev       # development slice only
-npm run eval -- --n=1 --replay    # fast, free, deterministic — for wiring changes
-npm run eval:ablation             # context ablation study
+npm run eval                     # development slice, baseline → eval/report.md
+npm run eval -- --gate           # verify the committed report and apply the thresholds
+npm run eval -- --slice=holdout  # the held-out slice — see the budget below
+npm run eval:ablation            # 🚧 M9 · #74
 ```
 
-Results land in `eval/report.md` and `eval/ablation.md`. Both are committed, so a regression shows
-up as a diff.
+`--classifier=agent` parses today and then declines: the agent lands in M3 (#35). The command
+itself works, only that value does not, which is why it carries no marker above — a 🚧 on a line
+beginning `npm run eval` would read as the whole command being unbuilt.
+
+The default is the **development slice**, not the whole dataset. That is the discipline: anything
+run habitually must not touch the held-out fixtures, or they stop being held out.
+
+`eval/report.md` and `eval/metrics.json` are committed, so a regression shows up as a diff. `--gate`
+is what keeps that true — it regenerates in memory and fails if the committed pair disagrees, then
+applies the thresholds in `eval/gate.ts`. Run it before pushing; CI runs the same command.
+
+**The held-out slice has a budget.** Every `--slice=holdout` or `--slice=all` run is appended to
+`eval/holdout-log.json`, which is committed. Past three evaluations in 30 days the harness warns.
+Iterate against `--slice=dev`; the held-out slice is for confirming a result, not finding one.
 
 ## Reporting a misclassification
 
