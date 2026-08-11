@@ -6,6 +6,13 @@
       "slice": "holdout",
       "n": 11,
       "jointAccuracy": 0.36363636363636365
+    },
+    {
+      "date": "2026-08-11",
+      "datasetRevision": "0f6b7fcc27f49b04",
+      "slice": "holdout",
+      "n": 11,
+      "jointAccuracy": 0.36363636363636365
     }
   ]
 }

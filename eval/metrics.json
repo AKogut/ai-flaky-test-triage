@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "classifier": "baseline",
+  "slice": "dev",
+  "datasetRevision": "eb99bece4ad0347c",
+  "n": 22,
+  "joint": {
+    "point": 0.36363636363636365,
+    "lower": 0.19733204670366125,
+    "upper": 0.5704829190986899
+  },
+  "owner": {
+    "point": 0.5,
+    "lower": 0.3072210627372502,
+    "upper": 0.6927789372627497,
+    "macroF1": 0.3817204301075268
+  },
+  "determinism": {
+    "point": 0.8181818181818182,
+    "lower": 0.6148339256287345,
+    "upper": 0.9269311541657794,
+    "macroF1": 0.8035714285714286
+  },
+  "hardQuadrant": {
+    "point": 0.3333333333333333,
+    "lower": 0.09677141110578041,
+    "upper": 0.700006684861608,
+    "support": 6,
+    "correct": 2
+  },
+  "selfConsistency": null,
+  "costPerFixtureUsd": null
+}

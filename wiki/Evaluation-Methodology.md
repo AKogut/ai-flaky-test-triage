@@ -187,6 +187,34 @@ behind every number.
 lowest number reported, and reporting the axes separately without it would be the most natural way
 to accidentally flatter the classifier.
 
+## The merge gate
+
+`npm run eval -- --gate` runs on every pull request. It verifies the committed report and metrics
+match a fresh run, then holds those numbers to the thresholds in `eval/gate.ts` — one file, each
+value carrying the reason it has the value it does.
+
+| Condition                                                           | Threshold      | Active |
+| ------------------------------------------------------------------- | -------------- | ------ |
+| Joint accuracy lower bound drops below the value recorded on `main` | −5pp           | yes    |
+| Joint accuracy lower bound below absolute floor                     | 0.65           | M3     |
+| Agent fails to beat the baseline on joint accuracy                  | any regression | M3     |
+| Self-consistency below floor                                        | 0.80           | M3     |
+| Hard-quadrant accuracy lower bound below floor                      | 0.50           | M3     |
+| Cost per fixture rises sharply                                      | +50%           | M3     |
+
+Five of the six are targets for the **agent**, not descriptions of the baseline — whose joint
+accuracy lower bound is 0.197 against a floor of 0.65. Enabling them today would make `main`
+permanently red on facts everybody already knows, and a permanently red gate is one people learn to
+merge past. They are implemented, printed on every run with the current distance to the target, and
+each names the condition that switches it on.
+
+Comparisons use interval **lower bounds**, never point estimates: at this dataset size a point
+estimate moves several percentage points between two classifiers that are indistinguishable, so
+gating on it would fire on the dice.
+
+Ratcheting means editing `gate.ts` in a reviewable commit. There is no runtime override — a gate
+you can wave through at 3am is not a gate.
+
 ## The ablation study
 
 `npm run eval:ablation` re-runs the dataset with parts of the context removed: no history, no diff,

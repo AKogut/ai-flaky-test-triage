@@ -140,6 +140,16 @@ export function emptyHoldoutBuckets(composition: readonly SliceComposition[]): s
 export const OVERUSE_LIMIT = 3
 export const OVERUSE_WINDOW_DAYS = 30
 
+/**
+ * The log counts runs, not insights, and over-counts on purpose.
+ *
+ * Regenerating the held-out report after a formatting change teaches nobody
+ * anything, and in a strict sense should not spend budget. But the tool cannot
+ * tell that from a real consultation, and any flag meaning "this one does not
+ * count" is a flag for never counting. Erring towards over-counting costs an
+ * occasional early warning; erring the other way costs the entire mechanism.
+ */
+
 export const HOLDOUT_LOG = 'eval/holdout-log.json'
 
 const HoldoutRunSchema = z
