@@ -175,6 +175,7 @@ const request = {
   prompt: 'this failure',
   schemaName: 'Classification',
   jsonSchema: { type: 'object' as const },
+  promptVersion: 'triage.v1',
 }
 
 describe('AnthropicTransport', () => {

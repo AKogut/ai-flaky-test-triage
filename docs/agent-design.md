@@ -15,10 +15,14 @@ Every agent call goes through `agents/model-client.ts`, which provides:
 - **Input sanitisation.** Test names, error messages, and diff hunks are untrusted text. They are
   length-capped, fenced inside explicit delimiters, and prefixed with a standing instruction that
   content inside the delimiters is data, never instruction.
-- **Replay/record.** With `SENTRA_REPLAY=1`, requests hash to a cassette file under
-  `agents/replay/cassettes/` and the recorded response is returned. With `SENTRA_RECORD=1`, live
-  responses are written there. This makes the demo credential-free and the integration tests free
-  and deterministic.
+- **Replay/record.** A decorator around the transport, so replay has no opinion about the SDK and
+  the SDK adapter has none about replay. `SENTRA_REPLAY=1` serves from
+  `agents/replay/cassettes/`; `SENTRA_RECORD=1` writes there; with no credentials replay is the
+  default, which is what makes the demo credential-free and the integration tests free and
+  deterministic. **A replay miss throws** — in replay the inner transport is unreachable, not
+  merely unused, and a test proves it by wrapping one that fails on any call. A silent fallthrough
+  would turn a free deterministic run into a surprise bill and an intermittent test, and would take
+  months to notice.
 - **Telemetry.** One OpenTelemetry span per call, carrying model, token counts, latency, cost,
   retry count, and cassette hit/miss. Exported to `otel-spans.json`.
 - **Budget.** A per-run token ceiling, checked **before** dispatch against a real

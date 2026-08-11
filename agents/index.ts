@@ -10,3 +10,4 @@
 
 export * from './transport.js'
 export * from './model-client.js'
+export * from './cassettes.js'

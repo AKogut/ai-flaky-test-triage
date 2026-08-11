@@ -209,6 +209,7 @@ export async function callModel<T>(
     prompt: options.prompt,
     schemaName: options.schemaName,
     jsonSchema: toolSchema(options.schema),
+    promptVersion: options.promptVersion,
   }
 
   let corrections = ''
