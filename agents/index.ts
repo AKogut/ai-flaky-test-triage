@@ -1,11 +1,12 @@
 /**
  * @sentra/agents
  *
- * Triage, root-cause and fix-suggestion agents, plus the orchestrator that turns analysis.json into report.md.
+ * The triage, root-cause and fix-suggestion agents, the orchestrator that turns
+ * analysis.json into report.md, and the one model client they all go through.
  *
- * The implementation lands in M3 and M7; this file exists so the
- * workspace, its TypeScript project reference and its public entry point are
- * in place before anything depends on them.
+ * The agents themselves land later in M3; the client and its transport port are
+ * the parts that exist.
  */
 
-export {}
+export * from './transport.js'
+export * from './model-client.js'

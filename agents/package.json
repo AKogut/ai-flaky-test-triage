@@ -10,5 +10,10 @@
       "types": "./dist/index.d.ts",
       "default": "./index.ts"
     }
+  },
+  "dependencies": {
+    "@sentra/contracts": "*",
+    "@anthropic-ai/sdk": "*",
+    "zod": "*"
   }
 }
