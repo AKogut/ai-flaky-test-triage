@@ -42,3 +42,4 @@ app/server/*.db-journal
 npm-debug.log*
 yarn-error.log*
 .eslintcache
+/eval/report-all.md

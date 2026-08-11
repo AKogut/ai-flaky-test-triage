@@ -14,6 +14,23 @@ import {
 } from './confusion.js'
 import { DATASET_DIR, listFixtures, loadLabels, loadPayload } from './dataset.js'
 import { formatProportion, score, type Metrics } from './metrics.js'
+import {
+  appendHoldoutRun,
+  consultsHoldout,
+  emptyHoldoutBuckets,
+  HOLDOUT_LOG,
+  HOLDOUT_SHARE,
+  inSlice,
+  isoDate,
+  lastEvaluated,
+  overuse,
+  overuseWarning,
+  readHoldoutLog,
+  sliceComposition,
+  type Overuse,
+  type SliceComposition,
+  type SliceSelector,
+} from './slices.js'
 
 /**
  * `npm run eval` — scores a classifier over the golden dataset and writes
@@ -35,26 +52,45 @@ import { formatProportion, score, type Metrics } from './metrics.js'
 
 export interface Options {
   classifier: 'baseline' | 'agent'
-  slice: 'dev' | 'holdout' | 'all'
+  slice: SliceSelector
   samples: number
   /** Verify the committed report is current instead of rewriting it. */
   gate: boolean
   out: string
 }
 
+/**
+ * Where each slice's report lands.
+ *
+ * Separate files rather than one, so the committed dev report — the one
+ * `--gate` checks on every pull request — never contains a held-out number. A
+ * single file would have to be regenerated from whichever slice ran last, and
+ * the gate could not tell an out-of-date report from a differently-sliced one.
+ */
+export const REPORT_PATHS: Record<SliceSelector, string> = {
+  dev: 'eval/report.md',
+  holdout: 'eval/holdout-report.md',
+  all: 'eval/report-all.md',
+}
+
+/**
+ * The default slice is `dev`, not `all`.
+ *
+ * This is the whole discipline in one line. Anything that runs habitually — the
+ * CI gate, a local check before pushing — must not touch the held-out fixtures,
+ * or they stop being held out.
+ */
 export const DEFAULTS: Options = {
   classifier: 'baseline',
-  slice: 'all',
+  slice: 'dev',
   samples: 1,
   gate: false,
-  out: 'eval/report.md',
+  out: REPORT_PATHS.dev,
 }
 
 /** Capabilities the CLI accepts but cannot do yet, with the issue that will land them. */
 const NOT_YET: Record<string, { what: string; milestone: string; issue: number }> = {
   'classifier=agent': { what: 'The agent classifier', milestone: 'M3', issue: 35 },
-  'slice=dev': { what: 'Dataset slices', milestone: 'M2', issue: 28 },
-  'slice=holdout': { what: 'Dataset slices', milestone: 'M2', issue: 28 },
 }
 
 export class UsageError extends Error {}
@@ -68,6 +104,7 @@ export class UsageError extends Error {}
  */
 export function parseArgs(argv: string[]): Options {
   const options: Options = { ...DEFAULTS }
+  let outWasGiven = false
 
   for (const arg of argv) {
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(arg)
@@ -91,11 +128,16 @@ export function parseArgs(argv: string[]): Options {
       case 'out':
         if (value === undefined || value === '') throw new UsageError(`--out needs a path`)
         options.out = value
+        outWasGiven = true
         break
       default:
         throw new UsageError(`unknown flag "--${flag}"`)
     }
   }
+
+  // Resolved after the loop, not inside it, so `--out=x --slice=holdout` and
+  // `--slice=holdout --out=x` mean the same thing.
+  if (!outWasGiven) options.out = REPORT_PATHS[options.slice]
 
   return options
 }
@@ -150,11 +192,20 @@ export interface EvaluatedFixture extends ScoredFixture {
   reasoning: string
 }
 
+/** Read from the committed log, and only present on a run that looked at held-out fixtures. */
+export interface HoldoutContext {
+  lastEvaluated: string | null
+  overuse: Overuse
+}
+
 export interface Evaluation {
   options: Options
   fixtures: EvaluatedFixture[]
   metrics: Metrics
+  /** How the whole dataset divides between the slices, whichever slice ran. */
+  composition: SliceComposition[]
   datasetRevision: string
+  holdout?: HoldoutContext
 }
 
 /**
@@ -176,23 +227,27 @@ const labelDigest = (labels: FixtureLabels): string =>
   `${labels.owner}/${labels.determinism}/${labels.bucket}/${labels.provenance}/${String(labels.lowConfidenceGroundTruth)}`
 
 export function evaluate(options: Options): Evaluation {
-  const fixtures = listFixtures().map((name): EvaluatedFixture => {
-    const { payload, hash } = loadPayload(name)
-    const labels = loadLabels(name)
-    const predicted = classifyWithBaseline(payload)
+  const every = listFixtures().map((name) => ({ name, bucket: loadLabels(name).bucket }))
 
-    return {
-      judgement: {
-        name,
-        predicted: { owner: predicted.owner, determinism: predicted.determinism },
-        actual: { owner: labels.owner, determinism: labels.determinism },
-      },
-      labels,
-      payloadHash: hash,
-      confidence: predicted.confidence,
-      reasoning: predicted.reasoning,
-    }
-  })
+  const fixtures = listFixtures()
+    .filter((name) => inSlice(name, options.slice))
+    .map((name): EvaluatedFixture => {
+      const { payload, hash } = loadPayload(name)
+      const labels = loadLabels(name)
+      const predicted = classifyWithBaseline(payload)
+
+      return {
+        judgement: {
+          name,
+          predicted: { owner: predicted.owner, determinism: predicted.determinism },
+          actual: { owner: labels.owner, determinism: labels.determinism },
+        },
+        labels,
+        payloadHash: hash,
+        confidence: predicted.confidence,
+        reasoning: predicted.reasoning,
+      }
+    })
 
   const headline = fixtures.filter((f) => !f.labels.lowConfidenceGroundTruth)
 
@@ -200,6 +255,9 @@ export function evaluate(options: Options): Evaluation {
     options,
     fixtures,
     metrics: score(headline.map((f) => f.judgement)),
+    // Over the whole dataset, not the slice being scored, so the dev report can
+    // say what is being withheld from it.
+    composition: sliceComposition(every),
     datasetRevision: datasetRevision(fixtures),
   }
 }
@@ -249,6 +307,13 @@ export function renderReport(evaluation: Evaluation): string {
     '',
     renderBreakdownSections(fixtures),
     '',
+    '## Slices',
+    '',
+    renderSlices(evaluation),
+    '',
+    ...(evaluation.holdout === undefined
+      ? []
+      : ['## Held-out usage', '', renderHoldoutUsage(evaluation.holdout), '']),
     '## Every fixture',
     '',
     renderPerFixture(fixtures),
@@ -283,11 +348,20 @@ function renderProvenance(evaluation: Evaluation): string {
     '',
     markdownTable(['', ''], rows, ['left', 'left']),
     '',
-    'There is deliberately **no generation timestamp** in this file. The report is committed, so',
-    '`git log eval/report.md` already records when each set of numbers was produced — and a clock',
+    'There is deliberately **no generation timestamp** here. The report is committed, so',
+    `\`git log ${options.out}\` already records when each set of numbers was produced — and a clock`,
     'reading in the body would make every regeneration a diff even when nothing measured changed,',
     'which is exactly the noise that trains people to stop reading the diff.',
     '',
+    ...(consultsHoldout(options.slice)
+      ? [
+          'The date under **Held-out usage** below is not an exception to that. It records when the',
+          'held-out slice was consulted, which is a fact about the dataset rather than a reading of',
+          'the clock at render time, and it is the number that bounds what the figures here are',
+          'worth.',
+          '',
+        ]
+      : []),
     'The dataset revision is a hash over every fixture payload **and** its labels. A payload edit',
     'and a label edit both move it, because both move the numbers.',
   ].join('\n')
@@ -363,6 +437,98 @@ function renderPerClass(metrics: Metrics): string {
     'classifier reached for it. A class with support and no correct predictions has an F1 of 0 and',
     'is invisible in the accuracy figure above — which is the reason macro-F1 is reported next to',
     'it.',
+  ].join('\n')
+}
+
+/**
+ * What is in this slice and what is being withheld from it.
+ *
+ * Present in every report, including the held-out one, because the question
+ * "what did this number *not* see" has to be answerable from the report a
+ * reader has open rather than by finding the other one.
+ */
+function renderSlices(evaluation: Evaluation): string {
+  const { composition, options } = evaluation
+  const totals = composition.reduce(
+    (sum, row) => ({ dev: sum.dev + row.dev, holdout: sum.holdout + row.holdout }),
+    { dev: 0, holdout: 0 },
+  )
+  const size = totals.dev + totals.holdout
+  const empty = emptyHoldoutBuckets(composition)
+
+  const rows = composition.map((row) => [
+    `\`${row.bucket}\``,
+    String(row.total),
+    String(row.dev),
+    String(row.holdout),
+  ])
+  rows.push([
+    '**total**',
+    `**${String(size)}**`,
+    `**${String(totals.dev)}**`,
+    `**${String(totals.holdout)}**`,
+  ])
+
+  return [
+    `This report scores the \`${options.slice}\` slice.`,
+    '',
+    markdownTable(['bucket', 'total', 'dev', 'held out'], rows, [
+      'left',
+      'right',
+      'right',
+      'right',
+    ]),
+    '',
+    `A fixture's slice is a pure function of its name — the first 32 bits of its SHA-256, held out`,
+    `below ${(HOLDOUT_SHARE * 100).toFixed(0)}%. Nothing about the rest of the dataset enters into it, so adding, removing or`,
+    'renaming any other fixture cannot move it. That property is worth more than an exact 80/20:',
+    'a fixture silently changing slice would invalidate every held-out number ever published, and',
+    'would do it without any visible failure.',
+    '',
+    `The realised split is ${String(totals.holdout)} of ${String(size)} — ${pct(totals.holdout, size)}, against a ${(HOLDOUT_SHARE * 100).toFixed(0)}% target. That gap is`,
+    'ordinary binomial variance at this size, not a defect in the rule, and it narrows as the',
+    'dataset grows towards the 60 fixtures the methodology targets.',
+    ...(empty.length === 0
+      ? []
+      : [
+          '',
+          `**Held-out results currently say nothing about ${empty.map((b) => `\`${b}\``).join(', ')}** —`,
+          'no fixture from that bucket is held out. A bucket of four has a 41% chance of that at a',
+          '20% share, so it is expected rather than surprising, but it does bound what a held-out',
+          'number can be read to mean.',
+        ]),
+  ].join('\n')
+}
+
+const pct = (part: number, whole: number): string =>
+  whole === 0 ? 'n/a' : `${((part / whole) * 100).toFixed(0)}%`
+
+/**
+ * How often the held-out slice has been looked at.
+ *
+ * This is the number that decides whether the held-out figure above still means
+ * anything. Every look leaks a little of the slice into the next prompt
+ * revision, so a set consulted freely is a development set with extra steps —
+ * and the erosion is invisible unless somebody counts.
+ */
+function renderHoldoutUsage(context: HoldoutContext): string {
+  const warning = overuseWarning(context.overuse)
+
+  return [
+    `Last evaluated: **${context.lastEvaluated ?? 'never'}** · ` +
+      `${String(context.overuse.within)} evaluation(s) in the last ${String(context.overuse.windowDays)} days · ` +
+      `limit ${String(context.overuse.limit)}`,
+    '',
+    `Every run is appended to [\`${HOLDOUT_LOG}\`](${HOLDOUT_LOG.replace('eval/', '')}), which is committed. A log kept`,
+    'outside version control would be advisory in the worst way — absent on a fresh clone, and',
+    'clearable by deleting a file nobody reviews.',
+    ...(warning === null
+      ? []
+      : [
+          '',
+          '> [!WARNING]',
+          ...warning.split('\n').map((line) => (line === '' ? '>' : `> ${line}`)),
+        ]),
   ].join('\n')
 }
 
@@ -462,7 +628,40 @@ async function main(argv: string[]): Promise<number> {
     )
   }
 
-  const report = await buildReport(evaluate(options))
+  const evaluation = evaluate(options)
+
+  // Reading the held-out slice is the act being recorded, so the run is logged
+  // before the report is rendered — the report then states the usage including
+  // itself, which is the number that decides how much its own figure is worth.
+  //
+  // `--gate` is excluded: it re-derives an evaluation that was already recorded
+  // when the report was written, and counting a verification as a consultation
+  // would let CI exhaust the budget on work nobody chose to do.
+  if (consultsHoldout(options.slice) && !options.gate) {
+    const runs = appendHoldoutRun({
+      date: isoDate(new Date()),
+      datasetRevision: evaluation.datasetRevision,
+      slice: options.slice,
+      n: evaluation.metrics.n,
+      jointAccuracy: evaluation.metrics.joint.point,
+    })
+    evaluation.holdout = { lastEvaluated: lastEvaluated(runs), overuse: overuse(runs, new Date()) }
+  } else if (consultsHoldout(options.slice)) {
+    const runs = readHoldoutLog()
+    evaluation.holdout = { lastEvaluated: lastEvaluated(runs), overuse: overuse(runs, new Date()) }
+  }
+
+  const report = await buildReport(evaluation)
+
+  const warning = evaluation.holdout ? overuseWarning(evaluation.holdout.overuse) : null
+  if (warning !== null) {
+    console.warn(
+      `\n  ${warning
+        .split('\n')
+        .map((l) => (l === '' ? '' : l))
+        .join('\n  ')}\n`,
+    )
+  }
 
   if (options.gate) {
     const committed = readCommitted(options.out)

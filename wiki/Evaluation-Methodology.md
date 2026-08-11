@@ -109,6 +109,37 @@ adversarial dataset from a difficult one.
 `straightforward` at 100% is the control on the control: the baseline is a working classifier, so
 the failures above are properties of the fixtures rather than of the code being measured.
 
+### Development and held-out slices
+
+Iterating prompts against every fixture fits them to it. `npm run eval` defaults to
+`--slice=dev`; the held-out fixtures are scored separately by `--slice=holdout`.
+
+The split is a **pure function of the fixture name** — the first 32 bits of its SHA-256 over 2³²,
+held out below 20%. Adding, removing or renaming any other fixture cannot move it.
+
+That property costs exact stratification, and the trade is deliberate. A split with guaranteed
+per-bucket counts has to look at the other fixtures, so inserting one reshuffles the boundary and
+silently moves an existing fixture across it — invalidating every held-out number published before
+that moment, with nothing going red. Poor stratification is visible and self-correcting; a moving
+split is neither.
+
+| Bucket                      | Total | Dev | Held out |
+| --------------------------- | ----: | --: | -------: |
+| `environment-as-regression` |     4 |   3 |        1 |
+| `hard-quadrant`             |    10 |   6 |        4 |
+| `misleading-history`        |     4 |   3 |        1 |
+| `stale-test`                |     7 |   5 |        2 |
+| `straightforward`           |     8 |   5 |        3 |
+| **Total**                   |    33 |  22 |   **11** |
+
+11 of 33 is 33%, not 20% — ordinary binomial variance at this size, which narrows as the dataset
+grows towards 60.
+
+**The usage budget.** A held-out set consulted freely is a development set with extra steps.
+`eval/holdout-log.json` records every evaluation and is committed, so the record cannot be quietly
+reset. Past three evaluations in 30 days the harness warns. `--slice=all` counts as a
+consultation — it reads the held-out fixtures just as surely as asking for them by name.
+
 ## 3. Reported uncertainty
 
 Two independent sources of noise, both measured rather than ignored.

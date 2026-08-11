@@ -9,13 +9,13 @@
 | classifier             | `baseline`                           |
 | model                  | none — a heuristic, no model call    |
 | prompt version         | none                                 |
-| dataset                | 33 fixtures in `eval/golden-dataset` |
-| dataset revision       | `f27bec4560f2ab77`                   |
-| slice                  | `all`                                |
+| dataset                | 22 fixtures in `eval/golden-dataset` |
+| dataset revision       | `eb99bece4ad0347c`                   |
+| slice                  | `dev`                                |
 | samples per fixture    | 1                                    |
-| scored in the headline | 33 (0 excluded)                      |
+| scored in the headline | 22 (0 excluded)                      |
 
-There is deliberately **no generation timestamp** in this file. The report is committed, so
+There is deliberately **no generation timestamp** here. The report is committed, so
 `git log eval/report.md` already records when each set of numbers was produced — and a clock
 reading in the body would make every regeneration a diff even when nothing measured changed,
 which is exactly the noise that trains people to stop reading the diff.
@@ -27,13 +27,13 @@ and a label edit both move it, because both move the numbers.
 
 | metric                 |          baseline | agent | delta |
 | ---------------------- | ----------------: | ----: | ----: |
-| **joint accuracy**     | 36.4% [22.2–53.4] |     — |     — |
-| `owner` accuracy       | 54.5% [38.0–70.2] |     — |     — |
-| `determinism` accuracy | 78.8% [62.2–89.3] |     — |     — |
-| `owner` macro-F1       |             0.365 |     — |     — |
-| `determinism` macro-F1 |             0.775 |     — |     — |
+| **joint accuracy**     | 36.4% [19.7–57.0] |     — |     — |
+| `owner` accuracy       | 50.0% [30.7–69.3] |     — |     — |
+| `determinism` accuracy | 81.8% [61.5–92.7] |     — |     — |
+| `owner` macro-F1       |             0.382 |     — |     — |
+| `determinism` macro-F1 |             0.804 |     — |     — |
 
-All figures over **n = 33**, with 95% Wilson intervals.
+All figures over **n = 22**, with 95% Wilson intervals.
 
 The agent column is empty because the agent does not exist yet — it lands in M3, tracked in
 [#35](https://github.com/AKogut/ai-flaky-test-triage/issues/35). It is present rather than
@@ -45,12 +45,12 @@ finding.
 
 | quadrant                        | support | correct |          accuracy |
 | ------------------------------- | ------: | ------: | ----------------: |
-| `app_code` + `deterministic`    |      11 |       8 | 72.7% [43.4–90.3] |
-| **`app_code` + `intermittent`** |      10 |       3 | 30.0% [10.8–60.3] |
-| `test_code` + `deterministic`   |       8 |       0 |   0.0% [0.0–32.4] |
+| `app_code` + `deterministic`    |       7 |       5 | 71.4% [35.9–91.8] |
+| **`app_code` + `intermittent`** |       6 |       2 |  33.3% [9.7–70.0] |
+| `test_code` + `deterministic`   |       6 |       0 |   0.0% [0.0–39.0] |
 | `test_code` + `intermittent`    |       0 |       0 |               n/a |
 | `environment` + `deterministic` |       2 |       1 |  50.0% [9.5–90.5] |
-| `environment` + `intermittent`  |       2 |       0 |   0.0% [0.0–65.8] |
+| `environment` + `intermittent`  |       1 |       0 |   0.0% [0.0–79.3] |
 
 The bold row is the hard quadrant — an `app_code` defect that does not reproduce on rerun.
 It is the case this project exists for, so it is reported on its own rather than averaged
@@ -64,10 +64,10 @@ Rows are ground truth, columns are what the classifier said; the bold diagonal i
 
 | actual ↓ / predicted → | `app_code` | `test_code` | `environment` | **total** |
 | ---------------------- | ---------: | ----------: | ------------: | --------: |
-| `app_code`             |     **17** |           4 |             0 |        21 |
-| `test_code`            |          8 |       **0** |             0 |         8 |
-| `environment`          |          3 |           0 |         **1** |         4 |
-| **total**              |         28 |           4 |             1 |    **33** |
+| `app_code`             |     **10** |           3 |             0 |        13 |
+| `test_code`            |          6 |       **0** |             0 |         6 |
+| `environment`          |          2 |           0 |         **1** |         3 |
+| **total**              |         18 |           3 |             1 |    **22** |
 
 ### `determinism`
 
@@ -75,19 +75,19 @@ Rows are ground truth, columns are what the classifier said; the bold diagonal i
 
 | actual ↓ / predicted → | `deterministic` | `intermittent` | **total** |
 | ---------------------- | --------------: | -------------: | --------: |
-| `deterministic`        |          **17** |              4 |        21 |
-| `intermittent`         |               3 |          **9** |        12 |
-| **total**              |              20 |             13 |    **33** |
+| `deterministic`        |          **12** |              3 |        15 |
+| `intermittent`         |               1 |          **6** |         7 |
+| **total**              |              13 |              9 |    **22** |
 
 ## Per class
 
 | axis          | class           | support | predicted | correct |           precision |            recall |    F1 |
 | ------------- | --------------- | ------: | --------: | ------: | ------------------: | ----------------: | ----: |
-| `owner`       | `app_code`      |      21 |        28 |      17 |   60.7% [42.4–76.4] | 81.0% [60.0–92.3] | 0.694 |
-| `owner`       | `test_code`     |       8 |         4 |       0 |     0.0% [0.0–49.0] |   0.0% [0.0–32.4] | 0.000 |
-| `owner`       | `environment`   |       4 |         1 |       1 | 100.0% [20.7–100.0] |  25.0% [4.6–69.9] | 0.400 |
-| `determinism` | `deterministic` |      21 |        20 |      17 |   85.0% [64.0–94.8] | 81.0% [60.0–92.3] | 0.829 |
-| `determinism` | `intermittent`  |      12 |        13 |       9 |   69.2% [42.4–87.3] | 75.0% [46.8–91.1] | 0.720 |
+| `owner`       | `app_code`      |      13 |        18 |      10 |   55.6% [33.7–75.4] | 76.9% [49.7–91.8] | 0.645 |
+| `owner`       | `test_code`     |       6 |         3 |       0 |     0.0% [0.0–56.1] |   0.0% [0.0–39.0] | 0.000 |
+| `owner`       | `environment`   |       3 |         1 |       1 | 100.0% [20.7–100.0] |  33.3% [6.1–79.2] | 0.500 |
+| `determinism` | `deterministic` |      15 |        13 |      12 |   92.3% [66.7–98.6] | 80.0% [54.8–93.0] | 0.857 |
+| `determinism` | `intermittent`  |       7 |         9 |       6 |   66.7% [35.4–87.9] | 85.7% [48.7–97.4] | 0.750 |
 
 `support` is how many fixtures genuinely are that class; `predicted` is how often the
 classifier reached for it. A class with support and no correct predictions has an F1 of 0 and
@@ -98,21 +98,44 @@ it.
 
 ### By provenance
 
-All 33 fixtures share one provenance (`synthetic`), so this breakdown would repeat the headline. It appears here once the dataset has more than one.
+All 22 fixtures share one provenance (`synthetic`), so this breakdown would repeat the headline. It appears here once the dataset has more than one.
 
 ### By difficulty bucket
 
 | bucket                      |   n |               joint |               owner |         determinism |
 | --------------------------- | --: | ------------------: | ------------------: | ------------------: |
-| `environment-as-regression` |   4 |    25.0% [4.6–69.9] |    25.0% [4.6–69.9] | 100.0% [51.0–100.0] |
-| `hard-quadrant`             |  10 |   30.0% [10.8–60.3] |   60.0% [31.3–83.2] |   70.0% [39.7–89.2] |
-| `misleading-history`        |   4 |     0.0% [0.0–49.0] |   75.0% [30.1–95.4] |     0.0% [0.0–49.0] |
-| `stale-test`                |   7 |     0.0% [0.0–35.4] |     0.0% [0.0–35.4] | 100.0% [64.6–100.0] |
-| `straightforward`           |   8 | 100.0% [67.6–100.0] | 100.0% [67.6–100.0] | 100.0% [67.6–100.0] |
+| `environment-as-regression` |   3 |    33.3% [6.1–79.2] |    33.3% [6.1–79.2] | 100.0% [43.9–100.0] |
+| `hard-quadrant`             |   6 |    33.3% [9.7–70.0] |   50.0% [18.8–81.2] |   83.3% [43.6–97.0] |
+| `misleading-history`        |   3 |     0.0% [0.0–56.1] |   66.7% [20.8–93.9] |     0.0% [0.0–56.1] |
+| `stale-test`                |   5 |     0.0% [0.0–43.4] |     0.0% [0.0–43.4] | 100.0% [56.6–100.0] |
+| `straightforward`           |   5 | 100.0% [56.6–100.0] | 100.0% [56.6–100.0] | 100.0% [56.6–100.0] |
 
 ### Excluded from the headline
 
 No fixture is currently marked `lowConfidenceGroundTruth`. That is a statement about the dataset, not a target — docs/eval-methodology.md expects roughly 10% of a finished dataset to be genuinely arguable, and a dataset with none may simply be avoiding the hard cases.
+
+## Slices
+
+This report scores the `dev` slice.
+
+| bucket                      |  total |    dev | held out |
+| --------------------------- | -----: | -----: | -------: |
+| `environment-as-regression` |      4 |      3 |        1 |
+| `hard-quadrant`             |     10 |      6 |        4 |
+| `misleading-history`        |      4 |      3 |        1 |
+| `stale-test`                |      7 |      5 |        2 |
+| `straightforward`           |      8 |      5 |        3 |
+| **total**                   | **33** | **22** |   **11** |
+
+A fixture's slice is a pure function of its name — the first 32 bits of its SHA-256, held out
+below 20%. Nothing about the rest of the dataset enters into it, so adding, removing or
+renaming any other fixture cannot move it. That property is worth more than an exact 80/20:
+a fixture silently changing slice would invalidate every held-out number ever published, and
+would do it without any visible failure.
+
+The realised split is 11 of 33 — 33%, against a 20% target. That gap is
+ordinary binomial variance at this size, not a defect in the rule, and it narrows as the
+dataset grows towards the 60 fixtures the methodology targets.
 
 ## Every fixture
 
@@ -121,38 +144,27 @@ No fixture is currently marked `lowConfidenceGroundTruth`. That is a statement a
 
 | fixture                                           | bucket                      | ground truth                | predicted                   |     | conf. |
 | ------------------------------------------------- | --------------------------- | --------------------------- | --------------------------- | --- | ----: |
-| `assertion-pins-reworded-empty-state`             | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `board-control-appears-twice-after-panel-split`   | `misleading-history`        | test_code / deterministic   | app_code / intermittent     | ✗   |  0.50 |
-| `board-render-throws-on-empty-description`        | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `bulk-insert-reuses-identifier`                   | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
-| `button-lookup-uses-superseded-label`             | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `client-calls-unversioned-endpoint-path`          | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `completed-filter-omits-most-recent-item`         | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `completion-lost-when-two-updates-overlap`        | `hard-quadrant`             | app_code / intermittent     | app_code / deterministic    | ½   |  0.35 |
-| `completion-toggle-never-reaches-server`          | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
-| `control-shows-earlier-state-after-quick-toggle`  | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
 | `counter-drifts-when-updates-interleave`          | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
 | `create-task-returns-ok-instead-of-created`       | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `debounced-save-skips-final-keystroke`            | `hard-quadrant`             | app_code / intermittent     | app_code / intermittent     | ✓   |  0.50 |
 | `delete-removes-neighbouring-record`              | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `delete-resurrected-by-in-flight-refetch`         | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
-| `duplicate-key-when-two-clients-create-at-once`   | `hard-quadrant`             | app_code / intermittent     | app_code / intermittent     | ✓   |  0.50 |
 | `editing-title-clears-board-position`             | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `expectation-assumes-flat-response-body`          | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `export-now-includes-archived-rows`               | `misleading-history`        | app_code / deterministic    | app_code / intermittent     | ½   |  0.50 |
-| `grouping-order-varies-with-key-insertion`        | `hard-quadrant`             | app_code / intermittent     | app_code / deterministic    | ½   |  0.35 |
 | `locator-still-uses-retired-test-id`              | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `package-registry-certificate-expired-on-agent`   | `environment-as-regression` | environment / deterministic | app_code / deterministic    | ½   |  0.60 |
 | `port-still-held-by-the-previous-job`             | `environment-as-regression` | environment / deterministic | environment / deterministic | ✓   |  0.70 |
 | `position-collision-orders-by-insertion-id`       | `hard-quadrant`             | app_code / intermittent     | app_code / intermittent     | ✓   |  0.50 |
-| `proxy-answers-a-data-request-with-a-login-page`  | `environment-as-regression` | environment / intermittent  | app_code / intermittent     | ½   |  0.50 |
 | `reorder-reconciliation-overwrites-later-drag`    | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
 | `search-rejects-the-empty-query-it-used-to-allow` | `misleading-history`        | app_code / deterministic    | app_code / intermittent     | ½   |  0.50 |
 | `seed-helper-sends-retired-column`                | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `spec-asserts-withdrawn-legacy-field`             | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
-| `task-count-header-excludes-newest`               | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
-| `timestamps-serialised-without-an-offset`         | `misleading-history`        | app_code / deterministic    | app_code / intermittent     | ½   |  0.50 |
-| `token-refresh-cancels-in-flight-save`            | `hard-quadrant`             | app_code / intermittent     | app_code / deterministic    | ½   |  0.35 |
 | `write-fails-when-the-runner-disk-fills`          | `environment-as-regression` | environment / intermittent  | app_code / intermittent     | ½   |  0.50 |
 
 `½` means one axis right and one wrong — a fixture that counts towards both axis accuracies
