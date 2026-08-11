@@ -120,11 +120,51 @@ because release notes are generated from `main`'s history.
 **Draft PRs** are opened early and deliberately — CI runs, the eval delta becomes visible while
 the work is still cheap to change.
 
+### Who can merge
+
+Write access, and nothing else. GitHub enforces it; there is no repository convention here that
+could quietly drift.
+
+|                                    |                                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| Accounts with write access         | one — [@AKogut](https://github.com/AKogut)                                              |
+| Direct pushes to `main`            | rejected; a pull request is required                                                    |
+| Required status checks             | `Repository hygiene`, `PR title convention`, `Static analysis`, `Unit & contract tests` |
+| Branch must be current with `main` | yes                                                                                     |
+| Merge strategy                     | squash only                                                                             |
+
+Approval from anyone without write access does not make a pull request mergeable. This is worth
+stating explicitly because the reverse — a repository where the rule is a norm rather than a
+setting — looks identical from the outside.
+
+The still-skipping jobs (`E2E tests`, `Evaluation gate`, `Flakiness analysis & triage`) are
+deliberately **not** required yet. A required check that never reports leaves every pull request
+waiting for a status that will not arrive. Each is added to the required set by the milestone that
+makes it run.
+
+### Outside pull requests
+
+The repository is public and forking cannot be disabled for public repositories, so anyone can
+open a pull request. That is fine, and [ADR-0007](adr/0007-no-github-app-no-pull-request-target.md)
+treats it as a supported path rather than an accident.
+
+Two things happen to such a pull request, and they answer different questions:
+
+**Whether CI runs at all.** Workflows on a fork pull request require explicit maintainer approval,
+every time — the Actions approval policy is `all_external_contributors`, not GitHub's default of
+`first_time_contributors`. Under the default, a second pull request from the same account runs
+without approval, including one that edits the workflow files themselves. Approving a run is a
+deliberate act of reading the diff first.
+
+**What it can reach once running.** Nothing secret. Fork pull requests receive no secrets, so the
+agent stage cannot run and the pipeline degrades to the baseline heuristic, saying so plainly in
+its comment. `pull_request_target`, the usual workaround, is not used anywhere in this repository —
+the reasoning is in ADR-0007.
+
 ## Review
 
 Single maintainer, so `CODEOWNERS` self-assignment is a routing mechanism rather than a gate.
-The self-review checklist in the PR template is the real control. External contributions require
-maintainer approval.
+The self-review checklist in the PR template is the real control.
 
 Reviews focus, in order, on: does the eval move; is the guardrail still enforced; is the change
 covered by a test; is it the smallest change that works.
