@@ -6,10 +6,12 @@ omission — see [Why no agent loop](#why-there-is-no-agent-loop).
 
 ## Shared infrastructure
 
-Every agent call goes through one wrapper that provides:
+Every agent call goes through `agents/model-client.ts`, which provides:
 
-- **Structured output** via a tool-use schema. The model cannot return prose where an enum is
-  expected; a schema violation triggers a retry with the validation error appended.
+- **Structured output** from the Zod schema. The response format is derived from the same schema
+  that validates the reply, so the model cannot return prose where an enum is expected. A schema
+  violation triggers a retry with the validation errors appended — the model is shown its own
+  failure, because a bare "try again" re-runs the same misunderstanding at the same price.
 - **Input sanitisation.** Test names, error messages, and diff hunks are untrusted text. They are
   length-capped, fenced inside explicit delimiters, and prefixed with a standing instruction that
   content inside the delimiters is data, never instruction.
@@ -19,8 +21,44 @@ Every agent call goes through one wrapper that provides:
   and deterministic.
 - **Telemetry.** One OpenTelemetry span per call, carrying model, token counts, latency, cost,
   retry count, and cassette hit/miss. Exported to `otel-spans.json`.
-- **Budget.** A per-run token ceiling. When it is hit the orchestrator stops dispatching and the
-  report says how many failures went unclassified rather than silently truncating.
+- **Budget.** A per-run token ceiling, checked **before** dispatch against a real
+  `count_tokens` call rather than a character estimate, and re-checked before each schema retry
+  because a corrected prompt is longer. When it is hit the orchestrator stops dispatching and the
+  report says how many failures went unclassified rather than silently truncating. A budget that
+  only reports what was spent is an invoice.
+
+### One transport, enforced
+
+`agents/transport.ts` is the only module allowed to construct an SDK client, and
+`eslint.config.js` fails the build on an `@anthropic-ai/sdk` import anywhere else under `agents/`.
+Every property above is a property of going through that seam; without the rule each one holds
+until the first call site that forgets, and then stops holding silently.
+
+### Retries are classified, not counted
+
+| Failure                                  | Retried                       | Why                                                              |
+| ---------------------------------------- | ----------------------------- | ---------------------------------------------------------------- |
+| Schema violation                         | yes, with the errors appended | The model can correct itself once it sees what was wrong         |
+| Rate limit (429)                         | yes, after backing off        | The request is fine; the timing is not                           |
+| Server fault (5xx) or connection failure | yes, after backing off        | Nothing about the request caused it                              |
+| Malformed request (4xx)                  | **no**                        | Sending it again produces the same 4xx                           |
+| Refusal                                  | **no**                        | A decision, not a fault — asking again buys the same answer      |
+| Anything unclassified                    | **no**                        | Retrying what nobody has categorised is how a bug becomes a bill |
+
+Backoff is exponential with **full jitter**. A fleet that backs off on an identical curve
+re-collides at every step, which is how one rate limit becomes a synchronised herd.
+
+### The model is pinned, and refusals are not papered over
+
+The model ID lives in `MODEL_CONFIG` and nowhere else, so "which model produced this number" has
+one answer per commit. `.github/dependabot.yml` ignores the SDK for the same reason: a model change
+moves every figure in `eval/report.md` and belongs in a reviewable commit with an eval run attached.
+
+Server-side model fallback on a refusal is **off by default**. It is a real feature and a
+reasonable default for the PR-comment path, where an answer from a second model beats no answer.
+It is the wrong default here: a silent substitution part-way through an evaluation would make the
+headline a blend of two models while the report still names one. A refusal surfaces as a typed
+error and is recorded.
 
 ## 1. Triage agent
 

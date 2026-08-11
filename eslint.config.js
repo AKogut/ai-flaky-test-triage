@@ -106,6 +106,39 @@ export default tseslint.config(
   },
 
   // ---------------------------------------------------------------------------
+  // Guardrail: exactly one module may construct an SDK client.
+  //
+  // Replay, sanitisation, the token budget and telemetry are all properties of
+  // going through `agents/transport.ts`. A second module that builds its own
+  // client keeps every one of those working right up until the first call site
+  // that forgets, and then loses them silently. This makes that a build failure
+  // rather than something review has to catch every time.
+  // ---------------------------------------------------------------------------
+  {
+    files: ['agents/**/*.ts'],
+    // Exactly the transport and its own test. The test constructs real SDK
+    // errors on purpose — the mapping it checks is the part that rots when the
+    // SDK's exception hierarchy moves. Exempting `**/*.test.ts` wholesale would
+    // let any agent's test build a client and quietly become the template for
+    // the production code beside it.
+    ignores: ['agents/transport.ts', 'agents/transport.test.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@anthropic-ai/sdk', '@anthropic-ai/sdk/*'],
+              message:
+                'Model calls go through agents/transport.ts. A second SDK client would bypass replay, sanitisation, the token budget and telemetry — see docs/agent-design.md.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ---------------------------------------------------------------------------
   // Config and script files are plain JavaScript and are not in any tsconfig,
   // so type-aware rules cannot run against them.
   // ---------------------------------------------------------------------------
