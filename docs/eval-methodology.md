@@ -153,7 +153,9 @@ roughly ±11pp at 90% accuracy. On 15 fixtures it is ±20pp — wide enough that
 invisible. Every reported metric carries its interval, and the dataset size is a tracked project
 metric.
 
-**Model non-determinism.** Temperature 0 is not determinism. Each fixture is classified `N=5`
+**Model non-determinism.** There is no temperature to pin — this model rejects `temperature`,
+`top_p` and `top_k` outright — and pinning it never bought determinism anyway. Each fixture is
+classified `N=5`
 times; the harness reports mean accuracy, per-fixture label stability (how often the same fixture
 gets the same label), and the variance.
 

@@ -93,7 +93,7 @@ project with a different set of problems.
 
 ## Why is the evaluation itself slightly flaky?
 
-Because model output is non-deterministic even at temperature 0, and 60 fixtures carry a ±11pp
+Because model output is non-deterministic and this model exposes no sampling controls to pretend otherwise, and 60 fixtures carry a ±11pp
 confidence interval. Rather than pretending otherwise, the harness samples each fixture five times,
 reports variance and label stability, and gates CI on interval lower bounds.
 

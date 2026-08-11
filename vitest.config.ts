@@ -20,7 +20,7 @@ export default defineConfig({
       /**
        * A floor, not a target.
        *
-       * Set a few points below what is measured today (96.6% statements, 82.9%
+       * Set a few points below what is measured today (96.8% statements, 83.4%
        * branches) on purpose. A threshold pinned to the current number fails on
        * the first honest refactor that deletes a well-covered file, and a gate
        * that fires on noise is one somebody switches off — at which point the
@@ -36,10 +36,10 @@ export default defineConfig({
        * commit that lifts it.
        */
       thresholds: {
-        statements: 93,
-        branches: 78,
-        functions: 93,
-        lines: 93,
+        statements: 95,
+        branches: 80,
+        functions: 95,
+        lines: 95,
       },
     },
   },

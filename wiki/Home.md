@@ -85,7 +85,7 @@ Three things, all of which are measured rather than claimed:
    obvious shortcuts — real races that look like flakes, environment noise inside a suspicious
    diff, tests that have been flaky for months and today fail for a new reason.
 3. **Reported uncertainty.** Accuracy on 60 fixtures carries a ±11pp interval, and model output is
-   non-deterministic even at temperature 0. Every metric ships with its confidence interval, and
+   non-deterministic, with no sampling controls to pretend otherwise. Every metric ships with its confidence interval, and
    the CI gate fires on the lower bound.
 
 There is a pleasing irony in a flaky-test triage tool whose own evaluation is mildly flaky. It is
