@@ -22,7 +22,26 @@ npm install
 npm run demo     # no API key needed
 ```
 
-Node ≥ 22. A key is only required for live model calls.
+Node ≥ 22.13. A key is only required for live model calls.
+
+## Who can merge, and what happens to an outside pull request
+
+Merging requires write access, of which there is exactly one holder. `main` rejects direct pushes,
+requires a pull request, and requires four passing checks. An approving review from an account
+without write access does not make a pull request mergeable — a GitHub setting rather than a house
+rule, so it cannot drift.
+
+Pull requests from a fork are welcome. Two things to expect:
+
+1. **CI waits for approval.** Workflows on fork pull requests need a maintainer to start them,
+   every time — deliberately stricter than GitHub's default, which asks only for the first and then
+   lets later runs through, including runs of a workflow file the same pull request changed.
+2. **No secrets, by design.** Fork pull requests receive no API key, so the agent stage is skipped
+   and the baseline heuristic runs instead. The comment says so rather than pretending. See
+   [Decision Records](Decision-Records) — ADR-0007.
+
+Neither is a judgement about the contribution. Approving a run means reading the diff before it
+executes, which is the only moment at which reading it helps.
 
 ## Picking something up
 

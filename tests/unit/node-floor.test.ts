@@ -1,12 +1,13 @@
+import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
- * The minimum Node version is stated in four places: `engines.node`, which is the
- * only one a package manager reads, and three prose copies a human reads first —
- * the README badge, CONTRIBUTING, and the wiki's requirements line.
+ * The minimum Node version is stated in five places: `engines.node`, which is the
+ * only one a package manager reads, and four prose copies a human reads first —
+ * the README badge, CONTRIBUTING, and two wiki pages.
  *
  * These drifted the moment ESLint 10 raised the real floor from 22 to 22.13. The
  * failure is quiet in the worst way: the docs keep promising a version that no
@@ -15,7 +16,18 @@ import { describe, expect, it } from 'vitest'
  *
  * `engines.node` is the source of truth here because it is the copy that has
  * consequences.
+ *
+ * The list below started with three files and missed `wiki/Contributing.md`,
+ * which then sat on the stale number while the check reported green. A guard
+ * that enumerates its targets by hand is only as good as the enumeration, so
+ * anything new that states a Node version belongs in `PROSE_COPIES`.
  */
+const PROSE_COPIES = [
+  'README.md',
+  'CONTRIBUTING.md',
+  'wiki/Getting-Started.md',
+  'wiki/Contributing.md',
+] as const
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (file: string): string => readFileSync(join(root, file), 'utf8')
@@ -41,21 +53,30 @@ const declaredFloor = (): string => {
 describe('the documented Node floor', () => {
   const floor = declaredFloor()
 
-  it.each([
-    ['README.md', () => read('README.md')],
-    ['CONTRIBUTING.md', () => read('CONTRIBUTING.md')],
-    ['wiki/Getting-Started.md', () => read('wiki/Getting-Started.md')],
-  ])('%s states the version from engines.node', (_file, load) => {
-    expect(load()).toContain(floor)
+  it.each(PROSE_COPIES)('%s states the version from engines.node', (file) => {
+    expect(read(file)).toContain(floor)
   })
 
-  it('no prose copy still claims the superseded bare major', () => {
+  it.each(PROSE_COPIES)('%s does not still claim the superseded bare major', (file) => {
     // `Node ≥ 22` reads as correct and is not — 22.0 through 22.12 fail to install.
     // Matching the major with nothing after it is what catches a half-done update.
-    const stale = /Node\s*(?:≥|>=)\s*22(?!\.)/
-    for (const file of ['README.md', 'CONTRIBUTING.md', 'wiki/Getting-Started.md']) {
-      expect(read(file)).not.toMatch(stale)
-    }
+    expect(read(file)).not.toMatch(/Node\s*(?:≥|>=)\s*22(?!\.)/)
+  })
+
+  it('checks every copy that exists, not a subset someone remembered', () => {
+    // The original list missed one wiki page, which then held the stale number
+    // while this suite reported green. Anything stating a Node version has to be
+    // in PROSE_COPIES, so the search runs over the tracked files rather than
+    // trusting the list to be complete.
+    //
+    // Both spellings count. README states the floor only inside a shields.io URL,
+    // where `>=` is percent-encoded — searching for prose alone would miss the
+    // one copy most readers see first.
+    const statesAVersion = /Node\s*(?:≥|>=)\s*\d|node-%3E%3D\d/
+    const stated = execSync('git ls-files "*.md"', { cwd: root, encoding: 'utf8' })
+      .split('\n')
+      .filter((file) => file !== '' && statesAVersion.test(read(file)))
+    expect(stated.sort()).toEqual([...PROSE_COPIES].sort())
   })
 
   it('the badge encodes the same floor', () => {

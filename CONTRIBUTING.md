@@ -48,6 +48,27 @@ format via a Husky hook, so a malformed message fails locally rather than in rev
 Open the PR as a **draft** early. CI runs, the eval delta appears, and the work is still cheap to
 change.
 
+## Who can merge, and what happens to an outside PR
+
+Merging requires write access, of which there is exactly one holder. `main` rejects direct pushes,
+requires a pull request, and requires four passing checks. An approving review from an account
+without write access does not make a pull request mergeable — this is a GitHub setting, not a
+house rule, so it cannot drift.
+
+You can still open a pull request from a fork, and it is welcome. Two things to expect:
+
+1. **CI waits for approval.** Workflows on fork pull requests need a maintainer to start them,
+   every time. That is deliberately stricter than GitHub's default, which only asks for the first
+   one and then lets subsequent runs through — including runs of a workflow file the same pull
+   request changed.
+2. **No secrets, by design.** Fork pull requests get no `ANTHROPIC_API_KEY`, so the agent stage is
+   skipped and the pipeline runs the baseline heuristic instead. The comment says so rather than
+   pretending. The reasoning, including why `pull_request_target` is not used, is in
+   [ADR-0007](docs/adr/0007-no-github-app-no-pull-request-target.md).
+
+Neither is a judgement about the contribution. Approving a workflow run means reading a diff before
+it executes, which is the only point at which reading it helps.
+
 ## What a good PR looks like
 
 - Under ~400 changed lines.
