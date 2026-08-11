@@ -43,6 +43,10 @@ Measured, published in `eval/report.md`, and expected:
   test" nearly always true and the strongest heuristic feature goes flat.
 - **Non-English or heavily templated assertion messages** degrade extraction quality; the dataset
   does not currently cover them.
+- **Capping evidence can remove the answer.** A stack trace cut at 4000 characters may lose the
+  frame that explained the failure, and the secret scrub is broad enough to redact a hard-coded
+  value a test was asserting on. Neither is silent: the prompt says how much was removed and the
+  report repeats it, so a classification made on partial evidence is legible as one.
 
 ## Security posture
 
@@ -50,16 +54,17 @@ Measured, published in `eval/report.md`, and expected:
 content in test names, assertion messages, source comments, or diff hunks — all of which flow
 into a prompt.
 
-| Concern                               | Position                                                                                                                                                                                                    |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Secrets in fork PRs                   | GitHub does not expose secrets to fork-triggered workflows. That is correct and is not worked around. `pull_request_target` is **not** used — it would run untrusted code with a write-scoped token.        |
-| Degraded mode on forks                | With no API key the pipeline runs the baseline heuristic only and the comment says so explicitly.                                                                                                           |
-| Prompt injection                      | Untrusted text is delimited, capped, and introduced as data. Output is schema-constrained, so the model can emit enum values and bounded strings, not instructions.                                         |
-| Injection impact ceiling              | Nothing executes agent output. The worst outcome is a wrong label and a misleading comment.                                                                                                                 |
-| Markdown/HTML injection in the report | Agent output is escaped before rendering, so injected content cannot forge report structure or embed hidden markers.                                                                                        |
-| Data leaving the repository           | Source snippets and diff hunks are sent to the Anthropic API. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it. |
-| Secret leakage into prompts           | Context assembly runs a secret-pattern scrub over diffs and source before they enter a prompt. Best-effort, not a guarantee.                                                                                |
-| Token scope                           | Least privilege: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope.                                                                                                |
+| Concern                               | Position                                                                                                                                                                                                                                                                   |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secrets in fork PRs                   | GitHub does not expose secrets to fork-triggered workflows. That is correct and is not worked around. `pull_request_target` is **not** used — it would run untrusted code with a write-scoped token.                                                                       |
+| Degraded mode on forks                | With no API key the pipeline runs the baseline heuristic only and the comment says so explicitly.                                                                                                                                                                          |
+| Prompt injection                      | Untrusted text is delimited, capped, and introduced as data by `agents/sanitise.ts`; harness markers are escaped out of content so nothing can close its own block. Output is schema-constrained, so the model can emit enum values and bounded strings, not instructions. |
+| Hidden text in evidence               | Bidirectional overrides and zero-width characters are removed, not escaped. Their only use here is to make a line render as something other than what it says — to the reviewer of the input first, then to the reader of the report that quotes it.                       |
+| Injection impact ceiling              | Nothing executes agent output. The worst outcome is a wrong label and a misleading comment.                                                                                                                                                                                |
+| Markdown/HTML injection in the report | Agent output is escaped before rendering, so injected content cannot forge report structure or embed hidden markers.                                                                                                                                                       |
+| Data leaving the repository           | Source snippets and diff hunks are sent to the Anthropic API. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it.                                                                |
+| Secret leakage into prompts           | A secret-pattern scrub runs over every untrusted field before it enters a prompt, and before the length cap is applied so a credential cannot be sliced past its own pattern. One pattern list, shared with the cassette writer. Best-effort, not a guarantee.             |
+| Token scope                           | Least privilege: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope.                                                                                                                                                               |
 
 ## Operational limitations
 
