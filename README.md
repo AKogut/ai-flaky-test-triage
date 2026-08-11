@@ -10,9 +10,9 @@
 
 <!-- status:start -->
 
-> **Project status: M2 — Golden dataset, baseline & eval harness.**
-> 2 of 11 milestones complete.
-> Current exit criterion: `npm run eval` scores the baseline heuristic on ≥30 labelled fixtures and writes a report with per-axis accuracy, intervals, and both confusion matrices — with no model involved.
+> **Project status: M3 — Triage agent & replay mode.**
+> 3 of 11 milestones complete.
+> Current exit criterion: the triage agent beats the baseline on joint accuracy by a margin that survives its confidence interval — or the finding that it does not is documented in the README. Either way, `npm run demo` runs the classifier end to end with no API key.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
 > Commands marked 🚧 in the script table are not implemented yet and say so when run.
@@ -140,20 +140,21 @@ cat eval/report.md
 
 ### Script reference
 
-| Script                       | Milestone | What it does                                               |
-| ---------------------------- | --------- | ---------------------------------------------------------- |
-| `npm run help`               | M0        | Annotated listing of every pipeline command and its status |
-| `npm run dev`                | M4 🚧     | Start TaskFlow (API + client) locally                      |
-| `npm run build`              | M4 🚧     | Build the TaskFlow client bundle                           |
-| `npm run test:unit`          | M0        | Vitest — API, flakemetry-lib, prompt builders, contracts   |
-| `npm run test:e2e`           | M5 🚧     | Playwright — TaskFlow UI flows including the flaky specs   |
-| `npm test`                   | M5 🚧     | Unit and E2E together; emits results.json                  |
-| `npm run flakemetry:analyze` | M6 🚧     | Test report + history → analysis.json                      |
-| `npm run agents:analyze`     | M7 🚧     | analysis.json → report.md                                  |
-| `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                          |
-| `npm run eval`               | M2        | Golden-dataset evaluation → eval/report.md                 |
-| `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                  |
-| `npm run demo`               | M3 🚧     | Full pipeline in replay mode, no credentials               |
+| Script                       | Milestone | What it does                                                  |
+| ---------------------------- | --------- | ------------------------------------------------------------- |
+| `npm run help`               | M0        | Annotated listing of every pipeline command and its status    |
+| `npm run dev`                | M4 🚧     | Start TaskFlow (API + client) locally                         |
+| `npm run build`              | M4 🚧     | Build the TaskFlow client bundle                              |
+| `npm run test:unit`          | M0        | Vitest — API, flakemetry-lib, prompt builders, contracts      |
+| `npm run test:coverage`      | M2        | Vitest with coverage, enforcing the floor in vitest.config.ts |
+| `npm run test:e2e`           | M5 🚧     | Playwright — TaskFlow UI flows including the flaky specs      |
+| `npm test`                   | M5 🚧     | Unit and E2E together; emits results.json                     |
+| `npm run flakemetry:analyze` | M6 🚧     | Test report + history → analysis.json                         |
+| `npm run agents:analyze`     | M7 🚧     | analysis.json → report.md                                     |
+| `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                             |
+| `npm run eval`               | M2        | Golden-dataset evaluation → eval/report.md                    |
+| `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                     |
+| `npm run demo`               | M3 🚧     | Full pipeline in replay mode, no credentials                  |
 
 🚧 marks a script that is not implemented yet; running it says so and names its issue.
 Everything else runs today. `npm run help` prints this table from the terminal.

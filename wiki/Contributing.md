@@ -19,10 +19,13 @@
 git clone https://github.com/AKogut/ai-flaky-test-triage.git
 cd ai-flaky-test-triage
 npm install
-npm run demo     # no API key needed
+npm run help            # every command, and whether it exists yet
+npm run test:coverage   # the full suite, with the coverage floor enforced
+npm run eval            # score the baseline against the golden dataset
+npm run demo            # 🚧 M3 · #39 — full pipeline in replay mode
 ```
 
-Node ≥ 22.13. A key is only required for live model calls.
+Node ≥ 22.13. A key is only required for live model calls, and nothing that works today needs one.
 
 ## Who can merge, and what happens to an outside pull request
 

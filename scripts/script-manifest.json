@@ -30,6 +30,13 @@
       "status": "implemented"
     },
     {
+      "name": "test:coverage",
+      "description": "Vitest with coverage, enforcing the floor in vitest.config.ts",
+      "milestone": "M2",
+      "issue": 123,
+      "status": "implemented"
+    },
+    {
       "name": "test:e2e",
       "description": "Playwright — TaskFlow UI flows including the flaky specs",
       "milestone": "M5",

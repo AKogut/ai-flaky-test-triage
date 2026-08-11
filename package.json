@@ -46,7 +46,8 @@
     "test:unit": "vitest run",
     "typecheck": "tsc --build",
     "typecheck:clean": "tsc --build --clean",
-    "wiki:publish": "./scripts/publish-wiki.sh"
+    "wiki:publish": "./scripts/publish-wiki.sh",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.1",
