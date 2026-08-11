@@ -149,7 +149,9 @@ accuracy. On 15 fixtures it is ±20pp — wide enough that a real regression is 
 proportion ships with its interval, and the CI gate compares **lower bounds**, never point
 estimates.
 
-**Model non-determinism.** Temperature 0 is not determinism. Each fixture is classified five times,
+**Model non-determinism.** There is no temperature to pin — this model rejects the sampling
+parameters outright — and pinning it never bought determinism anyway. Each fixture is classified
+five times,
 and the harness reports mean accuracy, variance, and per-fixture label stability.
 
 **Self-consistency is a first-class metric.** A classifier that is 85% accurate and 100% stable is

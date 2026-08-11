@@ -83,8 +83,12 @@ the file under test, and the test's own source.
 
 - The rubric is loaded from a single source shared with the eval harness. A prompt change that
   contradicts the labelling rules is a bug, and keeping one copy makes it impossible.
-- Temperature is 0, which reduces but does not eliminate variance. The eval harness samples
-  N times per fixture for exactly this reason.
+- **There is no temperature to set.** This model rejects `temperature`, `top_p` and `top_k` with a
+  400, so the usual "pin it to 0 and call it deterministic" move is not available — and the loss is
+  smaller than it looks, because it was never determinism in the first place. Variance is measured
+  rather than suppressed: the eval harness samples N times per fixture and reports
+  self-consistency as a first-class metric. A test asserts the client sends no sampling parameter,
+  so this cannot drift back in.
 - Prompts are versioned (`prompts/triage.v3.md`). `eval/report.md` records which version produced
   which numbers, so a regression is attributable.
 

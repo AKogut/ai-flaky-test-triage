@@ -211,7 +211,7 @@ races that look like flakes, environment noise that looks like a regression, sta
 look like bugs. Obvious cases are the minority.
 
 **Reported uncertainty.** Accuracy on 15 fixtures carries a ±20pp confidence interval, and LLM
-output is non-deterministic even at temperature 0 — so the evaluator runs N samples per fixture
+output is non-deterministic, and this model exposes no sampling controls to pretend otherwise — so the evaluator runs N samples per fixture
 and reports mean, variance, and confidence intervals. The CI gate fires on the lower bound, not
 the point estimate.
 
