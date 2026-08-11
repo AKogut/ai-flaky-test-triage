@@ -31,7 +31,7 @@
     "dev": "node scripts/pending.mjs dev",
     "docs:status": "tsx scripts/status-banner.ts",
     "docs:status:check": "tsx scripts/status-banner.ts --check",
-    "eval": "node scripts/pending.mjs eval",
+    "eval": "tsx eval/run-eval.ts",
     "eval:ablation": "node scripts/pending.mjs eval:ablation",
     "eval:lint": "tsx eval/hygiene.ts",
     "flakemetry:analyze": "node scripts/pending.mjs flakemetry:analyze",

@@ -8,10 +8,17 @@ coverage/
 .env.local
 
 # Pipeline outputs — regenerated every run, never committed.
-results.json
-analysis.json
-report.md
-otel-spans.json
+#
+# Anchored to the repository root. An unanchored `report.md` matches at every
+# depth, which silently swallowed `eval/report.md` — a file the README, the wiki
+# and CONTRIBUTING all describe as committed so that a regression shows up as a
+# diff. Nothing failed; the deliverable simply was not there, and `npm run eval
+# --gate` would have failed on a fresh checkout looking for a file git had been
+# told to hide.
+/results.json
+/analysis.json
+/report.md
+/otel-spans.json
 playwright-report/
 test-results/
 blob-report/

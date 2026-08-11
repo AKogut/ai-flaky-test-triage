@@ -62,12 +62,14 @@ Rationale: [ADR-0005](https://github.com/AKogut/ai-flaky-test-triage/blob/main/d
 ## Check the classifier's accuracy yourself
 
 ```bash
-npm run eval        # 🚧 M2 · #27
+npm run eval        # scores the baseline, writes eval/report.md
 cat eval/report.md
 ```
 
-This scores the classifier against the hand-labelled golden dataset **and** against the non-LLM
-baseline heuristic on the same fixtures, with confidence intervals on every proportion.
+Today this scores the **non-LLM baseline heuristic** against the hand-labelled golden dataset,
+with confidence intervals on every proportion. The agent column in the report is deliberately
+present and empty: the result this project reports is the delta between the two, and the agent
+arrives in M3.
 
 The report is committed to the repository, so you can also just
 [read the current one](https://github.com/AKogut/ai-flaky-test-triage/blob/main/eval/report.md)

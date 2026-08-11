@@ -106,14 +106,50 @@ describe('the committed pages', () => {
     expect(splice(page, renderBanner(milestones, variant))).toBe(page)
   })
 
-  it('marks every unimplemented pipeline command in the wiki quickstart (#116)', () => {
-    // The wiki described npm run demo in the present tense while it was a
-    // placeholder. It is the more public of the two surfaces, so it needs the
-    // README's convention rather than an exemption from it.
+  /**
+   * The wiki described `npm run demo` in the present tense while it was a
+   * placeholder (#116). It is the more public of the two surfaces, so it gets
+   * the README's convention rather than an exemption from it.
+   *
+   * The command list is derived from `script-manifest.json` rather than written
+   * out here. The hand-written version went stale twice over: it still demanded
+   * a marker on `npm run eval` after #27 implemented it, and it never knew about
+   * `eval:ablation` or `analyze`. A guard that has to be remembered is a guard
+   * that eventually lies.
+   */
+  describe('unimplemented commands in the wiki quickstart (#116)', () => {
     const page = readFileSync(join(root, 'wiki/Getting-Started.md'), 'utf8')
-    for (const command of ['npm run demo', 'npm run dev', 'npm run eval', 'npm test']) {
-      const line = page.split('\n').find((l) => l.includes(command) && l.includes('🚧'))
-      expect(line, `${command} is described without a 🚧 marker`).toBeTruthy()
-    }
+    const manifest = JSON.parse(
+      readFileSync(join(root, 'scripts/script-manifest.json'), 'utf8'),
+    ) as { scripts: { name: string; status: 'implemented' | 'pending' }[] }
+
+    /** `test:unit` → `npm run test:unit`; `test` → `npm test`. */
+    const invocation = (name: string): string => (name === 'test' ? 'npm test' : `npm run ${name}`)
+
+    /** Lines that invoke the command, excluding longer names that contain it. */
+    const mentions = (command: string): string[] =>
+      page
+        .split('\n')
+        .filter((line) => new RegExp(`${command}(?![\\w:-])`).test(line) && line.includes('#'))
+
+    it.each(manifest.scripts.filter((s) => s.status === 'pending').map((s) => s.name))(
+      'npm run %s is shown with a marker',
+      (name) => {
+        for (const line of mentions(invocation(name))) {
+          expect(line, `"${line.trim()}" describes a pending command with no 🚧`).toContain('🚧')
+        }
+      },
+    )
+
+    it.each(manifest.scripts.filter((s) => s.status === 'implemented').map((s) => s.name))(
+      'npm run %s is not marked as pending',
+      (name) => {
+        for (const line of mentions(invocation(name))) {
+          expect(line, `"${line.trim()}" marks an implemented command as pending`).not.toContain(
+            '🚧',
+          )
+        }
+      },
+    )
   })
 })
