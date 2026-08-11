@@ -51,7 +51,7 @@ change.
 ## Who can merge, and what happens to an outside PR
 
 Merging requires write access, of which there is exactly one holder. `main` rejects direct pushes,
-requires a pull request, and requires four passing checks. An approving review from an account
+requires a pull request, and requires five passing checks. An approving review from an account
 without write access does not make a pull request mergeable — this is a GitHub setting, not a
 house rule, so it cannot drift.
 

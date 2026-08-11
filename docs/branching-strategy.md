@@ -125,22 +125,22 @@ the work is still cheap to change.
 Write access, and nothing else. GitHub enforces it; there is no repository convention here that
 could quietly drift.
 
-|                                    |                                                                                         |
-| ---------------------------------- | --------------------------------------------------------------------------------------- |
-| Accounts with write access         | one — [@AKogut](https://github.com/AKogut)                                              |
-| Direct pushes to `main`            | rejected; a pull request is required                                                    |
-| Required status checks             | `Repository hygiene`, `PR title convention`, `Static analysis`, `Unit & contract tests` |
-| Branch must be current with `main` | yes                                                                                     |
-| Merge strategy                     | squash only                                                                             |
+|                                    |                                                                                                            |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Accounts with write access         | one — [@AKogut](https://github.com/AKogut)                                                                 |
+| Direct pushes to `main`            | rejected; a pull request is required                                                                       |
+| Required status checks             | `Repository hygiene`, `PR title convention`, `Static analysis`, `Unit & contract tests`, `Evaluation gate` |
+| Branch must be current with `main` | yes                                                                                                        |
+| Merge strategy                     | squash only                                                                                                |
 
 Approval from anyone without write access does not make a pull request mergeable. This is worth
 stating explicitly because the reverse — a repository where the rule is a norm rather than a
 setting — looks identical from the outside.
 
-The still-skipping jobs (`E2E tests`, `Evaluation gate`, `Flakiness analysis & triage`) are
-deliberately **not** required yet. A required check that never reports leaves every pull request
-waiting for a status that will not arrive. Each is added to the required set by the milestone that
-makes it run.
+The still-skipping jobs (`E2E tests`, `Flakiness analysis & triage`) are deliberately **not**
+required yet. A required check that never reports leaves every pull request waiting for a status
+that will not arrive. Each is added to the required set by the milestone that makes it run —
+`Evaluation gate` joined it in #27, the change that made it run at all.
 
 ### Outside pull requests
 

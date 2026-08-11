@@ -27,7 +27,7 @@ Node ≥ 22.13. A key is only required for live model calls.
 ## Who can merge, and what happens to an outside pull request
 
 Merging requires write access, of which there is exactly one holder. `main` rejects direct pushes,
-requires a pull request, and requires four passing checks. An approving review from an account
+requires a pull request, and requires five passing checks. An approving review from an account
 without write access does not make a pull request mergeable — a GitHub setting rather than a house
 rule, so it cannot drift.
 
