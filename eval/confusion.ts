@@ -94,7 +94,7 @@ export function renderConfusionMatrix(matrix: ConfusionMatrix): string {
   return [
     `Rows are ground truth, columns are what the classifier said; the bold diagonal is correct.`,
     '',
-    table(header, rows, ['left', ...matrix.labels.map(() => 'right' as const), 'right']),
+    markdownTable(header, rows, ['left', ...matrix.labels.map(() => 'right' as const), 'right']),
   ].join('\n')
 }
 
@@ -154,7 +154,7 @@ export function renderQuadrantTable(rows: QuadrantRow[]): string {
   })
 
   return [
-    table(['quadrant', 'support', 'correct', 'accuracy'], body, [
+    markdownTable(['quadrant', 'support', 'correct', 'accuracy'], body, [
       'left',
       'right',
       'right',
@@ -225,7 +225,7 @@ export function renderBreakdown(
     )
   }
 
-  return table(
+  return markdownTable(
     [dimension, 'n', 'joint', 'owner', 'determinism'],
     groups.map((g) => [
       code(g.group),
@@ -331,7 +331,7 @@ function renderLowConfidence(fixtures: ScoredFixture[]): string {
 // Markdown
 // ---------------------------------------------------------------------------
 
-type Align = 'left' | 'right'
+export type Align = 'left' | 'right'
 
 /**
  * A markdown table padded the way Prettier pads them.
@@ -341,7 +341,7 @@ type Align = 'left' | 'right'
  * failure. Matching its output means the file is stable the moment it is
  * written — asserted by a test that runs the real formatter over the result.
  */
-function table(headers: string[], rows: string[][], align: Align[]): string {
+export function markdownTable(headers: string[], rows: string[][], align: Align[]): string {
   const widths = headers.map((header, i) =>
     Math.max(displayWidth(header), ...rows.map((row) => displayWidth(row[i] ?? '')), 3),
   )

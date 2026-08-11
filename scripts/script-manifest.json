@@ -69,7 +69,7 @@
       "description": "Golden-dataset evaluation → eval/report.md",
       "milestone": "M2",
       "issue": 27,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "eval:ablation",
