@@ -242,12 +242,12 @@ jobs:
     if: needs.hygiene.outputs.has-eval == 'true'
     runs-on: ubuntu-latest
     steps:
+      # Full history. The gate measures a regression against the metrics
+      # recorded on main, and the scope check needs a merge base — neither is
+      # computable from the single commit checkout fetches by default.
       - uses: actions/checkout@v7
-
-      # The gate measures a regression against the metrics recorded on main, so
-      # that ref has to exist locally. checkout fetches one commit by default.
-      - name: Fetch main for comparison
-        run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main || true
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -261,14 +261,32 @@ jobs:
       # work it does rather than whether it runs at all. Today the whole thing
       # is free: no model, no network. From M3 the flag is what stops a
       # docs-only change from spending money on a model.
+      # Fails safe: anything other than a confidently empty diff reports
+      # "changed". Guessing wrong in that direction wastes a run; guessing wrong
+      # the other way silently skips the evaluation on a change that needed it,
+      # which is the failure nobody notices. An earlier version defaulted the
+      # other way and reported "nothing changed" on a pull request that rewrote
+      # eval/ — the merge base was unreachable from a depth-1 checkout, the diff
+      # came back empty, and the check believed it.
       - name: Did anything the evaluation depends on change?
         id: scope
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if git diff --name-only origin/main...HEAD \
-             | grep -Eq '^(agents|eval|prompts)/'; then
+
+          base='${{ github.event.pull_request.base.sha }}'
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Base commit $base unreachable — assuming the evaluation is in scope."
+            exit 0
+          fi
+
+          changed_files=$(git diff --name-only "$base" HEAD)
+          if [ -z "$changed_files" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Empty diff against the base — assuming the evaluation is in scope."
+          elif printf '%s\n' "$changed_files" | grep -Eq '^(agents|eval|prompts)/'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
