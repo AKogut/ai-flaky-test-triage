@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { format } from 'prettier'
 import type { FixtureLabels } from '@sentra/contracts'
+import { CURRENT_PROMPT } from '@sentra/prompts'
 import { classifyWithBaseline } from './baseline.js'
 import {
   confusionMatrix,
@@ -347,6 +348,21 @@ export function renderReport(evaluation: Evaluation): string {
   ].join('\n')
 }
 
+/**
+ * The prompt behind a set of numbers.
+ *
+ * Null for the baseline, and that is not a placeholder — a heuristic has no
+ * prompt, and writing one in would put a version into `eval/metrics.json` that
+ * `prompts/freeze.ts` would then protect on behalf of numbers no prompt
+ * produced.
+ */
+export function promptVersionFor(classifier: Options['classifier']): string | null {
+  return classifier === 'baseline' ? null : (CURRENT_PROMPT.triage ?? null)
+}
+
+const renderPromptVersion = (version: string | null): string =>
+  version === null ? 'none' : `\`${version}\``
+
 function renderProvenance(evaluation: Evaluation): string {
   const { options, fixtures, datasetRevision: revision } = evaluation
   const excluded = fixtures.filter((f) => f.labels.lowConfidenceGroundTruth).length
@@ -354,7 +370,7 @@ function renderProvenance(evaluation: Evaluation): string {
   const rows: string[][] = [
     ['classifier', `\`${options.classifier}\``],
     ['model', options.classifier === 'baseline' ? 'none — a heuristic, no model call' : 'unknown'],
-    ['prompt version', options.classifier === 'baseline' ? 'none' : 'unknown'],
+    ['prompt version', renderPromptVersion(promptVersionFor(options.classifier))],
     ['dataset', `${String(fixtures.length)} fixtures in \`${DATASET_DIR}\``],
     ['dataset revision', `\`${revision}\``],
     ['slice', `\`${options.slice}\``],
@@ -694,6 +710,7 @@ export async function main(argv: string[]): Promise<number> {
     ),
     {
       classifier: options.classifier,
+      promptVersion: promptVersionFor(options.classifier),
       slice: options.slice,
       datasetRevision: evaluation.datasetRevision,
     },

@@ -103,7 +103,7 @@ fails the suite with the old and new values side by side.
 
 Each fixture is a `TestRun`-shaped JSON file plus a sibling `.labels.json` carrying ground truth,
 a prose justification for the label, and the rules from
-[taxonomy.md](taxonomy.md#labelling-rules-for-the-golden-dataset) that were applied.
+[taxonomy.md](taxonomy.md#labelling-rules) that were applied.
 
 **Provenance matters.** Fixtures come from three sources, tracked per fixture:
 `synthetic` (hand-authored), `captured` (a real TaskFlow CI run, labelled after the fact), and

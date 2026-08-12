@@ -7,6 +7,7 @@ export default defineConfig({
       'contracts/**/*.test.ts',
       'flakemetry-lib/**/*.test.ts',
       'agents/**/*.test.ts',
+      'prompts/**/*.test.ts',
       'eval/**/*.test.ts',
       'app/server/**/*.test.ts',
     ],

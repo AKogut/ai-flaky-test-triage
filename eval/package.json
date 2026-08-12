@@ -12,6 +12,7 @@
     }
   },
   "dependencies": {
-    "@sentra/contracts": "*"
+    "@sentra/contracts": "*",
+    "@sentra/prompts": "*"
   }
 }

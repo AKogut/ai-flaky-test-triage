@@ -75,27 +75,48 @@ the file under test, and the test's own source.
 
 **Output:** the `Classification` object from [taxonomy.md](taxonomy.md#output-schema).
 
-**Prompt structure:**
+**Prompt structure.** Every instruction is in the system message and every untrusted string is in
+the user message, with nothing interpolated across the line. That split is the reason
+`prompts/registry.ts` offers exactly one substitution — the rubric — and refuses a template with
+any other placeholder: a prompt file that could interpolate evidence would be a prompt file that
+can put attacker text inside an instruction.
 
-1. Role and the two-axis definition, verbatim from the taxonomy doc — the same text the human
-   labeller used, so the model and the ground truth share a rubric.
-2. The ordered labelling rules, so ambiguous cases resolve the same way the dataset does.
-3. Explicit instruction to reason about the axes independently.
-4. The evidence bundle, in delimited blocks.
-5. A requirement to quote evidence for the decision.
+System (`prompts/triage.v1.md`):
+
+1. Role, and what the output is for.
+2. The rubric — the two-axis definition and the ordered labelling rules, substituted verbatim from
+   the same file the human labeller applies, so the model and the ground truth cannot disagree.
+3. What absence and truncation in the evidence mean, so a capped field is not read as a complete
+   one.
+4. The output contract, including what `confidence` is measured against and a requirement to quote
+   the evidence relied on rather than summarise it.
+
+User (`agents/sanitise.ts`):
+
+5. The standing "this is data" preamble, then the evidence in delimited blocks.
 
 **Design notes:**
 
-- The rubric is loaded from a single source shared with the eval harness. A prompt change that
-  contradicts the labelling rules is a bug, and keeping one copy makes it impossible.
+- **The rubric has one copy.** `prompts/rubric.md` is substituted into the prompt at load time and
+  generated into [taxonomy.md](taxonomy.md#the-rubric), which is what the human labeller applies.
+  A prompt whose definition of `intermittent` has drifted from the dataset's would make the
+  evaluation measure agreement with a rule nobody is following, and the figure would look exactly
+  like the one that meant something. `npm run prompts:sync` writes the copy, a unit test fails when
+  it is stale, and a test asserts no prompt file contains a pasted duplicate — the invariant is
+  "there is no second copy", not "the copies currently agree".
 - **There is no temperature to set.** This model rejects `temperature`, `top_p` and `top_k` with a
   400, so the usual "pin it to 0 and call it deterministic" move is not available — and the loss is
   smaller than it looks, because it was never determinism in the first place. Variance is measured
   rather than suppressed: the eval harness samples N times per fixture and reports
   self-consistency as a first-class metric. A test asserts the client sends no sampling parameter,
   so this cannot drift back in.
-- Prompts are versioned (`prompts/triage.v3.md`). `eval/report.md` records which version produced
-  which numbers, so a regression is attributable.
+- **Prompts are versioned and published versions are immutable.** `prompts/triage.v1.md`;
+  `eval/report.md` and `eval/metrics.json` record which version produced which numbers, so a
+  regression is attributable. Editing a version in place keeps the record and destroys the link —
+  the report still names `triage.v1`, and `triage.v1` is now different text — so
+  `npm run prompts:freeze` fails the build on any change to a prompt the committed metrics name,
+  the rubric included, since it is a section of every prompt rather than a document about them.
+  The next version is the way forward, not an edit.
 
 ## 2. Root-cause agent
 
