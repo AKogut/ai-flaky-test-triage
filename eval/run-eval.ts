@@ -3,6 +3,17 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { format } from 'prettier'
 import type { FixtureLabels } from '@sentra/contracts'
 import { cost, formatUsd, MODEL_CONFIG, type Cost } from '@sentra/agents'
+import {
+  calibrate,
+  deriveThreshold,
+  judge,
+  MIN_SUPPORT,
+  TARGET_ACCURACY,
+  type Calibration,
+  type Point,
+  type Threshold,
+  type Verdict,
+} from './calibration.js'
 import { chooseClassifier, type ClassifierContext, type ClassifierDeps } from './classifier.js'
 import { consensus, summarise, type Prediction, type SamplingSummary } from './consistency.js'
 import {
@@ -255,6 +266,10 @@ export interface Evaluation {
   classifier: ClassifierContext
   /** Mean single-run accuracy, its spread, and which fixtures flipped. */
   sampling: SamplingSummary
+  /** Whether the stated confidence is worth anything, and what follows if it is. */
+  calibration: Calibration
+  threshold: Threshold
+  verdict: Verdict
   /** Tokens and dollars. Zero everywhere for the baseline, which makes no calls. */
   cost: Cost
   metrics: Metrics
@@ -345,12 +360,41 @@ export async function evaluate(options: Options, deps: ClassifierDeps = {}): Pro
       })),
     ),
     cost: cost(chosen.usage),
+    ...calibrationOf(headline),
     metrics: score(headline.map((f) => f.judgement)),
     // Over the whole dataset, not the slice being scored, so the dev report can
     // say what is being withheld from it.
     composition: sliceComposition(every),
     datasetRevision: datasetRevision(fixtures),
   }
+}
+
+/**
+ * Every prediction the run produced, as a confidence and a verdict.
+ *
+ * One point per sample rather than per fixture: with sampling, each sample is a
+ * classification the pipeline could have emitted, and each carries its own
+ * stated confidence. Fixtures with arguable ground truth are already excluded by
+ * the caller — a calibration measured against a label the project itself is
+ * unsure of would be measuring the dataset.
+ */
+function calibrationOf(fixtures: readonly EvaluatedFixture[]): {
+  calibration: Calibration
+  threshold: Threshold
+  verdict: Verdict
+} {
+  const points: Point[] = fixtures.flatMap((fixture) =>
+    fixture.samples.map((sample) => ({
+      confidence: sample.confidence,
+      correct:
+        sample.owner === fixture.judgement.actual.owner &&
+        sample.determinism === fixture.judgement.actual.determinism,
+    })),
+  )
+
+  const calibration = calibrate(points)
+  const threshold = deriveThreshold(points)
+  return { calibration, threshold, verdict: judge(calibration, threshold) }
 }
 
 // ---------------------------------------------------------------------------
@@ -379,6 +423,10 @@ export function renderReport(evaluation: Evaluation): string {
     '## Stability',
     '',
     renderStability(evaluation),
+    '',
+    '## Calibration',
+    '',
+    renderCalibration(evaluation),
     '',
     '## Per quadrant',
     '',
@@ -429,6 +477,103 @@ export function renderReport(evaluation: Evaluation): string {
  * actually gets is the single-run mean, and it belongs on the page rather than
  * in a footnote. The gap between the two is the price of instability.
  */
+/**
+ * Whether the confidence number means anything, said in words first.
+ *
+ * The words lead because they are the part that changes what anybody does. A
+ * reliability table is only actionable once someone has decided whether the
+ * column it is built on carries information, and that decision belongs on the
+ * page rather than in the reader.
+ */
+function renderCalibration(evaluation: Evaluation): string {
+  const { calibration, threshold, verdict } = evaluation
+
+  const headline = [
+    `**${LABEL[verdict.usability]}** ${verdict.summary}`,
+    '',
+    markdownTable(
+      ['', ''],
+      [
+        ['predictions scored', String(calibration.n)],
+        ['distinct confidence values', String(calibration.distinctValues)],
+        [
+          'discrimination (AUROC)',
+          calibration.discrimination === null
+            ? `${NOT_MEASURED} — every prediction landed the same way`
+            : `${calibration.discrimination.toFixed(3)} — 0.50 is a coin toss`,
+        ],
+        ['expected calibration error', calibration.ece.toFixed(3)],
+        ['worst single bin', calibration.mce.toFixed(3)],
+        [
+          'derived root-cause threshold',
+          threshold.value === null
+            ? `not derived — ${threshold.reason}`
+            : threshold.value.toFixed(2),
+        ],
+      ],
+      ['left', 'left'],
+    ),
+  ]
+
+  const populated = calibration.bins.filter((bin) => bin.count > 0)
+  const curve =
+    populated.length === 0
+      ? ['No predictions to bin.']
+      : [
+          '### Reliability curve',
+          '',
+          'Stated confidence against observed accuracy. A perfectly calibrated classifier has the',
+          'two columns equal in every row. Empty bins are omitted; where the classifier never says',
+          '0.3, there is nothing to be right or wrong about.',
+          '',
+          markdownTable(
+            ['confidence', 'predictions', 'stated', 'observed', 'gap'],
+            populated.map((bin) => [
+              `${bin.lower.toFixed(1)}–${bin.upper.toFixed(1)}`,
+              String(bin.count),
+              bin.meanConfidence.toFixed(3),
+              bin.accuracy.toFixed(3),
+              signed(bin.accuracy - bin.meanConfidence),
+            ]),
+            ['left', 'right', 'right', 'right', 'right'],
+          ),
+        ]
+
+  const derivation =
+    threshold.sweep.length === 0
+      ? []
+      : [
+          '',
+          '### Deriving the threshold',
+          '',
+          `Each confidence value the classifier produced, with the accuracy of every prediction at`,
+          `or above it. The threshold is the lowest value clearing ${(TARGET_ACCURACY * 100).toFixed(0)}% over at least`,
+          `${String(MIN_SUPPORT)} predictions — lower is better, because the point is to run the root-cause agent on`,
+          'everything it can be right about, and a higher bar buys accuracy by answering less often.',
+          '',
+          markdownTable(
+            ['threshold', 'predictions at or above', 'accuracy', ''],
+            threshold.sweep.map((row) => [
+              row.threshold.toFixed(2),
+              String(row.count),
+              `${(row.accuracy * 100).toFixed(1)}%`,
+              row.threshold === threshold.value ? '**chosen**' : row.eligible ? 'eligible' : '',
+            ]),
+            ['right', 'right', 'right', 'left'],
+          ),
+        ]
+
+  return [...headline, '', ...curve, ...derivation].join('\n')
+}
+
+const LABEL: Record<Verdict['usability'], string> = {
+  unusable: 'Confidence is not usable.',
+  weak: 'Confidence is weakly informative.',
+  usable: 'Confidence is usable.',
+}
+
+const signed = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(3)}`
+
 function renderStability(evaluation: Evaluation): string {
   const { sampling, cost: spend, options } = evaluation
 

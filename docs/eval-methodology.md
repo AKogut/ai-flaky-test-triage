@@ -197,12 +197,42 @@ A model asked for a confidence number will return 0.85 for nearly everything. If
 whether the root-cause agent runs, the gate is decorative.
 
 The harness therefore bins predictions by stated confidence and measures observed accuracy per
-bin, producing a reliability curve and an **Expected Calibration Error**. Two consequences:
+bin, producing a reliability curve and an **Expected Calibration Error**.
 
-1. The root-cause confidence threshold is read off the calibration curve — the point where
-   observed accuracy actually crosses the target — rather than being guessed.
-2. If ECE is bad enough that confidence carries no information, the honest move is to drop the
-   field and gate on something else. That result would be published, not hidden.
+**ECE alone does not answer the question, and treating it as though it does is the usual mistake.**
+Two properties are being asked about and they are independent:
+
+- **Calibration** — when it says 0.8, is it right about 80% of the time? That is ECE, with the
+  worst single bin reported beside it, because an average hides the case that matters: a classifier
+  can post a respectable ECE while being wrong by 40 points in the one bin the threshold sits in.
+- **Discrimination** — does a higher number mean a better prediction _at all_? Measured as AUROC
+  over (confidence, correct), where 0.50 is a coin toss. A classifier that says 0.7 for every
+  prediction and is right 70% of the time has a **perfect ECE and is useless**, because ranking is
+  the only thing the threshold uses the number for.
+
+So the verdict leads with discrimination, and a good ECE cannot rescue an AUROC of 0.5. The report
+states the conclusion in words — usable, weakly informative, or not usable — before the tables, so
+a reader does not have to decide what the numbers mean before knowing whether the column they are
+built on carries information at all.
+
+Points are one per **prediction**, not per fixture: with sampling every sample is a classification
+the pipeline could have emitted, and each carries its own stated confidence. They are correlated,
+which is why no confidence interval is attached to ECE and why the report calls the result a
+direction rather than a measurement at this dataset size.
+
+**The threshold is read off the data.** The sweep runs over the confidence values the classifier
+actually produced — a threshold between two values it never emits behaves identically to one of
+them and looks more considered than it is — and takes the **lowest** value clearing the target
+accuracy over at least five predictions. Lower is better: the point is to run the root-cause agent
+on everything it can be right about, and a higher bar buys accuracy by answering less often.
+
+When no threshold qualifies, the report says which of the two problems it hit. "No threshold
+reaches 70%" printed next to a row showing 100% is a message a reader stops trusting; short support
+and low accuracy are different problems with different fixes — more fixtures, or a better
+classifier.
+
+If confidence carries no information, the honest move is to drop the field and gate on something
+else. That result gets published, not worked around.
 
 ## Metrics reported
 

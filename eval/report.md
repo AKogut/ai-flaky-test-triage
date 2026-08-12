@@ -47,6 +47,46 @@ Scored once per fixture (`--n=1`), so there is no spread to report.
 
 The baseline is a pure function: repeating it produces identical runs, and a self-consistency of 1 would say nothing about anything.
 
+## Calibration
+
+**Confidence is weakly informative.** Confidence ranks predictions at AUROC 0.70 with an expected calibration error of 0.216. It orders predictions better than chance but the stated number is not the observed rate — treat it as a sortable hint, not a probability. No root-cause threshold could be derived: the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point. At 22 predictions from a stratified dataset this is a direction, not a measurement.
+
+|                              |                                                                                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| predictions scored           | 22                                                                                                                                              |
+| distinct confidence values   | 4                                                                                                                                               |
+| discrimination (AUROC)       | 0.696 — 0.50 is a coin toss                                                                                                                     |
+| expected calibration error   | 0.216                                                                                                                                           |
+| worst single bin             | 0.350                                                                                                                                           |
+| derived root-cause threshold | not derived — the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point |
+
+### Reliability curve
+
+Stated confidence against observed accuracy. A perfectly calibrated classifier has the
+two columns equal in every row. Empty bins are omitted; where the classifier never says
+0.3, there is nothing to be right or wrong about.
+
+| confidence | predictions | stated | observed |    gap |
+| ---------- | ----------: | -----: | -------: | -----: |
+| 0.3–0.4    |           1 |  0.350 |    0.000 | -0.350 |
+| 0.5–0.6    |           9 |  0.500 |    0.222 | -0.278 |
+| 0.6–0.7    |          11 |  0.600 |    0.455 | -0.145 |
+| 0.7–0.8    |           1 |  0.700 |    1.000 | +0.300 |
+
+### Deriving the threshold
+
+Each confidence value the classifier produced, with the accuracy of every prediction at
+or above it. The threshold is the lowest value clearing 70% over at least
+5 predictions — lower is better, because the point is to run the root-cause agent on
+everything it can be right about, and a higher bar buys accuracy by answering less often.
+
+| threshold | predictions at or above | accuracy |     |
+| --------: | ----------------------: | -------: | --- |
+|      0.35 |                      22 |    36.4% |     |
+|      0.50 |                      21 |    38.1% |     |
+|      0.60 |                      12 |    50.0% |     |
+|      0.70 |                       1 |   100.0% |     |
+
 ## Per quadrant
 
 | quadrant                        | support | correct |          accuracy |
