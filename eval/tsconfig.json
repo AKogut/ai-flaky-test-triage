@@ -12,6 +12,9 @@
     },
     {
       "path": "../prompts"
+    },
+    {
+      "path": "../agents"
     }
   ]
 }

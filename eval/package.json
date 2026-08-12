@@ -12,6 +12,7 @@
     }
   },
   "dependencies": {
+    "@sentra/agents": "*",
     "@sentra/contracts": "*",
     "@sentra/prompts": "*"
   }

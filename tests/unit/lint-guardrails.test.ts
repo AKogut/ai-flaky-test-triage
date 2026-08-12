@@ -28,7 +28,12 @@ async function violations(code: string, filePath: string): Promise<string[]> {
     .map((message) => message.message)
 }
 
-const PURE_MODULES = ['agents/context.ts', 'agents/sanitise.ts', 'agents/redact.ts'] as const
+const PURE_MODULES = [
+  'agents/context.ts',
+  'agents/sanitise.ts',
+  'agents/redact.ts',
+  'agents/triage.ts',
+] as const
 
 describe('agents cannot touch the filesystem', () => {
   it.each(PURE_MODULES)('%s cannot import node:fs', async (file) => {

@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { format } from 'prettier'
 import type { FixtureLabels } from '@sentra/contracts'
-import { CURRENT_PROMPT } from '@sentra/prompts'
-import { classifyWithBaseline } from './baseline.js'
+import { MODEL_CONFIG } from '@sentra/agents'
+import { chooseClassifier, type ClassifierContext, type ClassifierDeps } from './classifier.js'
 import {
   confusionMatrix,
   markdownTable,
@@ -108,9 +108,7 @@ export const DEFAULTS: Options = {
 }
 
 /** Capabilities the CLI accepts but cannot do yet, with the issue that will land them. */
-const NOT_YET: Record<string, { what: string; milestone: string; issue: number }> = {
-  'classifier=agent': { what: 'The agent classifier', milestone: 'M3', issue: 35 },
-}
+const NOT_YET: Record<string, { what: string; milestone: string; issue: number }> = {}
 
 export class UsageError extends Error {}
 
@@ -224,6 +222,8 @@ export interface HoldoutContext {
 export interface Evaluation {
   options: Options
   fixtures: EvaluatedFixture[]
+  /** Which prompt, and whether the run touched the network. */
+  classifier: ClassifierContext
   metrics: Metrics
   /** How the whole dataset divides between the slices, whichever slice ran. */
   composition: SliceComposition[]
@@ -249,34 +249,43 @@ export function datasetRevision(fixtures: EvaluatedFixture[]): string {
 const labelDigest = (labels: FixtureLabels): string =>
   `${labels.owner}/${labels.determinism}/${labels.bucket}/${labels.provenance}/${String(labels.lowConfidenceGroundTruth)}`
 
-export function evaluate(options: Options): Evaluation {
+/**
+ * Score a classifier over a slice.
+ *
+ * Sequential on purpose. Concurrency would buy wall-clock on the agent path and
+ * cost the two things this function exists to provide: a deterministic order for
+ * the token budget to run out in, and a report whose per-fixture rows are in the
+ * same order on every run. A dataset of this size is not where latency matters.
+ */
+export async function evaluate(options: Options, deps: ClassifierDeps = {}): Promise<Evaluation> {
   const every = listFixtures().map((name) => ({ name, bucket: loadLabels(name).bucket }))
+  const chosen = chooseClassifier(options.classifier, deps)
 
-  const fixtures = listFixtures()
-    .filter((name) => inSlice(name, options.slice))
-    .map((name): EvaluatedFixture => {
-      const { payload, hash } = loadPayload(name)
-      const labels = loadLabels(name)
-      const predicted = classifyWithBaseline(payload)
+  const fixtures: EvaluatedFixture[] = []
+  for (const name of listFixtures().filter((n) => inSlice(n, options.slice))) {
+    const { payload, hash } = loadPayload(name)
+    const labels = loadLabels(name)
+    const predicted = await chosen.classify(payload)
 
-      return {
-        judgement: {
-          name,
-          predicted: { owner: predicted.owner, determinism: predicted.determinism },
-          actual: { owner: labels.owner, determinism: labels.determinism },
-        },
-        labels,
-        payloadHash: hash,
-        confidence: predicted.confidence,
-        reasoning: predicted.reasoning,
-      }
+    fixtures.push({
+      judgement: {
+        name,
+        predicted: { owner: predicted.owner, determinism: predicted.determinism },
+        actual: { owner: labels.owner, determinism: labels.determinism },
+      },
+      labels,
+      payloadHash: hash,
+      confidence: predicted.confidence,
+      reasoning: predicted.reasoning,
     })
+  }
 
   const headline = fixtures.filter((f) => !f.labels.lowConfidenceGroundTruth)
 
   return {
     options,
     fixtures,
+    classifier: chosen.context,
     metrics: score(headline.map((f) => f.judgement)),
     // Over the whole dataset, not the slice being scored, so the dev report can
     // say what is being withheld from it.
@@ -348,29 +357,31 @@ export function renderReport(evaluation: Evaluation): string {
   ].join('\n')
 }
 
-/**
- * The prompt behind a set of numbers.
- *
- * Null for the baseline, and that is not a placeholder — a heuristic has no
- * prompt, and writing one in would put a version into `eval/metrics.json` that
- * `prompts/freeze.ts` would then protect on behalf of numbers no prompt
- * produced.
- */
-export function promptVersionFor(classifier: Options['classifier']): string | null {
-  return classifier === 'baseline' ? null : (CURRENT_PROMPT.triage ?? null)
-}
-
-const renderPromptVersion = (version: string | null): string =>
-  version === null ? 'none' : `\`${version}\``
-
 function renderProvenance(evaluation: Evaluation): string {
   const { options, fixtures, datasetRevision: revision } = evaluation
   const excluded = fixtures.filter((f) => f.labels.lowConfidenceGroundTruth).length
 
   const rows: string[][] = [
     ['classifier', `\`${options.classifier}\``],
-    ['model', options.classifier === 'baseline' ? 'none — a heuristic, no model call' : 'unknown'],
-    ['prompt version', renderPromptVersion(promptVersionFor(options.classifier))],
+    [
+      'model',
+      options.classifier === 'baseline'
+        ? 'none — a heuristic, no model call'
+        : `\`${MODEL_CONFIG.model}\``,
+    ],
+    [
+      'prompt version',
+      evaluation.classifier.promptVersion === null
+        ? 'none'
+        : `\`${evaluation.classifier.promptVersion}\``,
+    ],
+    // Only when a model was involved. Whether a set of numbers came from
+    // recorded responses or live ones is the difference between a run that cost
+    // nothing and a run that cost money, and between one that is reproducible
+    // and one that is not.
+    ...(evaluation.classifier.mode === null
+      ? []
+      : [['model calls', `\`${evaluation.classifier.mode}\``]]),
     ['dataset', `${String(fixtures.length)} fixtures in \`${DATASET_DIR}\``],
     ['dataset revision', `\`${revision}\``],
     ['slice', `\`${options.slice}\``],
@@ -655,10 +666,7 @@ export async function main(argv: string[]): Promise<number> {
 
   const blocked = unsupported(options)
   if (blocked !== null) {
-    // Indent the text, not the blank lines between it — trailing spaces on an
-    // otherwise empty line show up in anything that captures the output.
-    const indented = blocked.split('\n').map((line) => (line === '' ? '' : `  ${line}`))
-    console.error(['', ...indented, ''].join('\n'))
+    console.error(['', indent(blocked), ''].join('\n'))
     return 2
   }
 
@@ -668,7 +676,22 @@ export async function main(argv: string[]): Promise<number> {
     )
   }
 
-  const evaluation = evaluate(options)
+  let evaluation: Evaluation
+  try {
+    evaluation = await evaluate(options)
+  } catch (error) {
+    // A run that could not finish is not a threshold failure and not a usage
+    // error, and the difference matters to whoever reads the exit code. What it
+    // needs is the message: a cassette miss, a budget ceiling and a refusal each
+    // already say exactly what to do next, and wrapping them in a stack trace
+    // buries the one line that helps.
+    console.error(
+      `\n  The evaluation could not finish.\n\n${indent(
+        error instanceof Error ? error.message : String(error),
+      )}\n`,
+    )
+    return 1
+  }
 
   // Reading the held-out slice is the act being recorded, so the run is logged
   // before the report is rendered — the report then states the usage including
@@ -710,7 +733,7 @@ export async function main(argv: string[]): Promise<number> {
     ),
     {
       classifier: options.classifier,
-      promptVersion: promptVersionFor(options.classifier),
+      promptVersion: evaluation.classifier.promptVersion,
       slice: options.slice,
       datasetRevision: evaluation.datasetRevision,
     },
@@ -761,6 +784,13 @@ export async function main(argv: string[]): Promise<number> {
   console.log(`\n  Wrote ${options.out} and ${metricsPath}\n`)
   return 0
 }
+
+/** Indents the text and not the blank lines — a trailing space shows up in captured output. */
+const indent = (text: string): string =>
+  text
+    .split('\n')
+    .map((line) => (line === '' ? '' : `  ${line}`))
+    .join('\n')
 
 /** Follows `--out` when it was given, so a redirected run does not clobber the committed pair. */
 function metricsPathFor(options: Options): string {

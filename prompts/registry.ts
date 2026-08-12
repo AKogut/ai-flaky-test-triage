@@ -48,8 +48,11 @@ export type Agent = 'triage' | 'root-cause' | 'fix-suggestion'
  * A constant rather than "the highest version on disk". Resolving it
  * automatically means adding a file changes what every future number is measured
  * against, which is the sort of thing that should require a line in a diff.
+ *
+ * `triage` is required by the type: the pipeline has no meaning without it, and
+ * making it optional would buy a runtime guard for a state that cannot exist.
  */
-export const CURRENT_PROMPT: Partial<Record<Agent, string>> = {
+export const CURRENT_PROMPT: { triage: string } & Partial<Record<Agent, string>> = {
   triage: 'triage.v1',
 }
 
