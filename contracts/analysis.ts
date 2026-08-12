@@ -105,6 +105,34 @@ export const AnalysisSchema = z
 export type Analysis = z.infer<typeof AnalysisSchema>
 
 /**
+ * What a classifier is given, and nothing else.
+ *
+ * Named for the job rather than for the file it happens to arrive in. The
+ * evaluation reads it out of a `<name>.run.json` fixture and production
+ * assembles it from `analysis.json`, a diff and a test source — two paths to the
+ * same shape, which is the only way the agent and the baseline can be compared
+ * without measuring their inputs instead of themselves.
+ *
+ * `FixturePayload` extends this with `name` and `scenario`. That direction
+ * matters: dataset bookkeeping is added to the classifier's input, never carved
+ * out of it, so the fields the eval harness keeps for itself cannot reach a
+ * prompt built from this type. Structural rather than remembered.
+ */
+export const ClassificationInputSchema = z
+  .object({
+    /** The failing test plus its flakiness signal. */
+    subject: AnalysedTestSchema,
+    /** Diff of the commit under test, when the scenario involves one. */
+    diff: z.string().max(20_000).optional(),
+    /** Source of the test itself, when the scenario turns on how it is written. */
+    testSource: z.string().max(20_000).optional(),
+    /** False when the run had no history to draw on — a cache miss, usually. */
+    historyAvailable: z.boolean(),
+  })
+  .strict()
+export type ClassificationInput = z.infer<typeof ClassificationInputSchema>
+
+/**
  * Parse an `analysis.json` document, refusing an incompatible major version.
  *
  * A version mismatch has to be an error rather than a best-effort read: the
