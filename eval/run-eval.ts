@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { format } from 'prettier'
 import type { FixtureLabels } from '@sentra/contracts'
-import { MODEL_CONFIG } from '@sentra/agents'
+import { cost, formatUsd, MODEL_CONFIG, type Cost } from '@sentra/agents'
 import { chooseClassifier, type ClassifierContext, type ClassifierDeps } from './classifier.js'
+import { consensus, summarise, type Prediction, type SamplingSummary } from './consistency.js'
 import {
   confusionMatrix,
   markdownTable,
@@ -122,6 +123,7 @@ export class UsageError extends Error {}
 export function parseArgs(argv: string[]): Options {
   const options: Options = { ...DEFAULTS }
   let outWasGiven = false
+  let samplesWereGiven = false
 
   for (const arg of argv) {
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(arg)
@@ -138,6 +140,7 @@ export function parseArgs(argv: string[]): Options {
       case 'n':
       case 'samples':
         options.samples = wholeNumber(flag, value)
+        samplesWereGiven = true
         break
       case 'gate':
         options.gate = true
@@ -159,8 +162,28 @@ export function parseArgs(argv: string[]): Options {
   // Resolved after the loop, not inside it, so `--out=x --slice=holdout` and
   // `--slice=holdout --out=x` mean the same thing.
   if (!outWasGiven) options.out = REPORT_PATHS[options.slice]
+  if (!samplesWereGiven) options.samples = DEFAULT_SAMPLES[options.classifier]
 
   return options
+}
+
+/**
+ * How many times each fixture is classified, by default.
+ *
+ * Five for the agent, because there is no temperature to pin and a single run
+ * cannot tell a prompt improvement from the same prompt run twice. One for the
+ * baseline, which is a pure function — five identical runs would cost time and
+ * report a self-consistency of 1 that says nothing about anything.
+ *
+ * The same in every mode, including replay. The issue proposed defaulting to one
+ * under replay to keep a demo quick; that would make the committed report
+ * unreproducible in CI, since the gate regenerates it from the defaults and would
+ * find a one-sample run disagreeing with a five-sample file. Replaying five
+ * cassettes costs nothing but disk, so there was nothing to save.
+ */
+export const DEFAULT_SAMPLES: Record<Options['classifier'], number> = {
+  baseline: 1,
+  agent: 5,
 }
 
 function expect<T extends string>(flag: string, value: string | undefined, allowed: T[]): T {
@@ -209,8 +232,14 @@ export function unsupported(options: Options): string | null {
  */
 export interface EvaluatedFixture extends ScoredFixture {
   payloadHash: string
+  /** Mean across samples — one sample's number would be arbitrary. */
   confidence: number
+  /** From the first sample. Averaging prose is not a thing. */
   reasoning: string
+  /** Every sample this fixture produced, in order. */
+  samples: Prediction[]
+  /** Share of samples that agreed with the consensus label. */
+  stability: number
 }
 
 /** Read from the committed log, and only present on a run that looked at held-out fixtures. */
@@ -224,6 +253,10 @@ export interface Evaluation {
   fixtures: EvaluatedFixture[]
   /** Which prompt, and whether the run touched the network. */
   classifier: ClassifierContext
+  /** Mean single-run accuracy, its spread, and which fixtures flipped. */
+  sampling: SamplingSummary
+  /** Tokens and dollars. Zero everywhere for the baseline, which makes no calls. */
+  cost: Cost
   metrics: Metrics
   /** How the whole dataset divides between the slices, whichever slice ran. */
   composition: SliceComposition[]
@@ -265,18 +298,36 @@ export async function evaluate(options: Options, deps: ClassifierDeps = {}): Pro
   for (const name of listFixtures().filter((n) => inSlice(n, options.slice))) {
     const { payload, hash } = loadPayload(name)
     const labels = loadLabels(name)
-    const predicted = await chosen.classify(payload)
 
+    // Sample-major per fixture rather than run-major over the dataset: a budget
+    // that runs out then leaves whole fixtures unscored instead of leaving every
+    // fixture with a different number of samples, which nothing downstream could
+    // interpret.
+    const samples: Prediction[] = []
+    let reasoning = ''
+    for (let sample = 0; sample < options.samples; sample++) {
+      const predicted = await chosen.classify(payload, sample)
+      samples.push({
+        owner: predicted.owner,
+        determinism: predicted.determinism,
+        confidence: predicted.confidence,
+      })
+      if (sample === 0) reasoning = predicted.reasoning
+    }
+
+    const agreed = consensus(samples)
     fixtures.push({
       judgement: {
         name,
-        predicted: { owner: predicted.owner, determinism: predicted.determinism },
+        predicted: { owner: agreed.owner, determinism: agreed.determinism },
         actual: { owner: labels.owner, determinism: labels.determinism },
       },
       labels,
       payloadHash: hash,
-      confidence: predicted.confidence,
-      reasoning: predicted.reasoning,
+      confidence: agreed.confidence,
+      reasoning,
+      samples,
+      stability: agreed.stability,
     })
   }
 
@@ -286,6 +337,14 @@ export async function evaluate(options: Options, deps: ClassifierDeps = {}): Pro
     options,
     fixtures,
     classifier: chosen.context,
+    sampling: summarise(
+      headline.map((f) => ({
+        name: f.judgement.name,
+        samples: f.samples,
+        actual: f.judgement.actual,
+      })),
+    ),
+    cost: cost(chosen.usage),
     metrics: score(headline.map((f) => f.judgement)),
     // Over the whole dataset, not the slice being scored, so the dev report can
     // say what is being withheld from it.
@@ -316,6 +375,10 @@ export function renderReport(evaluation: Evaluation): string {
     '## Headline',
     '',
     renderHeadline(metrics),
+    '',
+    '## Stability',
+    '',
+    renderStability(evaluation),
     '',
     '## Per quadrant',
     '',
@@ -356,6 +419,95 @@ export function renderReport(evaluation: Evaluation): string {
     '',
   ].join('\n')
 }
+
+/**
+ * What repeated sampling says, and what the headline above is therefore not.
+ *
+ * The headline is scored on the consensus label, which keeps every count in this
+ * report meaning one fixture — support, confusion cells, quadrant recall. But
+ * the shipped pipeline classifies once, so the number a pull-request comment
+ * actually gets is the single-run mean, and it belongs on the page rather than
+ * in a footnote. The gap between the two is the price of instability.
+ */
+function renderStability(evaluation: Evaluation): string {
+  const { sampling, cost: spend, options } = evaluation
+
+  if (sampling.samples <= 1) {
+    return [
+      `Scored once per fixture (\`--n=1\`), so there is no spread to report.`,
+      '',
+      options.classifier === 'baseline'
+        ? 'The baseline is a pure function: repeating it produces identical runs, and a self-consistency of 1 would say nothing about anything.'
+        : 'Re-run with `--n=5` to measure how much a single classification moves.',
+    ].join('\n')
+  }
+
+  const rows: string[][] = [
+    ['samples per fixture', String(sampling.samples)],
+    ['consensus joint accuracy', formatProportion(evaluation.metrics.joint)],
+    [
+      'single-run joint accuracy',
+      `${share(sampling.meanJoint)} ± ${share(sampling.sdJoint)} — what one comment gets`,
+    ],
+    ['self-consistency', `${share(sampling.selfConsistency)} of samples agreed with the consensus`],
+    [
+      'fixtures that flipped',
+      `${String(sampling.unstable.length)} of ${String(evaluation.metrics.n)}`,
+    ],
+  ]
+
+  const flips =
+    sampling.unstable.length === 0
+      ? ['Every fixture gave the same answer on every sample.']
+      : [
+          'Fixtures that gave more than one answer, least stable first. These are where a',
+          'single-run number and a consensus number disagree, and where a reader of one PR',
+          'comment is being told something the next run would contradict.',
+          '',
+          markdownTable(
+            ['fixture', 'stability', 'labels seen'],
+            sampling.unstable.map((row) => [
+              `\`${row.name}\``,
+              share(row.stability),
+              row.labels.map((label) => `\`${label}\``).join(', '),
+            ]),
+            ['left', 'right', 'left'],
+          ),
+        ]
+
+  const spendRows: string[] =
+    spend.inputTokens + spend.outputTokens === 0
+      ? []
+      : [
+          '',
+          '### Cost',
+          '',
+          markdownTable(
+            ['', ''],
+            [
+              ['input tokens', String(spend.inputTokens)],
+              ['output tokens', String(spend.outputTokens)],
+              ['total', formatUsd(spend.usd)],
+              [
+                'per fixture',
+                `${formatUsd(spend.usd / Math.max(1, evaluation.fixtures.length))} at ${String(sampling.samples)} sample(s) each`,
+              ],
+              [
+                'projected, 50-failure CI run',
+                formatUsd((spend.usd / Math.max(1, evaluation.fixtures.length)) * 50),
+              ],
+              ...(spend.unpricedModels.length === 0
+                ? []
+                : [['unpriced models', spend.unpricedModels.join(', ')]]),
+            ],
+            ['left', 'right'],
+          ),
+        ]
+
+  return [markdownTable(['', ''], rows, ['left', 'left']), '', ...flips, ...spendRows].join('\n')
+}
+
+const share = (value: number): string => `${(value * 100).toFixed(1)}%`
 
 function renderProvenance(evaluation: Evaluation): string {
   const { options, fixtures, datasetRevision: revision } = evaluation
@@ -736,6 +888,15 @@ export async function main(argv: string[]): Promise<number> {
       promptVersion: evaluation.classifier.promptVersion,
       slice: options.slice,
       datasetRevision: evaluation.datasetRevision,
+      // Null rather than 1 when nothing was sampled. A single run of a
+      // deterministic classifier agrees with itself trivially, and recording
+      // that as a perfect score would let the self-consistency floor pass on
+      // evidence nobody gathered.
+      selfConsistency: evaluation.sampling.samples > 1 ? evaluation.sampling.selfConsistency : null,
+      costPerFixtureUsd:
+        evaluation.cost.inputTokens + evaluation.cost.outputTokens === 0
+          ? null
+          : evaluation.cost.usd / Math.max(1, evaluation.fixtures.length),
     },
   )
   const metricsPath = metricsPathFor(options)

@@ -50,6 +50,14 @@ export interface TriageDeps {
   onTelemetry?: (telemetry: CallTelemetry) => void
   /** Names the call site in errors and spans; defaults to the test under triage. */
   label?: string
+  /**
+   * Which of N self-consistency samples this is.
+   *
+   * Threaded down to the cassette key. Without it every sample of a fixture
+   * replays the same recorded answer, and the harness reports perfect stability
+   * for a classifier nobody measured.
+   */
+  sample?: number
 }
 
 export interface TriageResult {
@@ -88,6 +96,7 @@ export async function triage(input: ClassificationInput, deps: TriageDeps): Prom
       prompt,
       promptVersion: deps.promptVersion,
       label: deps.label ?? `triage ${input.subject.result.testId}`,
+      ...(deps.sample !== undefined && { sample: deps.sample }),
     },
     call,
   )

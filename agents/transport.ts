@@ -32,6 +32,16 @@ export interface ModelRequest {
    * that looks exactly like a passing test.
    */
   promptVersion: string
+  /**
+   * Which of N self-consistency samples this is.
+   *
+   * Part of the cassette key, which is the whole reason it lives on the request.
+   * Without it every sample of a fixture hashes to one cassette, replay hands
+   * back the same answer five times, and the harness reports perfect stability
+   * for a classifier nobody measured. A recorded distribution has to replay as a
+   * distribution.
+   */
+  sample?: number
 }
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'

@@ -163,6 +163,32 @@ gets the same label), and the variance.
 more useful than one that is 88% accurate and flips on a third of fixtures, because the second one
 cannot be trusted at the level of an individual PR comment.
 
+**Two accuracy numbers, both on the page.** The headline is scored on the **consensus** label —
+the one a majority of samples gave — so that every count in the report keeps meaning one fixture:
+support, confusion cells, quadrant recall, F1. Directly beneath it the report states the **mean
+single-run accuracy and its spread**, because the shipped pipeline classifies once and that is the
+number a pull-request comment actually gets. The gap between the two is the price of instability,
+and it is stated rather than left for a reader to derive. Every fixture that gave more than one
+answer is listed with the labels it gave.
+
+Ties in the consensus break towards the first sample, not towards a fixed label. A fixed tiebreak
+would make one class win every coin flip, which arrives in the confusion matrix looking like a real
+bias in the classifier and comes from nowhere in it.
+
+The spread is a **population** standard deviation. These N runs are every run that happened, and at
+N=5 the Bessel correction would widen the reported figure by 12% for no reason a reader could act
+on.
+
+**Default N is five for the agent and one for the baseline** — the baseline is a pure function, so
+five identical runs would cost time and report a self-consistency of 1 that says nothing. It is the
+same in every mode, including replay. Making it mode-dependent would make the committed report
+unreproducible: the gate regenerates from the defaults and would find a one-sample run disagreeing
+with the five-sample file it is checking. Replaying five cassettes costs nothing but disk.
+
+**The sample index is part of the cassette key.** Without it every sample of a fixture hashes to the
+same cassette, replay hands back one answer five times, and the harness reports perfect stability
+for a classifier nobody measured.
+
 The CI gate fires on the **lower bound** of the confidence interval, never the point estimate.
 
 ## 4. Confidence calibration

@@ -6,6 +6,7 @@ import {
   triage,
   type Mode,
   type Transport,
+  type Usage,
 } from '@sentra/agents'
 import type { Classification, ClassificationInput } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
@@ -25,7 +26,8 @@ import { classifyWithBaseline } from './baseline.js'
  * paths identical everywhere else.
  */
 
-export type Classify = (input: ClassificationInput) => Promise<Classification>
+/** `sample` is the index of N self-consistency runs; it reaches the cassette key. */
+export type Classify = (input: ClassificationInput, sample: number) => Promise<Classification>
 
 export interface ClassifierContext {
   /** Named in the report so a set of numbers is attributable to a wording. */
@@ -37,6 +39,8 @@ export interface ClassifierContext {
 export interface ChosenClassifier {
   classify: Classify
   context: ClassifierContext
+  /** Every model call the run made, in order. Empty for the baseline. */
+  usage: Usage[]
 }
 
 /**
@@ -71,6 +75,7 @@ export function chooseClassifier(
     return {
       classify: (input) => Promise.resolve(classifyWithBaseline(input)),
       context: { promptVersion: null, mode: null },
+      usage: [],
     }
   }
 
@@ -82,18 +87,28 @@ export function chooseClassifier(
     new CassetteTransport(mode === 'replay' ? unreachable() : new AnthropicTransport(), { mode })
 
   const budget = new TokenBudget(tokenBudget(env))
+  const usage: Usage[] = []
 
   return {
-    classify: async (input) => {
+    classify: async (input, sample) => {
       const result = await triage(input, {
         transport,
         system: prompt.system,
         promptVersion: prompt.version,
         budget,
+        sample,
+        onTelemetry: (telemetry) => {
+          usage.push({
+            model: telemetry.model,
+            inputTokens: telemetry.inputTokens,
+            outputTokens: telemetry.outputTokens,
+          })
+        },
       })
       return result.classification
     },
     context: { promptVersion: prompt.version, mode },
+    usage,
   }
 }
 

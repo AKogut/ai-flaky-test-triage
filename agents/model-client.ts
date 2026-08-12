@@ -145,6 +145,8 @@ export interface CallOptions<T> {
   promptVersion: string
   /** Human-readable call site, for telemetry and error messages. */
   label: string
+  /** Which of N self-consistency samples this is; part of the cassette key. */
+  sample?: number
 }
 
 export interface CallTelemetry {
@@ -210,6 +212,7 @@ export async function callModel<T>(
     schemaName: options.schemaName,
     jsonSchema: toolSchema(options.schema),
     promptVersion: options.promptVersion,
+    ...(options.sample !== undefined && { sample: options.sample }),
   }
 
   let corrections = ''

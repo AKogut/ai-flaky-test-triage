@@ -170,6 +170,8 @@ describe('datasetRevision', () => {
     payloadHash: 'aaaa',
     confidence: 0.5,
     reasoning: 'because',
+    samples: [{ owner: 'app_code', determinism: 'intermittent', confidence: 0.5 }],
+    stability: 1,
     ...over,
   })
 
