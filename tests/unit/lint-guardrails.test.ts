@@ -1,5 +1,5 @@
 import { ESLint } from 'eslint'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 /**
  * The lint guardrails, checked by breaking them.
@@ -18,7 +18,23 @@ import { describe, expect, it } from 'vitest'
  * protect. `npm run lint` was green throughout.
  */
 
+/**
+ * These are type-aware rules, so the first `lintText` builds a TypeScript program
+ * for the whole project before it can report anything. That is seconds of work,
+ * paid once, and it fits inside the default five-second timeout on a developer
+ * machine and does not on a CI runner — which is precisely the failure this
+ * repository exists to talk about, so it is fixed rather than retried.
+ *
+ * The warm-up pays the cost where it is visible instead of charging it to
+ * whichever test happens to run first.
+ */
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 })
+
 const eslint = new ESLint()
+
+beforeAll(async () => {
+  await eslint.lintText('export const warm = 1\n', { filePath: 'agents/context.ts' })
+})
 
 /** Message ids are not stable across versions; the rule name is. */
 async function violations(code: string, filePath: string): Promise<string[]> {
