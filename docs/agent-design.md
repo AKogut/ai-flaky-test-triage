@@ -110,6 +110,13 @@ User (`agents/sanitise.ts`):
   rather than suppressed: the eval harness samples N times per fixture and reports
   self-consistency as a first-class metric. A test asserts the client sends no sampling parameter,
   so this cannot drift back in.
+- **Quoted evidence is verified against the input.** `evidence` is required by the schema, but a
+  schema cannot tell a quotation from an invention — and an invented one reads exactly like a real
+  one, which is what makes it the most damaging output this agent can produce. Every classification
+  is checked: each quoted fragment must appear in the text the model was shown, with whitespace
+  normalised and elisions honoured, so the count means "invented" rather than "reformatted".
+  Reported, not rejected — throwing away an otherwise usable classification would hide the rate, and
+  the rate is the thing worth knowing. #38 publishes it beside the accuracy figures.
 - **Prompts are versioned and published versions are immutable.** `prompts/triage.v1.md`;
   `eval/report.md` and `eval/metrics.json` record which version produced which numbers, so a
   regression is attributable. Editing a version in place keeps the record and destroys the link —
@@ -117,6 +124,24 @@ User (`agents/sanitise.ts`):
   `npm run prompts:freeze` fails the build on any change to a prompt the committed metrics name,
   the rubric included, since it is a section of every prompt rather than a document about them.
   The next version is the way forward, not an edit.
+
+### Running it
+
+`eval/classifier.ts` is the seam: one signature, one input type, one place that decides whether a
+run uses the heuristic or the model. The agent and the control have to be scored the same way over
+the same input or the headline number compares their inputs rather than themselves, so nothing
+about the two paths differs after this function returns.
+
+The seam is async for both. That costs the baseline nothing and keeps every caller identical.
+
+One token budget is shared across the whole run rather than one per call — a per-call ceiling is
+not a ceiling on anything, since thirty-three fixtures would each stay inside it and the run would
+spend thirty-three times what was authorised. Fixtures are scored sequentially: concurrency would
+buy wall-clock and cost a deterministic order for the budget to run out in.
+
+In replay mode the transport handed to the decorator is one that throws on any call. Constructing a
+real client there would work — the SDK does not check a key until it sends — and would turn a
+cassette miss into a live request from a run that was supposed to be free.
 
 ## 2. Root-cause agent
 

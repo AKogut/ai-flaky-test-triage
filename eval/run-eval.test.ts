@@ -13,8 +13,19 @@ import {
   UsageError,
   REPORT_PATHS,
   type EvaluatedFixture,
+  type Evaluation,
   type Options,
 } from './run-eval.js'
+
+/**
+ * One evaluation, at module scope.
+ *
+ * `evaluate` is async now that a classifier can be a model call, and a `describe`
+ * callback cannot await. Top-level await in the module can, and running it once
+ * rather than per-describe also keeps the suite honest about what it is
+ * measuring: the same evaluation every assertion below reads.
+ */
+const evaluation = await evaluate(DEFAULTS)
 
 describe('parseArgs', () => {
   it('defaults to the classifier that needs no network', () => {
@@ -85,11 +96,8 @@ describe('capabilities that do not exist yet', () => {
     expect(unsupported(DEFAULTS)).toBeNull()
   })
 
-  it('refuses the agent classifier and names the issue that lands it', () => {
-    const message = unsupported(options({ classifier: 'agent' }))
-    expect(message).toContain('not implemented yet')
-    expect(message).toContain('issues/35')
-    expect(message).toContain('What works today')
+  it('accepts the agent classifier, which #35 implemented', () => {
+    expect(unsupported(options({ classifier: 'agent' }))).toBeNull()
   })
 
   it.each(['dev', 'holdout', 'all'] as const)(
@@ -126,20 +134,19 @@ describe('slice wiring', () => {
     expect(parseArgs(['--slice=holdout', '--out=/tmp/x.md']).out).toBe('/tmp/x.md')
   })
 
-  it('scores only the requested slice', () => {
-    const dev = evaluate({ ...DEFAULTS, slice: 'dev' }).fixtures.length
-    const holdout = evaluate({ ...DEFAULTS, slice: 'holdout' }).fixtures.length
-    expect(dev + holdout).toBe(evaluate({ ...DEFAULTS, slice: 'all' }).fixtures.length)
+  it('scores only the requested slice', async () => {
+    const dev = (await evaluate({ ...DEFAULTS, slice: 'dev' })).fixtures.length
+    const holdout = (await evaluate({ ...DEFAULTS, slice: 'holdout' })).fixtures.length
+    expect(dev + holdout).toBe((await evaluate({ ...DEFAULTS, slice: 'all' })).fixtures.length)
     expect(holdout).toBeGreaterThan(0)
   })
 
-  it('reports the whole dataset composition whichever slice ran', () => {
+  it('reports the whole dataset composition whichever slice ran', async () => {
     // A reader of the dev report has to be able to answer "what did this number
     // not see" without opening the other file.
-    const total = (e: ReturnType<typeof evaluate>): number =>
-      e.composition.reduce((n, row) => n + row.total, 0)
-    expect(total(evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(33)
-    expect(total(evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(33)
+    const total = (e: Evaluation): number => e.composition.reduce((n, row) => n + row.total, 0)
+    expect(total(await evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(33)
+    expect(total(await evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(33)
   })
 })
 
@@ -202,8 +209,6 @@ describe('datasetRevision', () => {
 // ---------------------------------------------------------------------------
 
 describe('evaluating the committed dataset', () => {
-  const evaluation = evaluate(DEFAULTS)
-
   it('runs end to end with no model and no network', () => {
     // 22, not 33 — the default slice is `dev` and 11 fixtures are held out.
     expect(evaluation.fixtures).toHaveLength(22)
@@ -215,8 +220,8 @@ describe('evaluating the committed dataset', () => {
     expect(names).toEqual([...names].sort())
   })
 
-  it('produces the same revision hash on a second run', () => {
-    expect(evaluate(DEFAULTS).datasetRevision).toBe(evaluation.datasetRevision)
+  it('produces the same revision hash on a second run', async () => {
+    expect((await evaluate(DEFAULTS)).datasetRevision).toBe(evaluation.datasetRevision)
   })
 
   it('scores the headline over fixtures with confident ground truth only', () => {
@@ -226,7 +231,6 @@ describe('evaluating the committed dataset', () => {
 })
 
 describe('the rendered report', () => {
-  const evaluation = evaluate(DEFAULTS)
   const report = renderReport(evaluation)
 
   it('leads with joint accuracy', () => {
@@ -303,8 +307,8 @@ describe('the rendered report', () => {
     expect(report).toContain('no generation timestamp')
   })
 
-  it('is byte-identical across runs', () => {
-    expect(renderReport(evaluate(DEFAULTS))).toBe(report)
+  it('is byte-identical across runs', async () => {
+    expect(renderReport(await evaluate(DEFAULTS))).toBe(report)
   })
 
   it('tells a reader the interval is not a generalisation claim', () => {
@@ -327,7 +331,7 @@ describe('the committed report', () => {
     // This is what `--gate` checks in CI. Having it as a unit test too means the
     // failure arrives locally, before the push, with the same message.
     const committed = readFileSync('eval/report.md', 'utf8')
-    expect(await buildReport(evaluate(DEFAULTS))).toBe(committed)
+    expect(await buildReport(await evaluate(DEFAULTS))).toBe(committed)
   })
 
   it('is formatted the way Prettier formats it', async () => {

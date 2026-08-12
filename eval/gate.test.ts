@@ -31,6 +31,8 @@ const at = (lower: number, over: Partial<MetricsSnapshot> = {}): MetricsSnapshot
 const check = (report: ReturnType<typeof runGate>, id: string) =>
   report.checks.find((c) => c.id === id)
 
+const evaluation = await evaluate(DEFAULTS)
+
 describe('joint accuracy regression', () => {
   it('passes an unchanged classifier', () => {
     const report = runGate({ current: at(0.2), reference: at(0.2) })
@@ -241,7 +243,6 @@ describe('the report', () => {
 // ---------------------------------------------------------------------------
 
 describe('the snapshot', () => {
-  const evaluation = evaluate(DEFAULTS)
   const current = snapshot(
     evaluation.metrics,
     quadrantBreakdown(evaluation.fixtures.map((f) => f.judgement)),

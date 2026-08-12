@@ -164,8 +164,24 @@ describe('the eval CLI', () => {
     expect(await evalMain(argv)).toBe(2)
   })
 
-  it('exits 2 on a capability that does not exist yet', async () => {
-    expect(await evalMain(['--classifier=agent'])).toBe(2)
+  /**
+   * With no committed cassettes the agent classifier cannot run without a
+   * network, and replay never falls through to one. Exit 1 rather than 2: this
+   * is the run failing, not the caller mistyping. The message is the cassette
+   * miss, which already says how to record.
+   */
+  it('exits 1 when the agent classifier has no cassette to replay', async () => {
+    const errors: string[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => {
+      errors.push(String(m))
+    })
+    try {
+      expect(await evalMain(['--classifier=agent'])).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+    expect(errors.join('\n')).toContain('The evaluation could not finish')
+    expect(errors.join('\n')).toContain('SENTRA_RECORD=1')
   })
 
   it('exits 1 when the report it is gating on is missing', async () => {
