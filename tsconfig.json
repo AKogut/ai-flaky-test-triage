@@ -9,6 +9,9 @@
       "path": "./contracts"
     },
     {
+      "path": "./prompts"
+    },
+    {
       "path": "./flakemetry-lib"
     },
     {

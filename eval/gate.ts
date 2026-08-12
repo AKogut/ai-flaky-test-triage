@@ -102,6 +102,13 @@ export interface Interval {
 export interface MetricsSnapshot {
   version: 1
   classifier: Classifier
+  /**
+   * Which prompt produced these numbers; null for the baseline, which has none.
+   *
+   * The link between a figure and the text that produced it, and the input to
+   * `prompts/freeze.ts` — a version named here can no longer be edited in place.
+   */
+  promptVersion: string | null
   slice: string
   datasetRevision: string
   n: number
@@ -125,6 +132,15 @@ export const MetricsSnapshotSchema = z
   .object({
     version: z.literal(1),
     classifier: z.enum(['baseline', 'agent']),
+
+    /**
+     * Additive and defaulted rather than required, so a snapshot committed
+     * before this field existed still parses. `readReferenceSnapshot` throws on
+     * a file it cannot read, which is right for corruption and wrong for "older
+     * than the field" — a required key here would take the gate down on the
+     * commit that introduced it.
+     */
+    promptVersion: z.string().nullable().default(null),
     slice: z.string(),
     datasetRevision: z.string(),
     n: z.number().int().nonnegative(),
@@ -179,13 +195,19 @@ const interval = (p: { point: number; interval: { lower: number; upper: number }
 export function snapshot(
   metrics: Metrics,
   quadrants: readonly QuadrantRow[],
-  context: { classifier: Classifier; slice: string; datasetRevision: string },
+  context: {
+    classifier: Classifier
+    promptVersion: string | null
+    slice: string
+    datasetRevision: string
+  },
 ): MetricsSnapshot {
   const hard = quadrants.find((q) => q.hard)
 
   return {
     version: 1,
     classifier: context.classifier,
+    promptVersion: context.promptVersion,
     slice: context.slice,
     datasetRevision: context.datasetRevision,
     n: metrics.n,

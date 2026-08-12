@@ -1,0 +1,17 @@
+{
+  "name": "@sentra/prompts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Versioned prompt files and the rubric that the model and the human labeller share, with the loader that assembles them.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./index.ts"
+    }
+  },
+  "dependencies": {
+    "zod": "*"
+  }
+}

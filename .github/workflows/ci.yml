@@ -105,6 +105,14 @@ jobs:
           npm ci --silent
           npm run docs:status:check
 
+      # The rubric the model is sent and the rubric the dataset was labelled by
+      # are one file; docs/taxonomy.md carries a generated copy. Drift between
+      # them turns every accuracy figure into agreement with a rule nobody is
+      # applying, and nothing about the repository looks different afterwards.
+      - name: Documented rubric matches the one the prompt embeds
+        if: steps.detect.outputs.has-code == 'true'
+        run: npm run prompts:sync:check
+
       # Label leakage is the quietest way to inflate an accuracy number, so this
       # runs on every push rather than only when the dataset changes — a leaked
       # term arrives just as easily through an edit to the checker itself.
@@ -295,6 +303,14 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "::notice::No change under agents/, eval/ or prompts/ — from M3 the model run is skipped here."
           fi
+
+      # eval/report.md attributes its numbers to a prompt version. Editing that
+      # version in place keeps the record and breaks the link, so a published
+      # version — and the rubric substituted into it — is immutable. This runs
+      # here rather than in hygiene because it needs the full history that job
+      # does not fetch; it throws rather than passing if the ref is unreadable.
+      - name: Published prompt versions were not edited in place
+        run: npm run prompts:freeze -- --ref=origin/main
 
       - name: Run golden-dataset evaluation
         env:

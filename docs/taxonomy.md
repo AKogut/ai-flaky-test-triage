@@ -14,7 +14,17 @@ labeller has to pick arbitrarily. Two people labelling the same fixture disagree
 disagrees with themselves a week later. Once ground truth is unreproducible, accuracy measured
 against it is decoration.
 
-## Two orthogonal axes
+## The rubric
+
+The normative text below is generated from [`prompts/rubric.md`](../prompts/rubric.md) — the same
+file the triage prompt embeds. There is one copy on purpose: a rubric the model applies and a
+rubric the dataset was labelled by that have quietly drifted apart produce an accuracy figure that
+measures agreement with a rule nobody is following, and it looks exactly like the figure that
+meant something. `npm run prompts:sync` writes this block and a unit test fails when it is stale.
+
+<!-- rubric:begin -->
+
+<!-- Generated from prompts/rubric.md by `npm run prompts:sync`. Edit that file, not this block. -->
 
 Every failure gets exactly one value on each axis.
 
@@ -33,7 +43,38 @@ Every failure gets exactly one value on each axis.
 | `deterministic` | Fails every time under the same conditions. | `statusHistory` shows an unbroken failure streak; failed on all retry attempts; flakiness score near 0 with current status failing |
 | `intermittent`  | Fails some of the time.                     | Alternating pass/fail history; passed on retry within the same run; high flakiness score                                           |
 
-### The resulting matrix
+### Labelling rules
+
+Applied in order; the first rule that fires decides.
+
+1. **The run never reached the assertion** (browser crash, port bind failure, install error,
+   OOM) → `environment`, regardless of anything else.
+2. **The test source encodes an unsafe assumption** (asserts without waiting for an async
+   effect, depends on another test's state, depends on list order that is not guaranteed) →
+   `test_code`, even if the product also has a race. Rationale: the test is not a valid
+   detector, so it cannot be evidence about the product.
+3. **The failure reproduces against an unchanged product** (same commit, isolated run) →
+   `test_code` if the test is at fault, `app_code` if the product is.
+4. **Otherwise** → `app_code`.
+
+For `determinism`: `deterministic` iff every attempt in the run failed **and** the recorded
+history shows no pass in the last 5 runs of the same test at the same commit range. Anything
+else is `intermittent`. Where history is absent (`isNew`), fall back to within-run retries only,
+and mark the fixture `lowConfidenceGroundTruth: true` so it can be excluded from headline
+metrics.
+
+### Deciding the axes independently
+
+The axes are orthogonal by construction, and treating them as one judgement is the most common
+way to get both wrong. Knowing a failure is intermittent says nothing about whether the product
+or the test is at fault: a product race and a missing `await` in the spec produce the same
+alternating history. Decide `owner` from what the evidence implicates, decide `determinism` from
+how the failure behaves across attempts and history, and do not let a conclusion on one axis
+argue for a conclusion on the other.
+
+<!-- rubric:end -->
+
+## The resulting matrix
 
 |                   | `deterministic`                                                                     | `intermittent`                                                                                             |
 | ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -78,26 +119,6 @@ type Classification = {
 `evidence` is not decoration. Requiring the model to quote the input it relied on makes
 hallucinated justifications visible in review and gives the eval harness something to check
 beyond the label.
-
-## Labelling rules for the golden dataset
-
-Applied in order; the first rule that fires decides.
-
-1. **The run never reached the assertion** (browser crash, port bind failure, install error,
-   OOM) → `environment`, regardless of anything else.
-2. **The test source encodes an unsafe assumption** (asserts without waiting for an async
-   effect, depends on another test's state, depends on list order that is not guaranteed) →
-   `test_code`, even if the product also has a race. Rationale: the test is not a valid
-   detector, so it cannot be evidence about the product.
-3. **The failure reproduces against an unchanged product** (same commit, isolated run) →
-   `test_code` if the test is at fault, `app_code` if the product is.
-4. **Otherwise** → `app_code`.
-
-For `determinism`: `deterministic` iff every attempt in the run failed **and** the recorded
-history shows no pass in the last 5 runs of the same test at the same commit range. Anything
-else is `intermittent`. Where history is absent (`isNew`), fall back to within-run retries only,
-and mark the fixture `lowConfidenceGroundTruth: true` so it can be excluded from headline
-metrics.
 
 ## Known hard cases
 

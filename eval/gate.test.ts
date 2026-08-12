@@ -15,6 +15,7 @@ import { DEFAULTS, evaluate, METRICS_PATHS } from './run-eval.js'
 const at = (lower: number, over: Partial<MetricsSnapshot> = {}): MetricsSnapshot => ({
   version: 1,
   classifier: 'baseline',
+  promptVersion: null,
   slice: 'dev',
   datasetRevision: 'abcd',
   n: 22,
@@ -244,7 +245,12 @@ describe('the snapshot', () => {
   const current = snapshot(
     evaluation.metrics,
     quadrantBreakdown(evaluation.fixtures.map((f) => f.judgement)),
-    { classifier: 'baseline', slice: 'dev', datasetRevision: evaluation.datasetRevision },
+    {
+      classifier: 'baseline',
+      promptVersion: null,
+      slice: 'dev',
+      datasetRevision: evaluation.datasetRevision,
+    },
   )
 
   it('validates against its own schema', () => {
