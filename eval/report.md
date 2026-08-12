@@ -41,6 +41,12 @@ omitted because the delta over the baseline, not the absolute, is what this proj
 its result. A number in the baseline column with nothing to compare it against is not yet a
 finding.
 
+## Stability
+
+Scored once per fixture (`--n=1`), so there is no spread to report.
+
+The baseline is a pure function: repeating it produces identical runs, and a self-consistency of 1 would say nothing about anything.
+
 ## Per quadrant
 
 | quadrant                        | support | correct |          accuracy |

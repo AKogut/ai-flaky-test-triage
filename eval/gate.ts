@@ -200,6 +200,8 @@ export function snapshot(
     promptVersion: string | null
     slice: string
     datasetRevision: string
+    selfConsistency: number | null
+    costPerFixtureUsd: number | null
   },
 ): MetricsSnapshot {
   const hard = quadrants.find((q) => q.hard)
@@ -222,8 +224,8 @@ export function snapshot(
       support: hard?.support ?? 0,
       correct: hard?.correct ?? 0,
     },
-    selfConsistency: null,
-    costPerFixtureUsd: null,
+    selfConsistency: context.selfConsistency,
+    costPerFixtureUsd: context.costPerFixtureUsd,
   }
 }
 

@@ -251,6 +251,8 @@ describe('the snapshot', () => {
       promptVersion: null,
       slice: 'dev',
       datasetRevision: evaluation.datasetRevision,
+      selfConsistency: null,
+      costPerFixtureUsd: null,
     },
   )
 

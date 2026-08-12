@@ -37,7 +37,7 @@ describe('the baseline', () => {
   it('classifies without a model or a prompt', async () => {
     const chosen = chooseClassifier('baseline')
     expect(chosen.context).toEqual({ promptVersion: null, mode: null })
-    await expect(chosen.classify(payload())).resolves.toHaveProperty('owner')
+    await expect(chosen.classify(payload(), 0)).resolves.toHaveProperty('owner')
   })
 
   /**
@@ -60,7 +60,7 @@ describe('the agent', () => {
   it('sends the assembled prompt through the transport', async () => {
     const transport = stub()
     const chosen = chooseClassifier('agent', { env: REPLAY_ENV, transport })
-    await chosen.classify(payload())
+    await chosen.classify(payload(), 0)
 
     expect(transport.sent).toHaveLength(1)
     expect(transport.sent[0]?.system).toContain('Labelling rules')
@@ -69,7 +69,7 @@ describe('the agent', () => {
 
   it('returns the same shape the baseline does', async () => {
     const chosen = chooseClassifier('agent', { env: REPLAY_ENV, transport: stub() })
-    expect(await chosen.classify(payload())).toEqual(REPLY)
+    expect(await chosen.classify(payload(), 0)).toEqual(REPLY)
   })
 
   /**
@@ -80,7 +80,7 @@ describe('the agent', () => {
   it('shares one token budget across every fixture in the run', async () => {
     const transport = stub()
     const chosen = chooseClassifier('agent', { env: REPLAY_ENV, transport })
-    for (const _ of [0, 1, 2]) await chosen.classify(payload())
+    for (const sample of [0, 1, 2]) await chosen.classify(payload(), sample)
     expect(transport.sent).toHaveLength(3)
   })
 
@@ -92,7 +92,7 @@ describe('the agent', () => {
    */
   it('has no live transport to fall through to in replay mode', async () => {
     const chosen = chooseClassifier('agent', { env: REPLAY_ENV })
-    await expect(chosen.classify(payload())).rejects.toThrow(/no cassette for/)
+    await expect(chosen.classify(payload(), 0)).rejects.toThrow(/no cassette for/)
   })
 })
 

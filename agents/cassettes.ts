@@ -115,6 +115,8 @@ const CassetteSchema = z
     model: z.string(),
     /** Day precision. Enough for #40 to spot a cassette older than its prompt. */
     recordedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /** Which of N self-consistency samples this response was. */
+    sample: z.number().int().nonnegative().default(0),
     request: z.object({
       effort: z.string(),
       maxTokens: z.number().int().positive(),
@@ -142,9 +144,10 @@ export type Cassette = z.infer<typeof CassetteSchema>
 /**
  * A stable identity for a request.
  *
- * Covers the prompt version, the model, and everything about the request that
- * could change the answer — including the response schema, because a reshaped
- * output is a different question even when the prose is identical.
+ * Covers the prompt version, the model, the sample index, and everything about
+ * the request that could change the answer — including the response schema,
+ * because a reshaped output is a different question even when the prose is
+ * identical.
  *
  * The schema is hashed rather than stored: it is derived from a Zod type, runs
  * to hundreds of lines, and would bury the prompt in every cassette review.
@@ -162,6 +165,7 @@ export function cassetteKey(request: ModelRequest): string {
         schemaDigest(request),
         request.system,
         request.prompt,
+        request.sample ?? 0,
       ]),
     )
     .digest('hex')
@@ -286,6 +290,7 @@ export class CassetteTransport implements Transport {
       promptVersion: request.promptVersion,
       model: request.model,
       recordedAt: this.today(),
+      sample: request.sample ?? 0,
       request: {
         effort: request.effort,
         maxTokens: request.maxTokens,
