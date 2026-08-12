@@ -116,8 +116,31 @@ For each failing or newly-flaky test the orchestrator assembles a **context bund
 | Whether the diff touches the file under test | derived        | the single strongest heuristic signal                |
 | Test source                                  | filesystem     | detects missing waits, shared state                  |
 
-Context assembly is a pure function with no I/O of its own (paths are read by callers and passed
-in) so it is unit-testable without a git repo or a network.
+`agents/context.ts` assembles it, and three things about how are load-bearing.
+
+**It is pure** — no filesystem, no git, no network; callers read paths and pass the contents in —
+which is what makes it unit-testable without a repository and what makes the ablation study cheap:
+removing a context field is removing an option, not rewiring a pipeline. Enforced by lint, and the
+lint is itself tested by feeding it a violation.
+
+**It splits the bundle by trust rather than by convenience.** Numbers this pipeline computed —
+flakiness, streaks, retries, and whether the diff touched the code under test — are stated plainly,
+because a contributor cannot forge them. Every string that came out of the repository goes through
+`agents/sanitise.ts` and is fenced as data. The prompt says which half is which, so the model has
+somewhere to stand when the prose and the numbers disagree.
+
+**Whether the diff touches the code under test** is derived from the stack trace first — the
+application frames the failure passed through — and from the `Board.spec.ts` → `Board.ts` naming
+convention second. The convention is the fallback rather than the rule because it is a convention;
+it earns its place by carrying the signal in the case the stack cannot, a locator timeout with no
+application frame at all, which is exactly when the answer matters most. Path comparison is
+suffix-on-a-segment-boundary: reporters emit absolute paths while diff headers are
+repository-relative, so equality would make the strongest signal in the bundle silently always
+false.
+
+Per [ADR-0006](adr/0006-single-shot-agents-no-loop.md) there is no loop in which a model can go
+and find what it was not given, so the ceiling on classifier accuracy is set here rather than in
+the prompt.
 
 ### 4. Agents → `report.md`
 

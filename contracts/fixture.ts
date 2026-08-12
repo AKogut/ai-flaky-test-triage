@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { DeterminismSchema, OwnerSchema } from './agent-output.js'
-import { AnalysedTestSchema } from './analysis.js'
+import { ClassificationInputSchema } from './analysis.js'
 
 /**
  * The golden-dataset fixture format.
@@ -48,23 +48,22 @@ export const LabellingRuleSchema = z.enum([
 ])
 export type LabellingRule = z.infer<typeof LabellingRuleSchema>
 
-/** The classifier's input. Deliberately contains nothing about the answer. */
-export const FixturePayloadSchema = z
-  .object({
-    /** Stable identity, matching the filename stem. */
-    name: z.string().regex(/^[a-z0-9-]+$/),
-    /** One sentence of context. Must not hint at the label — checked by the hygiene lint. */
-    scenario: z.string().min(10).max(300),
-    /** The failing test plus its flakiness signal, exactly as the agents receive it. */
-    subject: AnalysedTestSchema,
-    /** Diff of the commit under test, when the scenario involves one. */
-    diff: z.string().max(20_000).optional(),
-    /** Source of the test itself, when the scenario turns on how it is written. */
-    testSource: z.string().max(20_000).optional(),
-    /** False when the run had no history to draw on. */
-    historyAvailable: z.boolean(),
-  })
-  .strict()
+/**
+ * A classifier's input plus the dataset's own bookkeeping.
+ *
+ * Built by extending `ClassificationInput` rather than by declaring the fields
+ * again, so the fixture format cannot drift from what production assembles — and
+ * so `name` and `scenario`, which exist for the harness and have no business in
+ * a prompt, are visibly additions to the input rather than part of it.
+ *
+ * Deliberately contains nothing about the answer.
+ */
+export const FixturePayloadSchema = ClassificationInputSchema.extend({
+  /** Stable identity, matching the filename stem. */
+  name: z.string().regex(/^[a-z0-9-]+$/),
+  /** One sentence of context. Must not hint at the label — checked by the hygiene lint. */
+  scenario: z.string().min(10).max(300),
+}).strict()
 export type FixturePayload = z.infer<typeof FixturePayloadSchema>
 
 /** The answer. Never returned together with a payload. */

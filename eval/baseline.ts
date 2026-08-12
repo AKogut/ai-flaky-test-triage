@@ -1,10 +1,14 @@
-import type { Classification, FixturePayload } from '@sentra/contracts'
+import type { Classification, ClassificationInput } from '@sentra/contracts'
 
 /**
  * The control.
  *
  * A deliberately simple, model-free classifier producing the same
- * `Classification` shape as the agent and scored on the same fixtures. Without
+ * `Classification` shape as the agent and scored on the same fixtures. It takes
+ * `ClassificationInput`, not the fixture format: the control and the agent have
+ * to see exactly the same input or the comparison measures the input rather than
+ * the classifier, and typing it that way is what makes that true by
+ * construction. Without
  * it the agent's accuracy is a number with nothing to compare against, and the
  * project cannot answer the only question that matters: does the model earn its
  * cost?
@@ -82,7 +86,7 @@ function changedProductPaths(diff: string): string[] {
     )
 }
 
-export function classifyWithBaseline(payload: FixturePayload): Classification {
+export function classifyWithBaseline(payload: ClassificationInput): Classification {
   const { result, signal } = payload.subject
   const message = `${result.error?.message ?? ''}\n${result.error?.stack ?? ''}`
   const changedProduct = changedProductPaths(payload.diff ?? '')
