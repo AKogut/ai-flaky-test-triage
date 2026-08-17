@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   normalisePlaywrightReport,
   normaliseVitestReport,
+  relativise,
   TestRunSchema,
   type TestRun,
 } from '@sentra/contracts'
@@ -122,6 +123,49 @@ describe.each(runs)('%s normalisation', (_label, run) => {
       expect(result.durationMs).toBeGreaterThanOrEqual(0)
       expect(Number.isFinite(result.durationMs)).toBe(true)
     }
+  })
+})
+
+/**
+ * Playwright relativises the file path and nothing else. The stack, the snippet
+ * and the message keep the absolute path of the machine that ran the suite —
+ * which goes into a prompt, then into a public pull-request comment, and makes a
+ * captured fixture specific to whoever captured it.
+ */
+describe('absolute paths from the runner', () => {
+  const raw = read('playwright-1.62.1.json')
+  const stacks = (run: TestRun): string =>
+    run.results
+      .map((result) => `${result.error?.stack ?? ''}${result.error?.snippet ?? ''}`)
+      .join('')
+
+  it('are in the fixture, so the next assertion means something', () => {
+    expect(stacks(normalisePlaywrightReport(raw, meta))).toContain('/repo/')
+  })
+
+  it('are stripped out of every error once a root is given', () => {
+    const run = normalisePlaywrightReport(raw, { ...meta, repositoryRoot: '/repo' })
+
+    for (const result of run.results) {
+      for (const text of [result.error?.message, result.error?.stack, result.error?.snippet]) {
+        expect(text ?? '').not.toContain('/repo/')
+      }
+    }
+    // And the paths survive, relative: stripping the root must not delete the file.
+    expect(stacks(run)).toContain('specs/sample.spec.ts')
+  })
+
+  it('are left alone when no root is given, rather than guessed at', () => {
+    expect(stacks(normalisePlaywrightReport(raw, meta))).toContain('/repo/')
+  })
+
+  it('leaves text with no root in it untouched', () => {
+    expect(relativise('at tests/e2e/board.spec.ts:12:5', '/repo')).toBe(
+      'at tests/e2e/board.spec.ts:12:5',
+    )
+    // An empty root would otherwise strip every leading slash in the file.
+    expect(relativise('/a/b', '')).toBe('/a/b')
+    expect(relativise('/repo/a', '/repo/')).toBe('a')
   })
 })
 

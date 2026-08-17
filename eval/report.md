@@ -9,11 +9,11 @@
 | classifier             | `baseline`                           |
 | model                  | none — a heuristic, no model call    |
 | prompt version         | none                                 |
-| dataset                | 22 fixtures in `eval/golden-dataset` |
-| dataset revision       | `eb99bece4ad0347c`                   |
+| dataset                | 23 fixtures in `eval/golden-dataset` |
+| dataset revision       | `5ce9721387a4b800`                   |
 | slice                  | `dev`                                |
 | samples per fixture    | 1                                    |
-| scored in the headline | 22 (0 excluded)                      |
+| scored in the headline | 23 (0 excluded)                      |
 
 There is deliberately **no generation timestamp** here. The report is committed, so
 `git log eval/report.md` already records when each set of numbers was produced — and a clock
@@ -27,13 +27,13 @@ and a label edit both move it, because both move the numbers.
 
 | metric                 |          baseline | agent | delta |
 | ---------------------- | ----------------: | ----: | ----: |
-| **joint accuracy**     | 36.4% [19.7–57.0] |     — |     — |
-| `owner` accuracy       | 50.0% [30.7–69.3] |     — |     — |
-| `determinism` accuracy | 81.8% [61.5–92.7] |     — |     — |
-| `owner` macro-F1       |             0.382 |     — |     — |
-| `determinism` macro-F1 |             0.804 |     — |     — |
+| **joint accuracy**     | 34.8% [18.8–55.1] |     — |     — |
+| `owner` accuracy       | 47.8% [29.2–67.0] |     — |     — |
+| `determinism` accuracy | 78.3% [58.1–90.3] |     — |     — |
+| `owner` macro-F1       |             0.375 |     — |     — |
+| `determinism` macro-F1 |             0.767 |     — |     — |
 
-All figures over **n = 22**, with 95% Wilson intervals.
+All figures over **n = 23**, with 95% Wilson intervals.
 
 The agent column is empty because the agent does not exist yet — it lands in M3, tracked in
 [#35](https://github.com/AKogut/ai-flaky-test-triage/issues/35). It is present rather than
@@ -49,14 +49,14 @@ The baseline is a pure function: repeating it produces identical runs, and a sel
 
 ## Calibration
 
-**Confidence is weakly informative.** Confidence ranks predictions at AUROC 0.70 with an expected calibration error of 0.216. It orders predictions better than chance but the stated number is not the observed rate — treat it as a sortable hint, not a probability. No root-cause threshold could be derived: the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point. At 22 predictions from a stratified dataset this is a direction, not a measurement.
+**Confidence is weakly informative.** Confidence ranks predictions at AUROC 0.66 with an expected calibration error of 0.235. It orders predictions better than chance but the stated number is not the observed rate — treat it as a sortable hint, not a probability. No root-cause threshold could be derived: the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point. At 23 predictions from a stratified dataset this is a direction, not a measurement.
 
 |                              |                                                                                                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| predictions scored           | 22                                                                                                                                              |
-| distinct confidence values   | 4                                                                                                                                               |
-| discrimination (AUROC)       | 0.696 — 0.50 is a coin toss                                                                                                                     |
-| expected calibration error   | 0.216                                                                                                                                           |
+| predictions scored           | 23                                                                                                                                              |
+| distinct confidence values   | 5                                                                                                                                               |
+| discrimination (AUROC)       | 0.658 — 0.50 is a coin toss                                                                                                                     |
+| expected calibration error   | 0.235                                                                                                                                           |
 | worst single bin             | 0.350                                                                                                                                           |
 | derived root-cause threshold | not derived — the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point |
 
@@ -70,7 +70,7 @@ two columns equal in every row. Empty bins are omitted; where the classifier nev
 | ---------- | ----------: | -----: | -------: | -----: |
 | 0.3–0.4    |           1 |  0.350 |    0.000 | -0.350 |
 | 0.5–0.6    |           9 |  0.500 |    0.222 | -0.278 |
-| 0.6–0.7    |          11 |  0.600 |    0.455 | -0.145 |
+| 0.6–0.7    |          12 |  0.604 |    0.417 | -0.187 |
 | 0.7–0.8    |           1 |  0.700 |    1.000 | +0.300 |
 
 ### Deriving the threshold
@@ -82,9 +82,10 @@ everything it can be right about, and a higher bar buys accuracy by answering le
 
 | threshold | predictions at or above | accuracy |     |
 | --------: | ----------------------: | -------: | --- |
-|      0.35 |                      22 |    36.4% |     |
-|      0.50 |                      21 |    38.1% |     |
-|      0.60 |                      12 |    50.0% |     |
+|      0.35 |                      23 |    34.8% |     |
+|      0.50 |                      22 |    36.4% |     |
+|      0.60 |                      13 |    46.2% |     |
+|      0.65 |                       2 |    50.0% |     |
 |      0.70 |                       1 |   100.0% |     |
 
 ## Per quadrant
@@ -92,7 +93,7 @@ everything it can be right about, and a higher bar buys accuracy by answering le
 | quadrant                        | support | correct |          accuracy |
 | ------------------------------- | ------: | ------: | ----------------: |
 | `app_code` + `deterministic`    |       7 |       5 | 71.4% [35.9–91.8] |
-| **`app_code` + `intermittent`** |       6 |       2 |  33.3% [9.7–70.0] |
+| **`app_code` + `intermittent`** |       7 |       2 |  28.6% [8.2–64.1] |
 | `test_code` + `deterministic`   |       6 |       0 |   0.0% [0.0–39.0] |
 | `test_code` + `intermittent`    |       0 |       0 |               n/a |
 | `environment` + `deterministic` |       2 |       1 |  50.0% [9.5–90.5] |
@@ -110,10 +111,10 @@ Rows are ground truth, columns are what the classifier said; the bold diagonal i
 
 | actual ↓ / predicted → | `app_code` | `test_code` | `environment` | **total** |
 | ---------------------- | ---------: | ----------: | ------------: | --------: |
-| `app_code`             |     **10** |           3 |             0 |        13 |
+| `app_code`             |     **10** |           4 |             0 |        14 |
 | `test_code`            |          6 |       **0** |             0 |         6 |
 | `environment`          |          2 |           0 |         **1** |         3 |
-| **total**              |         18 |           3 |             1 |    **22** |
+| **total**              |         18 |           4 |             1 |    **23** |
 
 ### `determinism`
 
@@ -122,18 +123,18 @@ Rows are ground truth, columns are what the classifier said; the bold diagonal i
 | actual ↓ / predicted → | `deterministic` | `intermittent` | **total** |
 | ---------------------- | --------------: | -------------: | --------: |
 | `deterministic`        |          **12** |              3 |        15 |
-| `intermittent`         |               1 |          **6** |         7 |
-| **total**              |              13 |              9 |    **22** |
+| `intermittent`         |               2 |          **6** |         8 |
+| **total**              |              14 |              9 |    **23** |
 
 ## Per class
 
 | axis          | class           | support | predicted | correct |           precision |            recall |    F1 |
 | ------------- | --------------- | ------: | --------: | ------: | ------------------: | ----------------: | ----: |
-| `owner`       | `app_code`      |      13 |        18 |      10 |   55.6% [33.7–75.4] | 76.9% [49.7–91.8] | 0.645 |
-| `owner`       | `test_code`     |       6 |         3 |       0 |     0.0% [0.0–56.1] |   0.0% [0.0–39.0] | 0.000 |
+| `owner`       | `app_code`      |      14 |        18 |      10 |   55.6% [33.7–75.4] | 71.4% [45.4–88.3] | 0.625 |
+| `owner`       | `test_code`     |       6 |         4 |       0 |     0.0% [0.0–49.0] |   0.0% [0.0–39.0] | 0.000 |
 | `owner`       | `environment`   |       3 |         1 |       1 | 100.0% [20.7–100.0] |  33.3% [6.1–79.2] | 0.500 |
-| `determinism` | `deterministic` |      15 |        13 |      12 |   92.3% [66.7–98.6] | 80.0% [54.8–93.0] | 0.857 |
-| `determinism` | `intermittent`  |       7 |         9 |       6 |   66.7% [35.4–87.9] | 85.7% [48.7–97.4] | 0.750 |
+| `determinism` | `deterministic` |      15 |        14 |      12 |   85.7% [60.1–96.0] | 80.0% [54.8–93.0] | 0.828 |
+| `determinism` | `intermittent`  |       8 |         9 |       6 |   66.7% [35.4–87.9] | 75.0% [40.9–92.9] | 0.706 |
 
 `support` is how many fixtures genuinely are that class; `predicted` is how often the
 classifier reached for it. A class with support and no correct predictions has an F1 of 0 and
@@ -144,14 +145,17 @@ it.
 
 ### By provenance
 
-All 22 fixtures share one provenance (`synthetic`), so this breakdown would repeat the headline. It appears here once the dataset has more than one.
+| provenance  |   n |             joint |             owner |       determinism |
+| ----------- | --: | ----------------: | ----------------: | ----------------: |
+| `captured`  |   1 |   0.0% [0.0–79.3] |   0.0% [0.0–79.3] |   0.0% [0.0–79.3] |
+| `synthetic` |  22 | 36.4% [19.7–57.0] | 50.0% [30.7–69.3] | 81.8% [61.5–92.7] |
 
 ### By difficulty bucket
 
 | bucket                      |   n |               joint |               owner |         determinism |
 | --------------------------- | --: | ------------------: | ------------------: | ------------------: |
 | `environment-as-regression` |   3 |    33.3% [6.1–79.2] |    33.3% [6.1–79.2] | 100.0% [43.9–100.0] |
-| `hard-quadrant`             |   6 |    33.3% [9.7–70.0] |   50.0% [18.8–81.2] |   83.3% [43.6–97.0] |
+| `hard-quadrant`             |   7 |    28.6% [8.2–64.1] |   42.9% [15.8–75.0] |   71.4% [35.9–91.8] |
 | `misleading-history`        |   3 |     0.0% [0.0–56.1] |   66.7% [20.8–93.9] |     0.0% [0.0–56.1] |
 | `stale-test`                |   5 |     0.0% [0.0–43.4] |     0.0% [0.0–43.4] | 100.0% [56.6–100.0] |
 | `straightforward`           |   5 | 100.0% [56.6–100.0] | 100.0% [56.6–100.0] | 100.0% [56.6–100.0] |
@@ -167,11 +171,11 @@ This report scores the `dev` slice.
 | bucket                      |  total |    dev | held out |
 | --------------------------- | -----: | -----: | -------: |
 | `environment-as-regression` |      4 |      3 |        1 |
-| `hard-quadrant`             |     10 |      6 |        4 |
+| `hard-quadrant`             |     11 |      7 |        4 |
 | `misleading-history`        |      4 |      3 |        1 |
 | `stale-test`                |      7 |      5 |        2 |
 | `straightforward`           |      8 |      5 |        3 |
-| **total**                   | **33** | **22** |   **11** |
+| **total**                   | **34** | **23** |   **11** |
 
 A fixture's slice is a pure function of its name — the first 32 bits of its SHA-256, held out
 below 20%. Nothing about the rest of the dataset enters into it, so adding, removing or
@@ -179,7 +183,7 @@ renaming any other fixture cannot move it. That property is worth more than an e
 a fixture silently changing slice would invalidate every held-out number ever published, and
 would do it without any visible failure.
 
-The realised split is 11 of 33 — 33%, against a 20% target. That gap is
+The realised split is 11 of 34 — 32%, against a 20% target. That gap is
 ordinary binomial variance at this size, not a defect in the rule, and it narrows as the
 dataset grows towards the 60 fixtures the methodology targets.
 
@@ -203,6 +207,7 @@ dataset grows towards the 60 fixtures the methodology targets.
 | `editing-title-clears-board-position`             | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `expectation-assumes-flat-response-body`          | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `export-now-includes-archived-rows`               | `misleading-history`        | app_code / deterministic    | app_code / intermittent     | ½   |  0.50 |
+| `list-order-reverts-after-two-quick-moves`        | `hard-quadrant`             | app_code / intermittent     | test_code / deterministic   | ✗   |  0.65 |
 | `locator-still-uses-retired-test-id`              | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `package-registry-certificate-expired-on-agent`   | `environment-as-regression` | environment / deterministic | app_code / deterministic    | ½   |  0.60 |
 | `port-still-held-by-the-previous-job`             | `environment-as-regression` | environment / deterministic | environment / deterministic | ✓   |  0.70 |

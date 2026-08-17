@@ -1,5 +1,5 @@
 import { createApp } from './app.js'
-import { chaosFrom } from './chaos.js'
+import { chaosFrom, type Chaos } from './chaos.js'
 import { open } from './db.js'
 import { seed } from './seed.js'
 
@@ -30,6 +30,16 @@ export interface ServeOptions {
   reseed?: boolean
   /** Serve the built client bundle from this origin too — see `AppDeps.client`. */
   client?: string
+  /**
+   * Seeded latency injection, when the caller wants it for *this* instance
+   * rather than for the process.
+   *
+   * The environment stays the default, because that is how a developer switches
+   * it on. The end-to-end launcher needs something the environment cannot say:
+   * one chaotic server and one calm one, side by side, so the flaky spec gets
+   * its interleaving without every other spec paying for it.
+   */
+  chaos?: Chaos
   log?: (message: string) => void
 }
 
@@ -41,7 +51,7 @@ export function serve(options: ServeOptions = {}): { close: () => Promise<void>;
   const db = open(path)
   if (options.reseed === true) seed(db)
 
-  const chaos = chaosFrom(process.env)
+  const chaos = options.chaos ?? chaosFrom(process.env)
   const server = createApp({
     db,
     chaos,

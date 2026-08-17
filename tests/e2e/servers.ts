@@ -1,7 +1,16 @@
+import { randomInt } from 'node:crypto'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { serve } from '@sentra/taskflow-server'
-import { BUNDLE, databaseFor, portFor, WORKERS } from './harness.js'
+import { chaosFrom, serve } from '@sentra/taskflow-server'
+import {
+  BUNDLE,
+  chaosDatabaseFor,
+  chaosPortFor,
+  CHAOS_SEED,
+  databaseFor,
+  portFor,
+  WORKERS,
+} from './harness.js'
 
 /**
  * One TaskFlow per Playwright worker, started by `webServer` before the run.
@@ -61,17 +70,42 @@ const directory = join(databaseFor(0), '..')
 rmSync(directory, { recursive: true, force: true })
 mkdirSync(directory, { recursive: true })
 
-const running = Array.from({ length: WORKERS }, (_unused, worker) =>
+/**
+ * One seed for this run, drawn here and printed.
+ *
+ * The launcher is the only process allowed to invent it: the config and the test
+ * workers import the same module, and a random default would give each of them a
+ * different answer to the same question. Printed because a flaky failure nobody
+ * can reproduce is a flaky failure nobody can debug — this line is what turns
+ * one into the other.
+ */
+const seed = CHAOS_SEED ?? String(randomInt(0, 2 ** 31))
+console.log(`  chaos seed ${seed} — reproduce this run with SENTRA_E2E_CHAOS=${seed}`)
+
+const start = (worker: number, chaotic: boolean): ReturnType<typeof serve> =>
   serve({
-    port: portFor(worker),
-    database: databaseFor(worker),
+    port: chaotic ? chaosPortFor(worker) : portFor(worker),
+    database: chaotic ? chaosDatabaseFor(worker) : databaseFor(worker),
     reseed: true,
     client: BUNDLE,
+    ...(chaotic && { chaos: chaosFrom({ SENTRA_CHAOS: seed }) }),
     log: (message) => {
-      console.log(`  [worker ${String(worker)}] ${message.trim()}`)
+      console.log(`  [worker ${String(worker)}${chaotic ? ' chaos' : ''}] ${message.trim()}`)
     },
-  }),
-)
+  })
+
+/**
+ * Two per worker: one calm, one with seeded latency injection.
+ *
+ * Only `reorder-quick-succession.spec.ts` uses the chaotic one. Running the whole suite
+ * under injected latency would make every spec slower and every failure
+ * ambiguous — and a control group that is also being perturbed is not a control
+ * group.
+ */
+const running = Array.from({ length: WORKERS }, (_unused, worker) => [
+  start(worker, false),
+  start(worker, true),
+]).flat()
 
 console.log(`  ${String(running.length)} TaskFlow instances ready.`)
 

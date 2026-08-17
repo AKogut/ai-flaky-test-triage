@@ -1,10 +1,28 @@
-import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TestRun } from '@sentra/contracts'
-import { BASE_PORT, databaseFor, originFor, portFor, WORKERS } from '../e2e/harness.js'
-import { isStale, main, metadata, newestChange, summarise, validate } from '../../scripts/e2e.js'
+import {
+  BASE_PORT,
+  chaosDatabaseFor,
+  chaosOriginFor,
+  chaosPortFor,
+  CHAOS_SEED,
+  databaseFor,
+  originFor,
+  portFor,
+  WORKERS,
+} from '../e2e/harness.js'
+import {
+  isStale,
+  main,
+  metadata,
+  newestChange,
+  summarise,
+  unresolvedPaths,
+  validate,
+} from '../../scripts/e2e.js'
 import playwright from '../../playwright.config.js'
 
 /**
@@ -49,6 +67,43 @@ describe('which worker gets what', () => {
 
   it('runs more than one worker, because #54 needs the ordering to vary', () => {
     expect(WORKERS).toBeGreaterThan(1)
+  })
+
+  /**
+   * Two TaskFlows per worker: one calm, one with latency injection. A port or a
+   * database shared between the two sets would let the control group feel the
+   * chaos, and the resulting flakiness would be nobody's fault and would teach
+   * the classifier nothing.
+   */
+  it('keeps the chaotic instances off the calm ones’ ports and files', () => {
+    const ports = new Set<number>()
+    const databases = new Set<string>()
+
+    for (let worker = 0; worker < WORKERS; worker++) {
+      ports.add(portFor(worker)).add(chaosPortFor(worker))
+      databases.add(databaseFor(worker)).add(chaosDatabaseFor(worker))
+    }
+
+    expect(ports.size).toBe(WORKERS * 2)
+    expect(databases.size).toBe(WORKERS * 2)
+  })
+
+  it('gives the chaotic instances their own origins', () => {
+    expect(chaosOriginFor(0)).not.toBe(originFor(0))
+    expect(chaosOriginFor(0)).toContain(String(chaosPortFor(0)))
+  })
+
+  /**
+   * A fixed seed makes the reorder spec fail on every run, which is a
+   * reproduction rather than a flaky test — measured at 12 failures out of 12
+   * before the launcher started drawing its own. So this constant is the
+   * override and nothing else; only the launcher may invent a seed.
+   */
+  it('leaves the chaos seed to the launcher unless somebody pins one', async () => {
+    expect(CHAOS_SEED).toBeUndefined()
+
+    vi.stubEnv('SENTRA_E2E_CHAOS', '4242')
+    expect((await import('../e2e/harness.js')).CHAOS_SEED).toBe('4242')
   })
 
   /**
@@ -121,6 +176,26 @@ describe('the Playwright configuration', () => {
   it('keeps a file’s tests in one worker, so a sequence can be a sequence', () => {
     expect(playwright.fullyParallel).toBe(false)
     expect(playwright.workers).toBe(WORKERS)
+  })
+
+  /**
+   * `testDir` is the repository root so that reported paths carry their
+   * directory, and the cost is that `testMatch` selects from the whole tree. A
+   * relative glob is not anchored: `tests/e2e/**` also matched
+   * `demo/sources/tests/e2e/smoke.spec.ts`, which is fixture data — the contents
+   * of specs in an imaginary repository, read as text and fed to a prompt.
+   * Playwright ran them against an application that is not TaskFlow and reported
+   * zero real tests.
+   */
+  it('collects the specs and nothing that merely looks like one', () => {
+    const matches = playwright.testMatch as RegExp
+    expect(matches.test(join(process.cwd(), 'tests/e2e/reorder.spec.ts'))).toBe(true)
+    expect(matches.test(join(process.cwd(), 'demo/sources/tests/e2e/smoke.spec.ts'))).toBe(false)
+    expect(matches.test('/elsewhere/tests/e2e/board.spec.ts')).toBe(false)
+
+    // The fixture data it must not collect is really there, so this is a check
+    // and not a hypothetical.
+    expect(existsSync(join(process.cwd(), 'demo/sources/tests/e2e/smoke.spec.ts'))).toBe(true)
   })
 })
 
@@ -260,6 +335,37 @@ describe('validating the report', () => {
     expect(() => validate({ tests: [] }, META)).toThrow(/Not a Playwright JSON report/)
   })
 
+  /**
+   * The failure that passed the schema comfortably: `testDir: 'tests/e2e'` made
+   * Playwright report paths relative to *that* directory, so a spec arrived as
+   * `reorder-quick-succession.spec.ts` with no directory at all. Test identity,
+   * run history and the agents' context all key on this path.
+   */
+  it('accepts a report whose paths resolve in the checkout', () => {
+    expect(unresolvedPaths(validate(REPORT, META), process.cwd())).toEqual([])
+  })
+
+  it('rejects one whose paths do not', () => {
+    const stripped = {
+      ...REPORT,
+      suites: [
+        {
+          ...REPORT.suites[0],
+          specs: REPORT.suites[0]?.specs.map((spec) => ({
+            ...spec,
+            file: 'harness.spec.ts',
+          })),
+        },
+      ],
+    }
+    expect(unresolvedPaths(validate(stripped, META), process.cwd())).toEqual(['harness.spec.ts'])
+  })
+
+  it('names every unresolved path once, however many tests share it', () => {
+    const run = validate(REPORT, META)
+    expect(unresolvedPaths(run, '/nowhere-at-all')).toEqual(['tests/e2e/harness.spec.ts'])
+  })
+
   it('counts what it found, so a run says something even when it is green', () => {
     expect(summarise(validate(REPORT, META))).toContain('2 tests')
     expect(summarise(validate(REPORT, META))).toContain('1 passed')
@@ -281,7 +387,12 @@ interface Invocation {
 }
 
 const runner = (
-  over: { report?: unknown; codes?: Record<string, number>; root?: string } = {},
+  over: {
+    report?: unknown
+    codes?: Record<string, number>
+    root?: string
+    exists?: (path: string) => boolean
+  } = {},
 ): { calls: Invocation[]; code: number; output: string } => {
   const calls: Invocation[] = []
   const lines: string[] = []
@@ -289,6 +400,7 @@ const runner = (
   const code = main([], {
     env: { GITHUB_RUN_ID: '1', GITHUB_SHA: 'abcdef1', GITHUB_REF_NAME: 'main' },
     root: over.root ?? tree(1, 60),
+    exists: over.exists ?? (() => true),
     log: (message) => lines.push(message),
     read: () => (over.report === undefined ? JSON.stringify(REPORT) : JSON.stringify(over.report)),
     run: (command, args) => {
@@ -350,12 +462,32 @@ describe('the runner', () => {
         read: () => {
           throw new Error('ENOENT: no such file or directory')
         },
+        exists: () => true,
         run: () => 0,
       })
       expect(code).toBe(1)
     } finally {
       spy.mockRestore()
     }
+  })
+
+  /**
+   * A path the checkout does not contain is a report the pipeline cannot use:
+   * the agents read the test's source from it and history is keyed on it.
+   */
+  it('fails when the report names a file that is not in the checkout', () => {
+    const errors: string[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => {
+      errors.push(String(m))
+    })
+
+    try {
+      expect(runner({ exists: () => false }).code).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+    expect(errors.join('')).toContain('do not exist in the checkout')
+    expect(errors.join('')).toContain('testDir')
   })
 
   it('passes its arguments through, so `--grep` and `--headed` still work', () => {
@@ -365,6 +497,7 @@ describe('the runner', () => {
       root: tree(1, 60),
       log: () => undefined,
       read: () => JSON.stringify(REPORT),
+      exists: () => true,
       run: (command, args) => {
         calls.push({ command, args })
         return 0

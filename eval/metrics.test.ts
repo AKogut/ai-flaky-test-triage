@@ -355,13 +355,13 @@ describe('the baseline scored against the committed dataset', () => {
    * moved and whether the movement was intended.
    */
   it('records joint accuracy, the headline metric', () => {
-    expect(metrics.n).toBe(33)
+    expect(metrics.n).toBe(34)
     expect(metrics.joint.successes).toBe(12)
-    expect(metrics.joint.point).toBeCloseTo(0.3636, 4)
+    expect(metrics.joint.point).toBeCloseTo(0.3529, 4)
   })
 
   it('shows joint accuracy well below either axis', () => {
-    // 54.5% and 78.8% look like a classifier that half works. 36.4% is how often
+    // 52.9% and 76.5% look like a classifier that half works. 35.3% is how often
     // it produces an answer a developer could act on, and it is the only one of
     // the three that says so.
     expect(metrics.owner.accuracy.successes).toBe(18)
@@ -370,11 +370,11 @@ describe('the baseline scored against the committed dataset', () => {
   })
 
   it('reports an interval wide enough to forbid reading small movements', () => {
-    // ±15.6pp at n=33. Any comparison of two runs that differ by less than a
+    // ±15.3pp at n=34. Any comparison of two runs that differ by less than a
     // third of the dataset is noise, and the interval is what says so out loud.
     expect(marginOfError(metrics.joint)).toBeGreaterThan(15)
-    expect(metrics.joint.interval.lower).toBeCloseTo(0.2217, 3)
-    expect(metrics.joint.interval.upper).toBeCloseTo(0.5342, 3)
+    expect(metrics.joint.interval.lower).toBeCloseTo(0.2149, 3)
+    expect(metrics.joint.interval.upper).toBeCloseTo(0.5209, 3)
   })
 
   it('never finds a single test_code fixture, which accuracy alone hides', () => {
@@ -382,13 +382,13 @@ describe('the baseline scored against the committed dataset', () => {
     // calls them app_code — documented in docs/eval-methodology.md and left
     // deliberately unfixed. The consequence is a class with F1 exactly 0.
     const testCode = metrics.owner.classes.find((c) => c.label === 'test_code')
-    expect(testCode).toMatchObject({ support: 8, predictedCount: 4, truePositives: 0 })
+    expect(testCode).toMatchObject({ support: 8, predictedCount: 5, truePositives: 0 })
     expect(testCode?.f1).toBe(0)
   })
 
   it('is beaten on owner accuracy by answering "app_code" every time', () => {
-    // 21 of 33 fixtures are app_code, so the constant classifier scores 63.6%
-    // against the baseline's 54.5%. This is not a defect in the baseline — it is
+    // 22 of 34 fixtures are app_code, so the constant classifier scores 64.7%
+    // against the baseline's 52.9%. This is not a defect in the baseline — it is
     // the adversarial dataset working as intended, and it is the clearest
     // argument for why macro-F1 is reported next to accuracy: the constant
     // classifier's macro-F1 is 0.26 against the baseline's 0.36.

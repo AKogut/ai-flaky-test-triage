@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createApp, pattern } from './app.js'
-import { chaosFrom, generator, OFF, PROFILE, seedFrom } from './chaos.js'
-import { open, type Db } from './db.js'
+import { chaosFrom, generator, OFF, PROFILE, seedFrom, type Chaos } from './chaos.js'
+import { list, open, type Db } from './db.js'
+import { seed } from './seed.js'
 
 /**
  * The chaos layer, and the property that makes it worth having.
@@ -221,6 +222,100 @@ describe('the server with chaos on', () => {
 
   it('still answers correctly with chaos on', async () => {
     expect((await run({ SENTRA_CHAOS: '11' })).status).toBe(200)
+  })
+
+  /**
+   * The distinction the whole layer rests on, and the one it got wrong.
+   *
+   * Delaying *before* the handler reorders the handlers, and for an index-based
+   * reorder that changes what the server computes — the client and the server
+   * then agree on an order the user never asked for, and no refresh fixes it.
+   * That is a race, but it is not the one `useTasks.move` documents and not the
+   * one the golden dataset contains.
+   *
+   * Delaying the **response** leaves the handlers in the order the client sent
+   * them, so the server stays right and only the answers come back inverted.
+   * That is the interleaving #52 needs: the database is correct, the screen is
+   * not, and the older response is the one that wins.
+   *
+   * Nothing caught the original because every test asserted on the delay
+   * *values*. This one asserts on the consequence.
+   */
+  it('delays the answer, not the work, so the server applies writes in the order they were sent', async () => {
+    const db: Db = open(':memory:')
+    const rows = seed(db)
+    const first = rows.at(-1)?.id ?? 0
+    const second = rows.at(-2)?.id ?? 0
+
+    // The first request's answer is held far longer than the second's, which is
+    // the inversion; the numbers are fixed rather than drawn so the test is
+    // about ordering rather than about luck.
+    const held = [180, 5]
+    let call = 0
+    const chaos: Chaos = { enabled: true, seed: 1, delay: () => held[call++] ?? 0 }
+
+    const server = createApp({ db, chaos }).listen(0)
+    const port = (server.address() as { port: number }).port
+
+    const move = async (id: number): Promise<{ at: number; titles: string[] }> => {
+      const response = await fetch(`http://127.0.0.1:${String(port)}/api/tasks/reorder`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, index: 0 }),
+      })
+      const body = (await response.json()) as { tasks: { title: string }[] }
+      return { at: Date.now(), titles: body.tasks.map((task) => task.title) }
+    }
+
+    const one = move(first)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const two = move(second)
+    const [a, b] = await Promise.all([one, two])
+
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+
+    // The answers came back inverted…
+    expect(a.at).toBeGreaterThan(b.at)
+    // …but the server applied them in the order they were sent, so the second
+    // move is the one on top.
+    expect(list(db)[0]?.title).toBe(rows.at(-2)?.title)
+    // And the late answer carries the older list — the payload that, applied
+    // last, undoes the second move on screen.
+    expect(a.titles).not.toEqual(list(db).map((task) => task.title))
+
+    db.close()
+  })
+
+  /**
+   * `DELETE` answers 204 with no body, so a wrapper that only delayed `json`
+   * would have left one route immediate while `PROFILE` claimed otherwise. A
+   * profile that lies is worse than no profile.
+   */
+  it('delays a response that has no body', async () => {
+    const db: Db = open(':memory:')
+    const rows = seed(db)
+    const delays: number[] = []
+    const app = createApp({
+      db,
+      chaos: chaosFrom({ SENTRA_CHAOS: '11' }),
+      sleep: (ms) => {
+        delays.push(ms)
+        return Promise.resolve()
+      },
+    })
+
+    const server = app.listen(0)
+    const port = (server.address() as { port: number }).port
+    const response = await fetch(
+      `http://127.0.0.1:${String(port)}/api/tasks/${String(rows[0]?.id ?? 0)}`,
+      { method: 'DELETE' },
+    )
+
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+    db.close()
+
+    expect(response.status).toBe(204)
+    expect(delays).toHaveLength(1)
   })
 
   /**

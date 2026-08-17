@@ -104,21 +104,50 @@ export function createApp(deps: AppDeps): Express {
   app.use(express.json({ limit: '64kb' }))
 
   /**
-   * The delay goes here — before the handler, after parsing — so it changes when
-   * a response *arrives* relative to other in-flight requests without changing
-   * what any handler does. That is the whole point: the interleaving moves, the
-   * application does not.
+   * The delay goes on the **response**, not on the request.
+   *
+   * This is the whole point of the layer and it was wrong until it was measured.
+   * Delaying before the handler changes the order the handlers run in, and for
+   * an index-based reorder that changes what the server computes — so the client
+   * and the server end up agreeing on an order the user did not ask for. That is
+   * a race, but it is not *this* application's race, and no refresh fixes it.
+   *
+   * Measured, with the delay before the handler and `SENTRA_CHAOS=37`:
+   *
+   * ```
+   * R1 arrived + 406 ms -> Triage… | Draft… | Write…      (handler ran second)
+   * R2 arrived +  37 ms -> Draft… | Write… | … | Triage…  (handler ran first)
+   * server and client agree: true
+   * ```
+   *
+   * Delaying the response instead leaves the handlers in the order the client
+   * sent them — the server stays correct — and only changes when each answer
+   * gets back. That is the interleaving `useTasks.move` documents: the newest
+   * request landed last at the server, its response arrived first at the client,
+   * and the older response overwrote it. The list is wrong, the database is
+   * right, and a refresh brings it back. A client-side reconciliation bug, which
+   * is what this project is built to classify.
+   *
+   * Implemented by wrapping `end`, so a 204 with no body is delayed exactly like
+   * a JSON response. Wrapping `json` alone would have left `DELETE` immediate
+   * while `PROFILE` claimed otherwise — a profile that lies is worse than no
+   * profile.
    *
    * `route` is the pattern rather than the path, so `/api/tasks/7/complete` and
    * `/api/tasks/9/complete` share a profile instead of being two unknown routes
    * that fall through to no delay at all.
    */
   if (chaos.enabled) {
-    app.use((request, _response, next) => {
+    app.use((request, response, next) => {
       const ms = chaos.delay(`${request.method} ${pattern(request.path)}`)
-      void sleep(ms).then(() => {
-        next()
-      })
+      if (ms > 0) {
+        const send = response.end.bind(response) as (...args: unknown[]) => Response
+        response.end = ((...args: unknown[]): Response => {
+          void sleep(ms).then(() => send(...args))
+          return response
+        }) as typeof response.end
+      }
+      next()
     })
   }
 

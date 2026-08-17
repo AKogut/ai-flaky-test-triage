@@ -29,6 +29,31 @@ fit a label already in mind.
 
 Use the [dataset fixture issue template](https://github.com/AKogut/ai-flaky-test-triage/issues/new/choose).
 
+## Captured fixtures
+
+A fixture is `captured` when its `subject.result` came out of a real run rather than out of
+somebody's imagination. Three rules apply to them, and each exists because of something that went
+wrong the first time one was made.
+
+**Paths are relative to the checkout, everywhere — including inside the error.** Playwright
+relativises `file` and nothing else; the stack, the snippet and the message keep the absolute path
+of the machine that ran the suite. That path reaches a prompt, then a public pull-request comment,
+and it makes a fixture specific to whoever captured it. `normalisePlaywrightReport` strips it when
+given a `repositoryRoot`, and `npm run test:e2e` gives it one.
+
+**Test sources are captured without their comments.** A comment in a spec is the author's argument
+about the failure, and the author knew the answer. Keeping them would hand a classifier the label
+in prose that no word list can catch.
+
+**A spec is named after the behaviour it covers, never after the defect it demonstrates.** The file
+path is part of what a classifier sees. A spec called `reorder-race.spec.ts` gives the answer away,
+and a model that gets it right from the filename has learned nothing that generalises.
+
+One value is provisional. `flakinessScore` is specified as an EWMA of pass/fail alternation and the
+implementation lands with `flakemetry-lib` in M6 (#57); until then a captured fixture records the
+plain alternation rate over its observed history — the share of adjacent runs that differ. It will
+be recomputed when the real definition exists, in the same commit that introduces it.
+
 ## Target composition
 
 Shares are specified in [`docs/eval-methodology.md`](../../docs/eval-methodology.md). The dataset is
