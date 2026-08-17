@@ -62,10 +62,13 @@ The system under test: React + TypeScript client, Express + SQLite API, task CRU
 drag-to-reorder, optimistic updates. Deliberately small. Includes a seedable nondeterminism layer
 so flakiness can be _emergent_ rather than scripted.
 
-**Status:** planned
+**Status:** done
 
 **Exit criterion:** `npm run dev` serves a working task board, and `SENTRA_CHAOS=<seed>` reproduces
-a specific interleaving of the optimistic-update race.
+a specific interleaving of the optimistic-update race. Both hold. The reproduction needed a fix the
+milestone did not anticipate: the chaos layer delayed the handler rather than the response, which
+reordered the writes and made the server and the client agree on an order neither had been asked
+for — a race, but not the documented one. See #52.
 
 ## M5 — Test suite & emergent flakiness
 
@@ -73,10 +76,19 @@ Vitest for the API and libraries, Playwright for UI flows, and a set of genuinel
 flakiness comes from real races rather than a `Math.random()` in the test. Captured runs feed the
 golden dataset.
 
-**Status:** planned
+**Status:** done
 
 **Exit criterion:** ≥10 `captured` fixtures from real CI runs are in the dataset, and eval metrics
 are reported broken down by provenance.
+
+**Outcome: the second half holds and the first does not, and the milestone closed anyway.** There
+are six captured fixtures, five of them from genuine CI runs. The constraint is not tooling —
+`npm run capture` takes a directory of downloaded reports — it is that the suite contains six specs
+that can fail and CI had run it nine times. Reaching ten meant capturing the same test's failure on
+several commits, which would have narrowed every interval in `eval/report.md` without adding a
+single new piece of information. That is the specific dishonesty the methodology exists to prevent,
+so the count was left short and #171 tracks it. A criterion quietly restated to match what was
+delivered would have been worse than a criterion visibly unmet.
 
 ## M6 — flakemetry-lib integration
 
