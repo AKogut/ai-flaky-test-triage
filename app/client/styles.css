@@ -202,3 +202,15 @@ input {
 .edit-form input {
   flex: 1 1 8rem;
 }
+
+.filter-bar {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.filter-bar button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #eff6ff;
+}

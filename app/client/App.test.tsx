@@ -46,6 +46,9 @@ afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+  // The filter lives in the query string, so a test that set one would otherwise
+  // deep-link the next test into a filtered view.
+  window.history.replaceState(null, '', '/')
 })
 
 describe('loading', () => {
@@ -589,5 +592,136 @@ describe('completing', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Complete' }))
     await waitFor(() => expect(fetchMock.mock.calls.at(-1)?.[0]).toBe('/api/tasks/5/complete'))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Filtering
+// ---------------------------------------------------------------------------
+
+describe('filtering', () => {
+  const mixed = (): Task[] => [
+    task({ id: 1, title: 'still going' }),
+    task({ id: 2, title: 'finished', status: 'completed' }),
+    task({ id: 3, title: 'also finished', status: 'completed' }),
+  ]
+
+  const titles = (): (string | null)[] =>
+    screen
+      .queryAllByTestId('task-item')
+      .map((row) => row.querySelector('.task-title')?.textContent ?? null)
+
+  it('shows everything by default', async () => {
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('narrows to active', async () => {
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    await userEvent.click(screen.getByRole('button', { name: 'Active' }))
+
+    expect(titles()).toEqual(['still going'])
+  })
+
+  it('narrows to completed', async () => {
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    await userEvent.click(screen.getByRole('button', { name: 'Completed' }))
+
+    expect(titles()).toEqual(['finished', 'also finished'])
+  })
+
+  it('puts the filter in the query string', async () => {
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    await userEvent.click(screen.getByRole('button', { name: 'Completed' }))
+    expect(window.location.search).toBe('?filter=completed')
+
+    await userEvent.click(screen.getByRole('button', { name: 'All' }))
+    expect(window.location.search).toBe('')
+  })
+
+  /** A shared link has to show what the sharer was looking at. */
+  it('deep-links into a filtered view on load', async () => {
+    window.history.replaceState(null, '', '/?filter=completed')
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(2))
+    expect(screen.getByRole('button', { name: 'Completed' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    )
+  })
+
+  it('does not request anything when the filter changes', async () => {
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    const before = fetchMock.mock.calls.length
+
+    await userEvent.click(screen.getByRole('button', { name: 'Active' }))
+    expect(fetchMock.mock.calls.length).toBe(before)
+  })
+
+  it('survives a mutation', async () => {
+    fetchMock.mockResolvedValueOnce(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    await userEvent.click(screen.getByRole('button', { name: 'Active' }))
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ task: task({ id: 4, title: 'brand new' }) }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    await userEvent.type(screen.getByLabelText('New task'), 'brand new')
+    await userEvent.click(screen.getByRole('button', { name: 'Add task' }))
+
+    await waitFor(() => expect(titles()).toEqual(['still going', 'brand new']))
+    expect(window.location.search).toBe('?filter=active')
+  })
+
+  it('says which kind of empty it is', async () => {
+    fetchMock.mockResolvedValue(respond([task({ id: 2, status: 'completed' })]))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(1))
+    await userEvent.click(screen.getByRole('button', { name: 'Active' }))
+
+    expect(screen.getByTestId('empty-state').textContent).toContain('Everything here is done')
+  })
+
+  /**
+   * The point of the feature, and the reason it was chosen. Every row renders the
+   * same status label, so how many elements a text locator matches depends on the
+   * filter — and a Playwright locator resolving to more than one element fails in
+   * strict mode. A spec written under one filter breaks under another for reasons
+   * that have nothing to do with timing, which is exactly the flakiness a
+   * timing-focused classifier misreads.
+   */
+  it('shows text that is unique under one filter and ambiguous under another', async () => {
+    fetchMock.mockResolvedValue(respond(mixed()))
+    render(<App />)
+
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+    expect(screen.getAllByText('To do')).toHaveLength(1)
+    expect(screen.getAllByText('Done')).toHaveLength(2)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Active' }))
+    expect(screen.getAllByText('To do')).toHaveLength(1)
+    expect(screen.queryAllByText('Done')).toHaveLength(0)
   })
 })

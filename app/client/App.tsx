@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Task } from './api.js'
+import { FILTERS, useFilter, visible, type Filter } from './useFilter.js'
 import { useTasks, type Tasks } from './useTasks.js'
 
 /**
@@ -39,10 +40,26 @@ import { useTasks, type Tasks } from './useTasks.js'
  *
  * **Text content never gets one.** A title is data; asserting on it is
  * asserting on the fixture, and that is the point.
+ *
+ * ## The list can legitimately show duplicate text, and that is deliberate
+ *
+ * Every row renders the same status label — "To do" or "Done" — so how many
+ * elements a text locator matches depends on the filter. Under `?filter=all` the
+ * seed shows three "To do" and two "Done"; under `?filter=completed` it shows two
+ * "Done" and no "To do" at all. The seed also contains two tasks whose titles
+ * begin "Review the", so a locator built from a partial title matches two rows
+ * under one filter and one under another.
+ *
+ * A Playwright locator that resolves to more than one element fails in strict
+ * mode. So a spec written against one filter, run under another, fails for
+ * reasons that have nothing to do with timing — which is exactly the flakiness a
+ * timing-focused classifier misreads, and exactly what #53 needs to exist.
  */
 
 export function App(): React.JSX.Element {
   const tasks = useTasks()
+  const { filter, setFilter } = useFilter()
+  const shown = visible(tasks.tasks, filter)
 
   return (
     <main className="app">
@@ -54,6 +71,7 @@ export function App(): React.JSX.Element {
       </header>
 
       <CreateForm onCreate={tasks.create} />
+      <FilterBar filter={filter} onChange={setFilter} />
 
       {tasks.writeError !== null && (
         <div className="banner banner-error" data-testid="write-error" role="alert">
@@ -80,14 +98,61 @@ export function App(): React.JSX.Element {
       )}
 
       {tasks.status === 'ready' &&
-        (tasks.tasks.length === 0 ? (
+        (shown.length === 0 ? (
           <p className="state" data-testid="empty-state">
-            Nothing to do. Add a task to get started.
+            {EMPTY[filter]}
           </p>
         ) : (
-          <TaskList tasks={tasks} />
+          <TaskList tasks={tasks} shown={shown} />
         ))}
     </main>
+  )
+}
+
+/**
+ * Different words per filter, because "nothing here" and "nothing matches" are
+ * different facts. A single message would leave a reader unable to tell an empty
+ * database from a filter they forgot they set.
+ */
+const EMPTY: Record<Filter, string> = {
+  all: 'Nothing to do. Add a task to get started.',
+  active: 'No active tasks. Everything here is done.',
+  completed: 'Nothing completed yet.',
+}
+
+const LABEL: Record<Filter, string> = {
+  all: 'All',
+  active: 'Active',
+  completed: 'Completed',
+}
+
+/**
+ * `aria-pressed` rather than a hidden radio group.
+ *
+ * It gives a spec `getByRole('button', { name: 'Active', pressed: true })`, which
+ * says what a user would say, and it keeps the control inside the policy: found
+ * by role and name, with no test id.
+ */
+function FilterBar({
+  filter,
+  onChange,
+}: {
+  filter: Filter
+  onChange: (next: Filter) => void
+}): React.JSX.Element {
+  return (
+    <div className="filter-bar" role="group" aria-label="Filter tasks">
+      {FILTERS.map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={filter === option}
+          onClick={() => onChange(option)}
+        >
+          {LABEL[option]}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -133,10 +198,10 @@ function CreateForm({ onCreate }: { onCreate: Tasks['create'] }): React.JSX.Elem
   )
 }
 
-function TaskList({ tasks }: { tasks: Tasks }): React.JSX.Element {
+function TaskList({ tasks, shown }: { tasks: Tasks; shown: readonly Task[] }): React.JSX.Element {
   return (
     <ul className="task-list" data-testid="task-list">
-      {tasks.tasks.map((task) => (
+      {shown.map((task) => (
         <TaskRow key={task.id} task={task} tasks={tasks} />
       ))}
     </ul>
