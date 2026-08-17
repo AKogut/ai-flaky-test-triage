@@ -258,7 +258,7 @@ describe('the baseline against the committed dataset', () => {
     // Rows app_code / test_code / environment, columns the same.
     expect(confusionMatrix(judgements, 'owner').counts).toEqual([
       [17, 5, 0],
-      [8, 1, 0],
+      [9, 1, 0],
       [3, 0, 1],
     ])
   })
@@ -266,12 +266,12 @@ describe('the baseline against the committed dataset', () => {
   it('pins the determinism confusion matrix', () => {
     expect(confusionMatrix(judgements, 'determinism').counts).toEqual([
       [17, 4],
-      [4, 10],
+      [4, 11],
     ])
   })
 
   it('shows almost the whole `test_code` row collapsing into `app_code`', () => {
-    // Eight of nine called app_code. This is the single most informative cell in
+    // Nine of ten called app_code. This is the single most informative cell in
     // the report and accuracy alone never shows it.
     //
     // The one that escapes is the captured fixture from #53, which has no diff
@@ -280,7 +280,7 @@ describe('the baseline against the committed dataset', () => {
     // fault, but that a product diff overrides everything else it knows.
     const matrix = confusionMatrix(judgements, 'owner')
     const row = matrix.counts[matrix.labels.indexOf('test_code')]
-    expect(row).toEqual([8, 1, 0])
+    expect(row).toEqual([9, 1, 0])
   })
 
   it('scores 3 of 11 on the hard quadrant', () => {
@@ -311,6 +311,7 @@ describe('the baseline against the committed dataset', () => {
 
   it('covers every bucket the dataset currently has', () => {
     expect(byBucket.map((g) => g.group)).toEqual([
+      'cross-file-state-leak',
       'environment-as-regression',
       'hard-quadrant',
       'misleading-history',

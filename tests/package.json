@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@sentra/contracts": "*",
-    "@sentra/taskflow-server": "*"
+    "@sentra/taskflow-server": "*",
+    "@sentra/eval": "*"
   }
 }

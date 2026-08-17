@@ -54,26 +54,6 @@ test.describe('one TaskFlow per worker', () => {
   })
 })
 
-test.describe('every test starts from the seed', () => {
-  test('adds a task, which the next test must not see', async ({ page, db }) => {
-    await page.goto('/')
-    await add(page, 'left behind by the previous test')
-
-    await expect(page.getByTestId('task-item')).toHaveCount(SEED.length + 1)
-    expect(stored(db)).toHaveLength(SEED.length + 1)
-  })
-
-  test('sees the seed, and only the seed', async ({ page, db }) => {
-    await page.goto('/')
-
-    await expect(page.getByTestId('task-item')).toHaveCount(SEED.length)
-    expect(stored(db).map((task) => task.title)).toEqual(SEED.map((task) => task.title))
-    // The id sequence too: reseeding replaces the rows and resets the counter,
-    // so a fixture that can name a row by id keeps being able to.
-    expect(stored(db)[0]?.id).toBe(1)
-  })
-})
-
 /**
  * The way out, which exists for exactly one reason.
  *
@@ -97,5 +77,25 @@ test.describe('opting out of the reset', () => {
 
     expect(stored(db).map((task) => task.title)).toContain('deliberately left behind')
     await expect(page.getByText('deliberately left behind')).toBeVisible()
+  })
+})
+
+test.describe('every test starts from the seed', () => {
+  test('adds a task, which the next test must not see', async ({ page, db }) => {
+    await page.goto('/')
+    await add(page, 'left behind by the previous test')
+
+    await expect(page.getByTestId('task-item')).toHaveCount(SEED.length + 1)
+    expect(stored(db)).toHaveLength(SEED.length + 1)
+  })
+
+  test('sees the seed, and only the seed', async ({ page, db }) => {
+    await page.goto('/')
+
+    await expect(page.getByTestId('task-item')).toHaveCount(SEED.length)
+    expect(stored(db).map((task) => task.title)).toEqual(SEED.map((task) => task.title))
+    // The id sequence too: reseeding replaces the rows and resets the counter,
+    // so a fixture that can name a row by id keeps being able to.
+    expect(stored(db)[0]?.id).toBe(1)
   })
 })

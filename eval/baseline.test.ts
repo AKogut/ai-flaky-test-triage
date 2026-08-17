@@ -273,12 +273,12 @@ describe('scored against the committed dataset', () => {
 
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
     // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(19 / 35, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(19 / 36, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {
     expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(
-      27 / 35,
+      28 / 36,
       5,
     )
   })

@@ -16,6 +16,7 @@ export * from './confusion.js'
 export * from './classifier.js'
 export * from './consistency.js'
 export * from './calibration.js'
+export { LEAK_TERMS } from './hygiene.js'
 
 /**
  * Only the sampling default.

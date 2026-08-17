@@ -170,15 +170,18 @@ describe('the committed dataset split', () => {
     expect(held).toBe(12)
   })
 
-  it('currently holds out at least one fixture from every bucket', () => {
-    // Not guaranteed by the rule — a bucket of four has a 41% chance of getting
-    // none. It happens to hold today, and the report says so rather than
-    // implying the split guarantees it.
-    expect(emptyHoldoutBuckets(composition)).toEqual([])
+  it('holds out nothing from the newest bucket, which the rule does not promise', () => {
+    // It used to hold out something from every bucket, and the comment here said
+    // that was luck rather than a guarantee — a bucket of four has a 41% chance
+    // of getting none. #54 added the first `cross-file-state-leak` fixture and
+    // the split put it in dev, so the luck has run out on a bucket of one. The
+    // report names the buckets the held-out slice says nothing about rather than
+    // letting a reader assume coverage.
+    expect(emptyHoldoutBuckets(composition)).toEqual(['cross-file-state-leak'])
   })
 
   it('leaves enough in the development slice to iterate against', () => {
-    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(23)
+    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(24)
   })
 })
 

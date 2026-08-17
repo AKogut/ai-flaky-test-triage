@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }) => {
 
 const FIRST = 'Write the incident postmortem'
 const SECOND = 'Review the migration plan'
-const LAST = 'Triage the flaky board spec'
+const LAST = 'Investigate the board spec'
 
 test('moves a task up one place', async ({ page, db }) => {
   const before = await titles(page).allTextContents()

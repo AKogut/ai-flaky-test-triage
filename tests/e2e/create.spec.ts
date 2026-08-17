@@ -103,6 +103,22 @@ test('adds a second task below the first', async ({ page }) => {
 })
 
 /**
+ * The empty state is the create flow's other end: a board with nothing on it has
+ * to say so, or a reader cannot tell it apart from a board that failed to load.
+ */
+test('offers the empty state when there is nothing left to show', async ({ page, db }) => {
+  db.exec('DELETE FROM tasks')
+  await open(page)
+
+  await expect(emptyState(page)).toHaveText('Nothing to do. Add a task to get started.')
+  await expect(items(page)).toHaveCount(0)
+
+  await add(page, 'The only one')
+  await expect(emptyState(page)).toBeHidden()
+  await expect(items(page)).toHaveCount(1)
+})
+
+/**
  * A rejected write, forced rather than waited for.
  *
  * The failure is injected at the network boundary with `page.route`, which makes
@@ -132,20 +148,4 @@ test('says so when the server refuses the write, and keeps the list', async ({ p
 
   await page.getByRole('button', { name: 'Dismiss' }).click()
   await expect(writeError(page)).toBeHidden()
-})
-
-/**
- * The empty state is the create flow's other end: a board with nothing on it has
- * to say so, or a reader cannot tell it apart from a board that failed to load.
- */
-test('offers the empty state when there is nothing left to show', async ({ page, db }) => {
-  db.exec('DELETE FROM tasks')
-  await open(page)
-
-  await expect(emptyState(page)).toHaveText('Nothing to do. Add a task to get started.')
-  await expect(items(page)).toHaveCount(0)
-
-  await add(page, 'The only one')
-  await expect(emptyState(page)).toBeHidden()
-  await expect(items(page)).toHaveCount(1)
 })
