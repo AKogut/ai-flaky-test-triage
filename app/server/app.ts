@@ -1,5 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import { z } from 'zod'
+import { OFF, type Chaos } from './chaos.js'
 import { create, find, list, remove, reorder, update, type Db, type Task } from './db.js'
 
 /**
@@ -22,6 +23,10 @@ export interface AppDeps {
   db: Db
   /** Injected so a test can pin timestamps rather than assert around them. */
   now?: () => string
+  /** Seeded latency injection. Off unless the environment asks for it — see chaos.ts. */
+  chaos?: Chaos
+  /** Injected so a chaos test does not spend real seconds proving a delay happened. */
+  sleep?: (ms: number) => Promise<void>
 }
 
 const TitleSchema = z.string().trim().min(1).max(200)
@@ -77,8 +82,30 @@ export function createApp(deps: AppDeps): Express {
   const { db } = deps
   const now = deps.now ?? (() => new Date().toISOString())
 
+  const chaos = deps.chaos ?? OFF
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+
   const app = express()
   app.use(express.json({ limit: '64kb' }))
+
+  /**
+   * The delay goes here — before the handler, after parsing — so it changes when
+   * a response *arrives* relative to other in-flight requests without changing
+   * what any handler does. That is the whole point: the interleaving moves, the
+   * application does not.
+   *
+   * `route` is the pattern rather than the path, so `/api/tasks/7/complete` and
+   * `/api/tasks/9/complete` share a profile instead of being two unknown routes
+   * that fall through to no delay at all.
+   */
+  if (chaos.enabled) {
+    app.use((request, _response, next) => {
+      const ms = chaos.delay(`${request.method} ${pattern(request.path)}`)
+      void sleep(ms).then(() => {
+        next()
+      })
+    })
+  }
 
   app.get('/api/health', (_request, response) => {
     response.json({ status: 'ok' })
@@ -168,6 +195,20 @@ export function createApp(deps: AppDeps): Express {
   })
 
   return app
+}
+
+/**
+ * The route a path belongs to, as a pattern.
+ *
+ * Derived here rather than read from Express, because middleware runs before
+ * routing and `request.route` is not populated yet. Six patterns is few enough
+ * to spell out, and a wrong guess costs a delay of zero rather than an error.
+ */
+export function pattern(path: string): string {
+  if (path === '/api/tasks/reorder') return '/api/tasks/reorder'
+  if (/^\/api\/tasks\/\d+\/complete$/.test(path)) return '/api/tasks/:id/complete'
+  if (/^\/api\/tasks\/\d+$/.test(path)) return '/api/tasks/:id'
+  return path
 }
 
 const identifier = (request: Request): number | null => {

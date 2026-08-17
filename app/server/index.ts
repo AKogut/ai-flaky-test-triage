@@ -1,4 +1,5 @@
 import { createApp } from './app.js'
+import { chaosFrom } from './chaos.js'
 import { open } from './db.js'
 import { seed } from './seed.js'
 
@@ -13,6 +14,7 @@ import { seed } from './seed.js'
  * without a port or a temporary directory.
  */
 
+export * from './chaos.js'
 export * from './db.js'
 export * from './app.js'
 export * from './seed.js'
@@ -37,9 +39,15 @@ export function serve(options: ServeOptions = {}): { close: () => Promise<void>;
   const db = open(path)
   if (options.reseed === true) seed(db)
 
-  const server = createApp({ db }).listen(port)
+  const chaos = chaosFrom(process.env)
+  const server = createApp({ db, chaos }).listen(port)
   const bound = address(server, port)
   log(`  TaskFlow API on http://localhost:${String(bound)} (${path})`)
+  if (chaos.enabled) {
+    // Said out loud, every time. A server quietly injecting latency is a server
+    // that makes every test in the suite suspect.
+    log(`  SENTRA_CHAOS=${String(chaos.seed)} — seeded latency injection is ON`)
+  }
 
   return {
     port: bound,

@@ -137,6 +137,25 @@ npm test                # 🚧 M5 — unit + e2e, produces results.json
 npm run analyze         # 🚧 M8 — flakemetry + agents, produces report.md
 ```
 
+**Reproduce the deliberate bug:**
+
+```bash
+SENTRA_CHAOS=37 npm run dev     # 🚧 M4 · #48 — seeded latency, off unless you ask
+```
+
+TaskFlow's optimistic reorder applies responses in the order they _arrive_ and never checks that an
+arriving response is the newest one. Drag two tasks less than about 350ms apart and the second drag
+is visibly undone — then refresh, and it comes back, because the server had it all along.
+
+That is `app_code` + `intermittent`, the hard quadrant, and it is the failure this project exists to
+classify. It is left in on purpose and
+[documented](docs/limitations-and-guardrails.md#the-bug-that-is-left-in-on-purpose) rather than
+hidden: the point is that the _classifier_ has to work it out from a trace.
+
+`SENTRA_CHAOS=<seed>` delays API responses on a seeded schedule — the same seed always produces the
+same interleaving, so a failure can be got back. Seed 37 delays the first reorder by 399ms and the
+second by 11ms. Off by default, and a test asserts it.
+
 **Check the classifier's accuracy yourself:**
 
 ```bash
