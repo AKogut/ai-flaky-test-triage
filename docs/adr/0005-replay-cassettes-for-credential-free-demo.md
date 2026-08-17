@@ -42,6 +42,12 @@ times and the answers differ. Without it every sample of a fixture would hash to
 replay would hand back the same answer five times, and the harness would report perfect stability
 for a classifier nobody measured. A recorded distribution has to replay as a distribution.
 
+`npm run cassettes:check` is the mitigation for the maintenance cost below: offline, free, and run
+in CI on every push, it compares the keys the pipeline _would_ request against the files on disk.
+Cassettes going stale is not a hypothetical — it is the default outcome unless something checks.
+`npm run cassettes:record` refreshes every recording in one step, because two steps is how the eval
+set and the demo set diverge.
+
 `npm run demo` runs the full pipeline against a bundled fixture run. Until the first recorded
 evaluation lands (#38) there is nothing to replay, so it runs the model-free baseline and prints
 that — the demo degrades honestly rather than failing on a clean clone, which is the one thing it

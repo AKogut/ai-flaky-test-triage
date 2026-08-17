@@ -26,6 +26,8 @@
     "agents:analyze": "node scripts/pending.mjs agents:analyze",
     "analyze": "node scripts/pending.mjs analyze",
     "build": "node scripts/pending.mjs build",
+    "cassettes:check": "tsx scripts/cassettes.ts",
+    "cassettes:record": "tsx scripts/record.ts",
     "changelog": "tsx scripts/changelog.ts",
     "changelog:check": "tsx scripts/changelog.ts --check",
     "demo": "tsx scripts/demo.ts",

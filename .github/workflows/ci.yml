@@ -113,6 +113,16 @@ jobs:
         if: steps.detect.outputs.has-code == 'true'
         run: npm run prompts:sync:check
 
+      # Runs on every push rather than only when prompts/ or agents/ change. The
+      # check is offline and takes under a second, and the changes that
+      # invalidate a cassette are not confined to those directories — the context
+      # assembler, the sanitiser, the response schema and the sampling default
+      # all feed the key. A path filter here would be a filter that is wrong the
+      # first time somebody edits a fifth thing.
+      - name: Committed cassettes still answer the questions the pipeline asks
+        if: steps.detect.outputs.has-code == 'true'
+        run: npm run cassettes:check
+
       # Label leakage is the quietest way to inflate an accuracy number, so this
       # runs on every push rather than only when the dataset changes — a leaked
       # term arrives just as easily through an edit to the checker itself.
