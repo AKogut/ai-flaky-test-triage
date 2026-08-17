@@ -116,12 +116,18 @@ cd ai-flaky-test-triage
 npm install
 ```
 
-**Run the full pipeline with no API key** (replays recorded model responses — deterministic,
-free, offline):
+**Run the full pipeline with no API key** — no configuration, no network, no build:
 
 ```bash
-npm run demo            # 🚧 M3
+npm run demo            # writes report.md
 ```
+
+It classifies the bundled run in [`demo/`](demo/) and says which classifier produced the
+output. Until the first recorded evaluation lands (#38) there are no cassettes to replay, so it
+runs the model-free baseline and prints that rather than implying a live classification happened.
+Replay proves the plumbing — context assembly, the fences around untrusted text, the forced output
+schema, the report — never the model's behaviour today; that is measured separately in
+[`eval/report.md`](eval/report.md).
 
 **Run against live models:**
 
@@ -154,7 +160,7 @@ cat eval/report.md
 | `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                             |
 | `npm run eval`               | M2        | Golden-dataset evaluation → eval/report.md                    |
 | `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                     |
-| `npm run demo`               | M3 🚧     | Full pipeline in replay mode, no credentials                  |
+| `npm run demo`               | M3        | Full pipeline in replay mode, no credentials                  |
 
 🚧 marks a script that is not implemented yet; running it says so and names its issue.
 Everything else runs today. `npm run help` prints this table from the terminal.

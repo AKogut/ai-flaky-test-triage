@@ -22,7 +22,7 @@ npm install
 npm run help            # every command, and whether it exists yet
 npm run test:coverage   # the full suite, with the coverage floor enforced
 npm run eval            # score the baseline against the golden dataset
-npm run demo            # 🚧 M3 · #39 — full pipeline in replay mode
+npm run demo            # full pipeline, no API key — writes report.md
 ```
 
 Node ≥ 22.13. A key is only required for live model calls, and nothing that works today needs one.

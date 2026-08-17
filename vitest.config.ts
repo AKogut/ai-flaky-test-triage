@@ -16,12 +16,37 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],
       reportsDirectory: 'coverage',
-      exclude: ['**/dist/**', '**/*.config.*', 'scripts/**', 'tests/**'],
+      /**
+       * `scripts/` is no longer excluded wholesale.
+       *
+       * It was, when it held only glue. It now holds `demo.ts`, which is the
+       * README's headline command and therefore product surface — and code
+       * nobody measures is code nobody notices breaking.
+       *
+       * The line is product surface in, repository maintenance out.
+       * `changelog.ts` and `status-banner.ts` each have a `--check` mode that CI
+       * runs against the committed files, which is a stronger claim about them
+       * than a percentage. A script added later is measured by default, which is
+       * the safe direction for this list to rot in.
+       *
+       * `demo/` holds bundled fixture data — the contents of test files in an
+       * imaginary repository, read as text and fed to a prompt. Measuring
+       * coverage of an input is a category error.
+       */
+      exclude: [
+        '**/dist/**',
+        '**/*.config.*',
+        '**/scripts/*.mjs',
+        '**/scripts/changelog.ts',
+        '**/scripts/status-banner.ts',
+        'tests/**',
+        'demo/**',
+      ],
 
       /**
        * A floor, not a target.
        *
-       * Set a few points below what is measured today (96.8% statements, 83.4%
+       * Set a few points below what is measured today (97.5% statements, 87.4%
        * branches) on purpose. A threshold pinned to the current number fails on
        * the first honest refactor that deletes a well-covered file, and a gate
        * that fires on noise is one somebody switches off — at which point the

@@ -28,7 +28,7 @@
     "build": "node scripts/pending.mjs build",
     "changelog": "tsx scripts/changelog.ts",
     "changelog:check": "tsx scripts/changelog.ts --check",
-    "demo": "node scripts/pending.mjs demo",
+    "demo": "tsx scripts/demo.ts",
     "dev": "node scripts/pending.mjs dev",
     "docs:status": "tsx scripts/status-banner.ts",
     "docs:status:check": "tsx scripts/status-banner.ts --check",
@@ -73,7 +73,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
-      "eslint --fix --max-warnings=0",
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
       "prettier --write"
     ],
     "*.{json,md,yml,yaml}": [
