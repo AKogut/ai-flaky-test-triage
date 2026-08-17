@@ -38,17 +38,17 @@
     },
     {
       "name": "test:e2e",
-      "description": "Playwright \u2014 TaskFlow UI flows including the flaky specs",
+      "description": "Playwright \u2014 TaskFlow UI flows, one server per worker; emits results.json",
       "milestone": "M5",
       "issue": 50,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "test",
-      "description": "Unit and E2E together; emits results.json",
+      "description": "Unit and E2E together",
       "milestone": "M5",
       "issue": 50,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "flakemetry:analyze",

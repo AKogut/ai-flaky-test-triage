@@ -27,6 +27,21 @@ export interface AppDeps {
   chaos?: Chaos
   /** Injected so a chaos test does not spend real seconds proving a delay happened. */
   sleep?: (ms: number) => Promise<void>
+  /**
+   * Directory of the built client bundle, served from the same origin as the API.
+   *
+   * Absent in development, where Vite serves the client and proxies `/api` to
+   * here. Set for the end-to-end run, and that is not a shortcut: it collapses
+   * the topology to one process per Playwright worker, which is what makes a
+   * database per worker possible at all. A second process and a proxy hop would
+   * be two more things to rule out when a spec goes flaky, in the suite whose
+   * entire purpose is that its flakiness has exactly one explanation.
+   *
+   * No single-page fallback. TaskFlow's only route is `/`; the filter lives in a
+   * query parameter. A catch-all that rewrote unknown paths to `index.html`
+   * would turn a typo in a spec's `goto` into a passing page load.
+   */
+  client?: string
 }
 
 const TitleSchema = z.string().trim().min(1).max(200)
@@ -175,6 +190,9 @@ export function createApp(deps: AppDeps): Express {
     if (id === null || !remove(db, id)) return notFound(response)
     response.status(204).end()
   })
+
+  // After every API route, so a file called `tasks` could never shadow one.
+  if (deps.client !== undefined) app.use(express.static(deps.client))
 
   app.use((_request, response) => {
     response.status(404).json(error('not_found', 'no such route'))

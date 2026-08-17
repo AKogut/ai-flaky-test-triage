@@ -255,6 +255,12 @@ jobs:
         id: e2e
         continue-on-error: true
         run: npm run test:e2e
+      # `test-results/` holds the trace and the screenshot for each failure, and
+      # a trace is the evidence the triage agent reads — network timing, the DOM
+      # at the moment it failed, the console. Without it a failure in CI is a
+      # message and a guess, which is the position this project exists to
+      # improve on. Kept whatever the outcome: a red run is the one worth
+      # keeping.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -262,6 +268,7 @@ jobs:
           path: |
             results.json
             playwright-report/
+            test-results/
           retention-days: 14
       - name: Record whether the suite was red
         run: echo "e2e_outcome=${{ steps.e2e.outcome }}" >> "$GITHUB_OUTPUT"
