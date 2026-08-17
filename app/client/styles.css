@@ -126,3 +126,79 @@ button:hover {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* Screen-reader-only labels: every input has one, and none of them is visible. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.create-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.create-form input {
+  flex: 1;
+}
+
+input {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: white;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.banner p {
+  margin: 0;
+}
+
+.banner-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--danger);
+}
+
+.task-actions,
+.edit-actions,
+.confirm {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.task-actions {
+  margin-left: auto;
+}
+
+.edit-form {
+  display: flex;
+  flex: 1;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.edit-form input {
+  flex: 1 1 8rem;
+}
