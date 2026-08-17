@@ -34,7 +34,7 @@ npm run lint && npm run typecheck
 And what does not yet, with the milestone it arrives in:
 
 ```bash
-npm run demo            # 🚧 M3 · #39 — full pipeline in replay mode, no API key
+npm run demo            # full pipeline, no API key — writes report.md
 npm run dev             # 🚧 M4 · #48 — start TaskFlow locally
 npm test                # 🚧 M5 · #50 — unit and e2e together
 ```

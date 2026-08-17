@@ -203,6 +203,18 @@ jobs:
       # runs is the one a contributor can run locally by name. The thresholds in
       # vitest.config.ts fail the job on their own.
       - run: npm run test:coverage
+
+      # The README's headline claim, run the way a stranger runs it: a clean
+      # checkout, `npm ci`, and nothing else. The unit tests already drive the
+      # demo's `main`, but only this proves the *command* works — a broken
+      # binary, a missing bundled file or a script rename would pass every test
+      # in the suite and fail the first person who tried it.
+      #
+      # No ANTHROPIC_API_KEY is set on this job on purpose. If the demo ever
+      # needs one, it fails here rather than in a reader's terminal.
+      - name: The credential-free demo still runs
+        run: npm run demo
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

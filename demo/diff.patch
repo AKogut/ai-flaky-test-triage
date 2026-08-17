@@ -1,0 +1,22 @@
+diff --git a/app/client/src/useTasks.ts b/app/client/src/useTasks.ts
+--- a/app/client/src/useTasks.ts
++++ b/app/client/src/useTasks.ts
+@@ -58,11 +58,12 @@ export function useTasks() {
+   async function complete(id: string) {
+-    const updated = await api.completeTask(id)
+-    setTasks((current) => current.map((t) => (t.id === id ? updated : t)))
++    // Optimistic: paint the change before the request settles.
++    setTasks((current) => current.map((t) => (t.id === id ? { ...t, status: 'done' } : t)))
++    await api.completeTask(id)
+   }
+ 
+   async function rename(id: string, title: string) {
+     const updated = await api.updateTask(id, { title })
+     setTasks((current) => current.map((t) => (t.id === id ? updated : t)))
+   }
+diff --git a/app/client/src/TaskRow.tsx b/app/client/src/TaskRow.tsx
+--- a/app/client/src/TaskRow.tsx
++++ b/app/client/src/TaskRow.tsx
+@@ -12,7 +12,7 @@ export function TaskRow({ task }: { task: Task }) {
+-      <input type="checkbox" data-testid="filter-completed" />
++      <input type="checkbox" data-testid="filter-done" />

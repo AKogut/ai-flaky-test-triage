@@ -28,6 +28,10 @@ export default tseslint.config(
       '**/dist/**',
       '**/node_modules/**',
       'coverage/**',
+      // Bundled fixture data for `npm run demo`, not project source. These are
+      // the *contents* of a test file in an imaginary repository, read as text
+      // and passed into a prompt — linting them would be linting the input.
+      'demo/sources/**',
       'playwright-report/**',
       'test-results/**',
       '**/*.d.ts',

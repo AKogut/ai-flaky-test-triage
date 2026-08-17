@@ -6,5 +6,16 @@
     "types": ["node"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["dist"]
+  "exclude": ["dist"],
+  "references": [
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../agents"
+    },
+    {
+      "path": "../eval"
+    }
+  ]
 }

@@ -40,7 +40,7 @@ npm run typecheck
 ### What does not, and why it is described anyway
 
 ```bash
-npm run demo          # 🚧 M3 · #39
+npm run demo          # writes report.md
 ```
 
 The intent: run the entire pipeline — flakiness analysis, triage, root cause, fix suggestion,
