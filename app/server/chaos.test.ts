@@ -222,4 +222,38 @@ describe('the server with chaos on', () => {
   it('still answers correctly with chaos on', async () => {
     expect((await run({ SENTRA_CHAOS: '11' })).status).toBe(200)
   })
+
+  /**
+   * Once, with the real timer.
+   *
+   * Every other test here injects `sleep` and asserts on the number, which keeps
+   * the suite fast and is the right trade — but it means the delay the server
+   * actually performs is the one line nothing runs. A `sleep` that resolved
+   * immediately, or never, would pass all of them and inject no latency at all,
+   * and the flaky specs downstream would quietly stop being flaky.
+   *
+   * Seed 3 on a `GET`, whose profile tops out at 60ms, so this costs
+   * milliseconds. The assertion is that time passed at all, with a floor well
+   * under the delay — a tight bound would be exactly the fixed-timeout mistake
+   * #55 exists to demonstrate.
+   */
+  it('really waits, when nobody hands it a fake clock', async () => {
+    const db: Db = open(':memory:')
+    const chaos = chaosFrom({ SENTRA_CHAOS: '3' })
+    const delay = chaosFrom({ SENTRA_CHAOS: '3' }).delay('GET /api/tasks')
+    expect(delay).toBeGreaterThan(20)
+
+    const server = createApp({ db, chaos }).listen(0)
+    const port = (server.address() as { port: number }).port
+
+    const started = process.hrtime.bigint()
+    const response = await fetch(`http://127.0.0.1:${String(port)}/api/tasks`)
+    const elapsed = Number(process.hrtime.bigint() - started) / 1e6
+
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+    db.close()
+
+    expect(response.status).toBe(200)
+    expect(elapsed).toBeGreaterThan(delay / 2)
+  })
 })

@@ -51,3 +51,7 @@ yarn-error.log*
 # The Vite bundle. `dist/` next to it holds TypeScript's declarations, and the two
 # tools would delete each other's output if they shared a directory.
 app/client/dist-bundle/
+
+# The unit run's machine-readable report. Playwright's is results.json above; the
+# two are separate files so that `npm test` cannot have one erase the other.
+/results-unit.json

@@ -28,6 +28,7 @@
   "files.readonlyInclude": {
     "analysis.json": true,
     "results.json": true,
+    "results-unit.json": true,
     "otel-spans.json": true
   }
 }
