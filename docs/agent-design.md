@@ -6,7 +6,9 @@ omission — see [Why no agent loop](#why-there-is-no-agent-loop).
 
 ## Shared infrastructure
 
-Every agent call goes through `agents/model-client.ts`, which provides:
+Every agent call goes through the same path. `agents/model-client.ts` owns the call itself;
+`agents/context.ts` and `agents/sanitise.ts` own what goes into it; `agents/cassettes.ts` decorates
+the transport. Between them:
 
 - **Structured output** from the Zod schema. The response format is derived from the same schema
   that validates the reply, so the model cannot return prose where an enum is expected. A schema
@@ -24,13 +26,19 @@ Every agent call goes through `agents/model-client.ts`, which provides:
   merely unused, and a test proves it by wrapping one that fails on any call. A silent fallthrough
   would turn a free deterministic run into a surprise bill and an intermittent test, and would take
   months to notice.
-- **Telemetry.** One OpenTelemetry span per call, carrying model, token counts, latency, cost,
-  retry count, and cassette hit/miss. Exported to `otel-spans.json`.
+- **Telemetry.** Every call reports a `CallTelemetry` record — model, prompt version, attempts,
+  schema violations, transient failures, token counts, duration — to a callback the caller
+  supplies, and the eval harness turns those into the cost figures in `eval/report.md`. The
+  OpenTelemetry span carrying the same fields, exported to `otel-spans.json`, is **M9 (#76)**, and
+  the per-call cost accounting is **#77**. The record above is the seam both will be built on
+  rather than a stand-in for either.
 - **Budget.** A per-run token ceiling, checked **before** dispatch against a real
   `count_tokens` call rather than a character estimate, and re-checked before each schema retry
-  because a corrected prompt is longer. When it is hit the orchestrator stops dispatching and the
-  report says how many failures went unclassified rather than silently truncating. A budget that
-  only reports what was spent is an invoice.
+  because a corrected prompt is longer. A budget that only reports what was spent is an invoice.
+  One budget is shared across a whole run — a per-call ceiling is not a ceiling on anything, since
+  thirty-three fixtures would each stay inside it. Hitting it currently aborts the run with a typed
+  error; the orchestrator stopping dispatch and reporting how many failures went unclassified is
+  **M7 (#66)**.
 
 ### One transport, enforced
 

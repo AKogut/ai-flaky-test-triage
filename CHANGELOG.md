@@ -25,7 +25,9 @@ commitlint because a well-formed history needs them, but they are not release no
 - **agents:** fence, cap and scrub untrusted text before it reaches a prompt ([#143](https://github.com/AKogut/ai-flaky-test-triage/pull/143))
 - **agents:** npm run demo, on a clean clone, with no key ([#149](https://github.com/AKogut/ai-flaky-test-triage/pull/149))
 - **agents:** the triage agent, and the seam that scores it like the control ([#146](https://github.com/AKogut/ai-flaky-test-triage/pull/146))
+- **ci:** catch cassettes that answer questions nobody asks any more ([#151](https://github.com/AKogut/ai-flaky-test-triage/pull/151))
 - **ci:** define the npm script contract ([#98](https://github.com/AKogut/ai-flaky-test-triage/pull/98))
+- **client:** the task list, and a documented selector policy ([#155](https://github.com/AKogut/ai-flaky-test-triage/pull/155))
 - **dataset:** add the golden-dataset fixture and label format ([#107](https://github.com/AKogut/ai-flaky-test-triage/pull/107))
 - **dataset:** add the golden-dataset hygiene lint ([#115](https://github.com/AKogut/ai-flaky-test-triage/pull/115))
 - **dataset:** author the 10 hard-quadrant fixtures ([#111](https://github.com/AKogut/ai-flaky-test-triage/pull/111))
@@ -45,10 +47,13 @@ commitlint because a well-formed history needs them, but they are not release no
 - **flakemetry:** add FlakySignal and analysis.json schemas ([#105](https://github.com/AKogut/ai-flaky-test-triage/pull/105))
 - **prompts:** give the rubric one copy and make published versions immutable ([#144](https://github.com/AKogut/ai-flaky-test-triage/pull/144))
 - **release:** generate the changelog from Conventional Commits ([#100](https://github.com/AKogut/ai-flaky-test-triage/pull/100))
+- **server:** reorder by target index, with the race written down ([#154](https://github.com/AKogut/ai-flaky-test-triage/pull/154))
+- **server:** TaskFlow's API — five routes, one table, no service layer ([#152](https://github.com/AKogut/ai-flaky-test-triage/pull/152))
 
 ### Fixes
 
 - **agents:** cover the transport, and stop documenting a parameter that 400s ([#141](https://github.com/AKogut/ai-flaky-test-triage/pull/141))
+- **docs:** make the repository's claims true again after M3 ([#150](https://github.com/AKogut/ai-flaky-test-triage/pull/150))
 - **docs:** stop the wiki claiming unbuilt commands work ([#120](https://github.com/AKogut/ai-flaky-test-triage/pull/120))
 - **eval:** stop the baseline reading documentation as product source ([#113](https://github.com/AKogut/ai-flaky-test-triage/pull/113))
 - **eval:** test the guards nothing was watching, and set a coverage floor ([#139](https://github.com/AKogut/ai-flaky-test-triage/pull/139))
