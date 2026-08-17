@@ -34,10 +34,18 @@ in the environment to detect. Somebody authenticated that way would silently get
 what `SENTRA_LIVE=1` exists to override.
 
 Cassettes live in `agents/replay/cassettes/`, are committed, and are keyed by a stable hash of
-(prompt version, model, normalised request body). A replay miss is a loud error, never a silent
-fallthrough to a live call.
+(prompt version, model, effort, token ceiling, response-schema digest, system, prompt, **sample
+index**). A replay miss is a loud error, never a silent fallthrough to a live call.
 
-`npm run demo` runs the full pipeline in replay mode against a bundled fixture run.
+The sample index is in the key because self-consistency sampling (#36) asks the same question five
+times and the answers differ. Without it every sample of a fixture would hash to one cassette,
+replay would hand back the same answer five times, and the harness would report perfect stability
+for a classifier nobody measured. A recorded distribution has to replay as a distribution.
+
+`npm run demo` runs the full pipeline against a bundled fixture run. Until the first recorded
+evaluation lands (#38) there is nothing to replay, so it runs the model-free baseline and prints
+that — the demo degrades honestly rather than failing on a clean clone, which is the one thing it
+exists not to do.
 
 ## Options considered
 

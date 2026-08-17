@@ -177,6 +177,9 @@ Everything else runs today. `npm run help` prints this table from the terminal.
 │   └── CODEOWNERS
 ├── contracts/                   # Zod schemas + inferred types for every artifact
 │                                #   the pipeline reads or writes
+├── prompts/                     # versioned prompt files + the rubric they share
+│                                #   with docs/taxonomy.md, and the loader
+├── demo/                        # the bundled run `npm run demo` classifies
 ├── app/                         # TaskFlow — the system under test
 │   ├── client/                  # React + TypeScript
 │   └── server/                  # Express + SQLite

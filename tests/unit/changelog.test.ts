@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { format } from 'prettier'
 import { describe, expect, it } from 'vitest'
 import {
   FIELD_SEP,
@@ -133,5 +135,26 @@ describe('splice', () => {
 
   it('refuses to guess when the markers are missing', () => {
     expect(() => splice('# Changelog\n', 'x')).toThrow(/markers/)
+  })
+})
+
+/**
+ * The generator writes into a tree `npm run format:check` reads.
+ *
+ * It did not always format its output, so `npm run changelog` — a documented
+ * release step — produced a file Prettier would rewrite, and `--check` reported
+ * a difference that was only a blank line. A release step that breaks the
+ * formatting gate is a release step somebody skips.
+ */
+describe('the committed changelog', () => {
+  it('is formatted the way Prettier formats it', async () => {
+    const committed = readFileSync('CHANGELOG.md', 'utf8')
+    expect(await format(committed, { parser: 'markdown' })).toBe(committed)
+  })
+
+  it('still carries the markers regeneration splices between', () => {
+    const committed = readFileSync('CHANGELOG.md', 'utf8')
+    expect(committed).toContain('<!-- changelog:start -->')
+    expect(committed).toContain('<!-- changelog:end -->')
   })
 })

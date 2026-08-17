@@ -314,10 +314,12 @@ export async function evaluate(options: Options, deps: ClassifierDeps = {}): Pro
     const { payload, hash } = loadPayload(name)
     const labels = loadLabels(name)
 
-    // Sample-major per fixture rather than run-major over the dataset: a budget
-    // that runs out then leaves whole fixtures unscored instead of leaving every
-    // fixture with a different number of samples, which nothing downstream could
-    // interpret.
+    // All N samples of a fixture before moving on, rather than sweeping the
+    // dataset N times. It changes which fixtures a run reaches when it stops
+    // early — a budget ceiling or a refusal aborts the whole evaluation today,
+    // so nothing is half-scored, and if that ever becomes a partial result it
+    // will be whole fixtures missing rather than every fixture carrying a
+    // different number of samples, which nothing downstream could interpret.
     const samples: Prediction[] = []
     let reasoning = ''
     for (let sample = 0; sample < options.samples; sample++) {

@@ -174,13 +174,13 @@ function render(
     '| ---- | ------- | ---------: | --- |',
     ...sorted.map((row) => {
       const { owner, determinism, confidence, reasoning } = row.classification
-      return `| \`${row.subject.result.title}\` | ${QUADRANT[`${owner}/${determinism}`] ?? ''} <br> \`${owner}\` + \`${determinism}\` | ${confidence.toFixed(2)} | ${escape(reasoning)} |`
+      return `| ${escape(row.subject.result.title)} | ${QUADRANT[`${owner}/${determinism}`] ?? ''} <br> \`${owner}\` + \`${determinism}\` | ${confidence.toFixed(2)} | ${escape(reasoning)} |`
     }),
     '',
     ...sorted.flatMap((row) => [
-      `### \`${row.subject.result.title}\``,
+      `### ${escape(row.subject.result.title)}`,
       '',
-      `\`${row.subject.result.file}\` — ${row.subject.result.status}, ` +
+      `${escape(row.subject.result.file)} — ${row.subject.result.status}, ` +
         `${String(row.subject.result.attempts)} attempt(s), history \`${row.subject.signal.statusHistory}\``,
       '',
       'Evidence the classifier says it relied on:',
@@ -197,15 +197,24 @@ const order = (row: Row): number =>
 const name = (row: Row): string => row.subject.result.testId
 
 /**
- * Agent output is escaped before it reaches markdown.
+ * Everything the repository wrote is escaped before it reaches markdown.
  *
- * Every string in a classification originates in text a contributor wrote, so an
- * unescaped one can forge a table row or open a `<details>` the report never
- * closed. The worst case is cosmetic, which is exactly why it would go
- * unnoticed.
+ * Agent output *and* the run's own strings. Test titles and file paths are as
+ * attacker-controlled as a classification is — a fork pull request names its own
+ * tests — and escaping only the model's half is the version of this that looks
+ * careful and is not. The first draft here did exactly that.
+ *
+ * Backticks are neutralised rather than escaped, and untrusted strings are not
+ * wrapped in code spans. A backslash does not escape a backtick inside a code
+ * span, so `\`` in a title would end the span and let everything after it render
+ * as markup; there is no way to make a code span safe for arbitrary text, so it
+ * is not used for arbitrary text.
+ *
+ * The worst achievable outcome is a mangled report, which is precisely why it
+ * would go unnoticed.
  */
 const escape = (text: string): string =>
-  text.replaceAll('|', '\\|').replaceAll('<', '&lt;').replaceAll('\n', ' ')
+  text.replaceAll('|', '\\|').replaceAll('<', '&lt;').replaceAll('`', '&#96;').replaceAll('\n', ' ')
 
 if (process.argv[1]?.endsWith('demo.ts') === true) {
   process.exitCode = await main()

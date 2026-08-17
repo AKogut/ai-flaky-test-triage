@@ -16,6 +16,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { format } from 'prettier'
 
 const REPO = 'https://github.com/AKogut/ai-flaky-test-triage'
 const START = '<!-- changelog:start -->'
@@ -144,7 +145,7 @@ function git(args: string[], { quiet = false }: { quiet?: boolean } = {}): strin
   })
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const all = process.argv.includes('--all')
   const check = process.argv.includes('--check')
 
@@ -170,7 +171,12 @@ function main(): void {
 
   const generated = renderChangelog(parseCommits(raw), heading)
   const existing = readFileSync('CHANGELOG.md', 'utf8')
-  const next = splice(existing, generated)
+
+  // Formatted before it is compared or written, for the same reason
+  // eval/report.md is: this file sits in a tree `npm run format:check` reads, so
+  // output Prettier would rewrite breaks CI on the commit that regenerates it —
+  // and `--check` would report a diff that is only whitespace.
+  const next = await format(splice(existing, generated), { parser: 'markdown' })
 
   if (check) {
     if (next !== existing) {
@@ -185,4 +191,4 @@ function main(): void {
   console.log(`CHANGELOG.md regenerated (${heading})`)
 }
 
-if (process.argv[1]?.endsWith('changelog.ts') === true) main()
+if (process.argv[1]?.endsWith('changelog.ts') === true) await main()

@@ -4,7 +4,10 @@ Recorded model responses, committed so the pipeline runs with no API key and no 
 claim [ADR-0005](../../../docs/adr/0005-replay-cassettes-for-credential-free-demo.md) exists to
 make true, and what makes the integration tests free and deterministic.
 
-Empty until the triage agent lands in #35. The machinery that reads and writes these files is
+Empty until the first recorded evaluation lands in #38 — recording needs credentials, so it is a
+deliberate act with a cost rather than something that happens on the way past. Until then
+`npm run demo` runs the model-free baseline and says so, and the integration tests drive the agent
+through stub transports instead. The machinery that reads and writes these files is
 `agents/cassettes.ts`.
 
 ## Recording
