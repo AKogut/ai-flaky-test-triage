@@ -41,6 +41,8 @@ export interface E2eDeps {
   run?: (command: string, args: string[]) => number
   log?: (message: string) => void
   read?: (path: string) => string
+  /** Injected so the runner's own tests can use a temporary tree with no specs in it. */
+  exists?: (path: string) => boolean
 }
 
 /**
@@ -103,8 +105,34 @@ export function metadata(env: NodeJS.ProcessEnv, root: string): RunMetadata {
  * cannot. The normaliser's own error already names the field and the file to
  * update; wrapping it in a second message would bury that.
  */
-export function validate(raw: unknown, meta: RunMetadata): TestRun {
+export function validate(raw: unknown, meta: RunMetadata & { repositoryRoot?: string }): TestRun {
   return parseTestRun(normalisePlaywrightReport(raw, meta), REPORT)
+}
+
+/**
+ * Every reported path must resolve to a file in the checkout.
+ *
+ * The schema accepts any non-empty string, and the failure this catches passed
+ * it comfortably: with `testDir: 'tests/e2e'` Playwright reports paths relative
+ * to *that* directory, so the report called a spec
+ * `reorder-quick-succession.spec.ts` with no directory at all. Nothing errored.
+ * `testId` is derived from the path, so two `board.spec.ts` in different
+ * directories would have shared one history; the context assembler reads a
+ * test's source from disk by that path and would have found nothing; and the
+ * golden dataset's synthetic fixtures carry repository-relative paths, so
+ * captured and synthetic fixtures would have differed in shape for a reason
+ * that had nothing to do with the failures.
+ *
+ * Checked against the filesystem rather than against a regular expression,
+ * because the question is not whether the string looks like a path.
+ */
+export function unresolvedPaths(
+  run: TestRun,
+  root: string,
+  exists: (path: string) => boolean = (path) => existsSync(path),
+): string[] {
+  const files = [...new Set(run.results.map((result) => result.file))]
+  return files.filter((file) => !exists(join(root, file)))
 }
 
 export function summarise(run: TestRun): string {
@@ -152,8 +180,9 @@ export function main(argv: string[], deps: E2eDeps = {}): number {
     return 1
   }
 
+  let outcomeRun: TestRun
   try {
-    log(summarise(validate(report, metadata(env, root))))
+    outcomeRun = validate(report, { ...metadata(env, root), repositoryRoot: root })
   } catch (failure) {
     console.error(
       `\n  ${REPORT} is not something the pipeline can consume:\n\n` +
@@ -162,6 +191,18 @@ export function main(argv: string[], deps: E2eDeps = {}): number {
     return 1
   }
 
+  const unresolved = unresolvedPaths(outcomeRun, root, deps.exists ?? existsSync)
+  if (unresolved.length > 0) {
+    console.error(
+      `\n  ${REPORT} reports paths that do not exist in the checkout:\n\n` +
+        unresolved.map((file) => `      ${file}`).join('\n') +
+        `\n\n  Test identity, run history and the agents' context all key on this path.` +
+        `\n  Check \`testDir\` in playwright.config.ts — Playwright reports relative to it.\n`,
+    )
+    return 1
+  }
+
+  log(summarise(outcomeRun))
   return outcome
 }
 

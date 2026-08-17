@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
-import { originFor, WORKERS } from './tests/e2e/harness.js'
+import { originFor, REPO_ROOT, WORKERS } from './tests/e2e/harness.js'
 
 /**
  * Playwright, configured for a suite whose output is data.
@@ -33,14 +33,50 @@ import { originFor, WORKERS } from './tests/e2e/harness.js'
 const RETRIES = Number(process.env.SENTRA_E2E_RETRIES ?? 0)
 
 /**
+ * The specs, named exactly.
+ *
+ * Anchored to the checkout root rather than written as a relative glob, because
+ * a relative glob is not anchored: `tests/e2e/**\/*.spec.ts` matches any path
+ * ending that way, including `demo/sources/tests/e2e/smoke.spec.ts` — fixture
+ * data that exists to be read as text, not run. It was collected, it failed
+ * against an application that is not TaskFlow, and the real suite reported zero
+ * tests. A regular expression says what a glob only implies.
+ */
+const SPECS = new RegExp(
+  `^${REPO_ROOT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/tests/e2e/[^/]+\\.spec\\.ts$`,
+)
+
+/**
  * **No `baseURL` here.** It is a fixture, in `tests/e2e/fixtures.ts`, because
  * each worker has its own server and its own database. A URL set at this level
  * would send every worker to the same instance, and per-test isolation would be
  * a comment rather than a property.
  */
 export default defineConfig({
-  testDir: 'tests/e2e',
-  testMatch: '**/*.spec.ts',
+  /**
+   * The repository root, with the specs selected by `testMatch` instead.
+   *
+   * `testDir: 'tests/e2e'` is the obvious setting and it corrupts the pipeline's
+   * input. Playwright reports every path relative to the common ancestor of its
+   * test directories, so with the specs as the root the JSON report calls this
+   * file `reorder-quick-succession.spec.ts` — no directory at all.
+   *
+   * That matters three ways, and none of them announces itself: `testId` is
+   * derived from the path, so two `board.spec.ts` in different directories would
+   * share one history; the context assembler reads a test's source from disk by
+   * that path and would not find it; and the golden dataset's synthetic fixtures
+   * carry repository-relative paths, so captured and synthetic data would differ
+   * in shape for a reason that has nothing to do with the failures.
+   *
+   * The cost is that `testMatch` now selects from the whole tree, and a relative
+   * glob is not anchored — `'tests/e2e/**\/*.spec.ts'` also matched
+   * `demo/sources/tests/e2e/smoke.spec.ts`, which is fixture data: the contents
+   * of specs in an imaginary repository, read as text and fed to a prompt.
+   * Playwright collected them, they failed against an application that is not
+   * TaskFlow, and the real suite did not run at all. Hence an anchored pattern.
+   */
+  testDir: '.',
+  testMatch: SPECS,
 
   /**
    * Files are the unit of parallelism; tests inside one run in order, in one

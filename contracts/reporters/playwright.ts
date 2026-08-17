@@ -120,16 +120,43 @@ export interface RunMetadata {
   branch: string
 }
 
+/**
+ * Strip the checkout's absolute path out of free text.
+ *
+ * Playwright relativises `spec.file`; it does not touch the stack, the snippet
+ * or the message, which carry `/Users/someone/work/repo/tests/e2e/…` exactly as
+ * the machine saw it. Three consequences, and none of them announces itself:
+ *
+ * - the text goes into a prompt, and later into a **public** pull-request
+ *   comment, carrying somebody's home directory with it;
+ * - a fixture captured from a real run is then specific to the machine that
+ *   captured it, so two people's fixtures differ by their usernames;
+ * - and the golden dataset's leakage lint reads every string in a payload,
+ *   where an absolute path is a sentence nobody wrote.
+ *
+ * The last one is how this was found: the repository's own directory name
+ * contains a word from the label vocabulary, and the check fired on a path
+ * rather than on prose.
+ */
+export function relativise(text: string, root: string): string {
+  const trimmed = root.replace(/\/+$/, '')
+  if (trimmed === '') return text
+  return text.replaceAll(`${trimmed}/`, '')
+}
+
 /** The title Playwright itself displays: suite path below the file, then the spec. */
 const TITLE_SEPARATOR = ' › '
 
-function toError(raw: z.infer<typeof PlaywrightErrorSchema> | undefined): TestError | undefined {
+function toError(
+  raw: z.infer<typeof PlaywrightErrorSchema> | undefined,
+  root: string,
+): TestError | undefined {
   if (raw === undefined) return undefined
   const error: TestError = {
-    message: raw.message ?? 'Playwright reported a failure with no message',
+    message: relativise(raw.message ?? 'Playwright reported a failure with no message', root),
   }
-  if (raw.stack !== undefined) error.stack = raw.stack
-  if (raw.snippet !== undefined) error.snippet = raw.snippet
+  if (raw.stack !== undefined) error.stack = relativise(raw.stack, root)
+  if (raw.snippet !== undefined) error.snippet = relativise(raw.snippet, root)
   return error
 }
 
@@ -137,6 +164,7 @@ function toResult(
   spec: z.infer<typeof PlaywrightSpecSchema>,
   test: z.infer<typeof PlaywrightTestSchema>,
   suitePath: string[],
+  root: string,
 ): TestResult {
   const title = [...suitePath, spec.title].join(TITLE_SEPARATOR)
   const file = normaliseFilePath(spec.file)
@@ -165,7 +193,7 @@ function toResult(
     ),
   }
 
-  const error = toError(failing?.error)
+  const error = toError(failing?.error, root)
   if (error !== undefined) normalised.error = error
 
   return normalised
@@ -176,24 +204,30 @@ function collect(
   suitePath: string[],
   out: TestResult[],
   depth: number,
+  root: string,
 ): void {
   // The outermost suite is the file itself; its title is the filename and would
   // duplicate `file` in every test title.
   const path = depth === 0 ? [] : [...suitePath, suite.title]
 
   for (const spec of suite.specs) {
-    for (const test of spec.tests) out.push(toResult(spec, test, path))
+    for (const test of spec.tests) out.push(toResult(spec, test, path, root))
   }
-  for (const child of suite.suites ?? []) collect(child, path, out, depth + 1)
+  for (const child of suite.suites ?? []) collect(child, path, out, depth + 1, root)
 }
 
 /**
  * Validate a Playwright JSON report and normalise it.
  *
  * `meta` is supplied by the caller because the reporter records none of it — the
- * run identity comes from CI, not from the test tool.
+ * run identity comes from CI, not from the test tool. `repositoryRoot` is
+ * optional and, when given, is stripped out of every error's free text — see
+ * `relativise` for why that is normalisation rather than editing.
  */
-export function normalisePlaywrightReport(raw: unknown, meta: RunMetadata): TestRun {
+export function normalisePlaywrightReport(
+  raw: unknown,
+  meta: RunMetadata & { repositoryRoot?: string },
+): TestRun {
   const parsed = PlaywrightReportSchema.safeParse(raw)
   if (!parsed.success) {
     const issues = parsed.error.issues
@@ -207,7 +241,8 @@ export function normalisePlaywrightReport(raw: unknown, meta: RunMetadata): Test
   }
 
   const results: TestResult[] = []
-  for (const suite of parsed.data.suites) collect(suite, [], results, 0)
+  const root = meta.repositoryRoot ?? ''
+  for (const suite of parsed.data.suites) collect(suite, [], results, 0, root)
 
   return {
     runId: meta.runId,

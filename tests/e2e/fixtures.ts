@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test'
 import { list, open, seed, type Db } from '@sentra/taskflow-server'
-import { databaseFor, originFor } from './harness.js'
+import { chaosDatabaseFor, chaosOriginFor, databaseFor, originFor } from './harness.js'
 
 /**
  * The fixtures every spec builds on: a TaskFlow of its own, and a clean list.
@@ -42,42 +42,70 @@ export interface TaskFlow {
 interface Options {
   /** False leaves whatever the previous test left. Deliberate, and only for #54. */
   resetDatabase: boolean
+  /**
+   * True moves this file to the worker's chaotic instance — see `CHAOS_SEED`.
+   *
+   * Only `reorder-quick-succession.spec.ts` asks. Injecting latency for the whole suite
+   * would make every failure ambiguous, and a control group that is also being
+   * perturbed is not a control group.
+   */
+  chaos: boolean
 }
 
 interface Fixtures {
+  /** Which of this worker's two servers this test is talking to. */
+  taskflow: TaskFlow
+  db: Db
   /** Runs before every test. Nothing depends on it by name; `auto` is what makes it run. */
   seeded: void
 }
 
-interface WorkerFixtures {
+interface Instance {
   taskflow: TaskFlow
-  /** One handle per worker. Opening one per test would be ~200 opens for no gain. */
   db: Db
+}
+
+interface WorkerFixtures {
+  /** Both servers, opened once. A handle per test would be ~200 opens for no gain. */
+  instances: { calm: Instance; chaotic: Instance }
 }
 
 export const test = base.extend<Options & Fixtures, WorkerFixtures>({
   resetDatabase: [true, { option: true }],
+  chaos: [false, { option: true }],
 
-  taskflow: [
+  instances: [
     // Playwright reads the destructured names to work out which fixtures this
     // one depends on, so the parameter has to be an object pattern even when it
     // is empty. A named parameter throws at collection time.
     // eslint-disable-next-line no-empty-pattern
     async ({}, use, workerInfo) => {
+      // `parallelIndex`, not `workerIndex`: stable across a worker restart, so
+      // the port stays the one the launcher bound.
       const worker = workerInfo.parallelIndex
-      await use({ worker, origin: originFor(worker), database: databaseFor(worker) })
+      const build = (origin: string, database: string): Instance => ({
+        taskflow: { worker, origin, database },
+        db: open(database),
+      })
+
+      const calm = build(originFor(worker), databaseFor(worker))
+      const chaotic = build(chaosOriginFor(worker), chaosDatabaseFor(worker))
+
+      await use({ calm, chaotic })
+
+      calm.db.close()
+      chaotic.db.close()
     },
     { scope: 'worker' },
   ],
 
-  db: [
-    async ({ taskflow }, use) => {
-      const db = open(taskflow.database)
-      await use(db)
-      db.close()
-    },
-    { scope: 'worker' },
-  ],
+  taskflow: async ({ instances, chaos }, use) => {
+    await use(chaos ? instances.chaotic.taskflow : instances.calm.taskflow)
+  },
+
+  db: async ({ instances, chaos }, use) => {
+    await use(chaos ? instances.chaotic.db : instances.calm.db)
+  },
 
   /**
    * `baseURL` is a built-in option, overridden here so `page.goto('/')` reaches

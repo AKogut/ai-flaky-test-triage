@@ -48,6 +48,41 @@ export const portFor = (worker: number): number => BASE_PORT + worker
 export const originFor = (worker: number): string => `http://127.0.0.1:${String(portFor(worker))}`
 
 /**
+ * A second TaskFlow per worker, with seeded latency injection switched on.
+ *
+ * Two servers rather than one switchable one, because chaos is decided when a
+ * server starts and a spec cannot restart it. Only `reorder-quick-succession.spec.ts` asks
+ * for this one; everything else keeps the calm instance, which is what makes the
+ * control group a control group. An idle Express app costs a few megabytes, and
+ * the alternative — running the whole suite under injected latency — would make
+ * every spec slower and every failure ambiguous.
+ */
+export const chaosPortFor = (worker: number): number => BASE_PORT + WORKERS + worker
+
+export const chaosOriginFor = (worker: number): string =>
+  `http://127.0.0.1:${String(chaosPortFor(worker))}`
+
+/**
+ * The seed the chaotic instances run under — **a new one every run.**
+ *
+ * This was a fixed number first, and measuring it is what changed it. A fixed
+ * seed, a server started fresh for each run and a request sequence that never
+ * varies produce the *same delays every time*: the spec failed on 12 runs out of
+ * 12. That is a reproduction, not a flaky test. It would have been labelled
+ * `deterministic`, which is the wrong quadrant, and the fixture would have
+ * taught the classifier that the hard case is easy.
+ *
+ * So the launcher draws a seed per start and prints it. Intermittency comes from
+ * the draw; reproducibility comes from the print. `SENTRA_E2E_CHAOS=<seed>` pins
+ * it, which is how a failure seen once in CI is got back.
+ *
+ * Undefined here rather than defaulted, because only the launcher may invent one
+ * — three processes import this file, and a random default would give each of
+ * them a different answer to the same question.
+ */
+export const CHAOS_SEED = process.env.SENTRA_E2E_CHAOS
+
+/**
  * One SQLite file per worker, under a gitignored directory.
  *
  * The path is derived rather than communicated, because the process that resets
@@ -58,6 +93,10 @@ export const originFor = (worker: number): string => `http://127.0.0.1:${String(
  */
 export const databaseFor = (worker: number): string =>
   join(REPO_ROOT, '.playwright', 'db', `worker-${String(worker)}.db`)
+
+/** The chaotic instance's own file. Sharing one would let a calm spec see a chaotic spec's rows. */
+export const chaosDatabaseFor = (worker: number): string =>
+  join(REPO_ROOT, '.playwright', 'db', `worker-${String(worker)}-chaos.db`)
 
 /** A malformed override is a typo, and a typo that silently becomes 0 workers is worse. */
 function positive(raw: string | undefined, fallback: number): number {

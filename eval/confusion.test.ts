@@ -257,7 +257,7 @@ describe('the baseline against the committed dataset', () => {
   it('pins the owner confusion matrix', () => {
     // Rows app_code / test_code / environment, columns the same.
     expect(confusionMatrix(judgements, 'owner').counts).toEqual([
-      [17, 4, 0],
+      [17, 5, 0],
       [8, 0, 0],
       [3, 0, 1],
     ])
@@ -266,7 +266,7 @@ describe('the baseline against the committed dataset', () => {
   it('pins the determinism confusion matrix', () => {
     expect(confusionMatrix(judgements, 'determinism').counts).toEqual([
       [17, 4],
-      [3, 9],
+      [4, 9],
     ])
   })
 
@@ -278,12 +278,12 @@ describe('the baseline against the committed dataset', () => {
     expect(row).toEqual([8, 0, 0])
   })
 
-  it('scores 3 of 10 on the hard quadrant', () => {
+  it('scores 3 of 11 on the hard quadrant', () => {
     // The project's thesis number. The baseline being poor here is the dataset
     // working, not the control being unfair.
     const hard = quadrantBreakdown(judgements).find((r) => r.hard)
-    expect(hard).toMatchObject({ support: 10, correct: 3 })
-    expect(hard?.accuracy.point).toBeCloseTo(0.3, 10)
+    expect(hard).toMatchObject({ support: 11, correct: 3 })
+    expect(hard?.accuracy.point).toBeCloseTo(3 / 11, 10)
   })
 
   it('has an empty quadrant, so the n/a path is exercised by real data', () => {
@@ -337,14 +337,24 @@ describe('the baseline against the committed dataset', () => {
     expect(bucket('environment-as-regression')?.determinism.accuracy.point).toBe(1)
   })
 
-  it('scores 30% joint on the hard quadrant bucket', () => {
-    expect(bucket('hard-quadrant')?.joint.point).toBeCloseTo(0.3, 10)
-    expect(bucket('hard-quadrant')?.owner.accuracy.point).toBeCloseTo(0.6, 10)
+  it('scores 3 of 11 joint on the hard-quadrant bucket', () => {
+    expect(bucket('hard-quadrant')?.joint.point).toBeCloseTo(3 / 11, 10)
+    expect(bucket('hard-quadrant')?.owner.accuracy.point).toBeCloseTo(6 / 11, 10)
   })
 
-  it('declines to print a provenance breakdown while every fixture is synthetic', () => {
+  /**
+   * It used to decline, because every fixture was synthetic and a table with one
+   * row says nothing. #52 added the first `captured` one, so the section now has
+   * something to compare — and the comparison is the sharpest threat to validity
+   * this project has, so it is asserted rather than left to whether somebody
+   * happens to read the report.
+   */
+  it('prints a provenance breakdown now that the dataset has two of them', () => {
     const rendered = renderBreakdownSections(dataset)
-    expect(rendered).toContain('All 33 fixtures share one provenance')
+    expect(rendered).toContain('### By provenance')
+    expect(rendered).toContain('`captured`')
+    expect(rendered).toContain('`synthetic`')
+    expect(rendered).not.toContain('share one provenance')
     expect(rendered).toContain('### By difficulty bucket')
   })
 })

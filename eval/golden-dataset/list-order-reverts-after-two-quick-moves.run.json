@@ -1,0 +1,33 @@
+{
+  "name": "list-order-reverts-after-two-quick-moves",
+  "scenario": "Two list reorders made in quick succession leave the board showing the state after the first of them.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/reorder-quick-succession.spec.ts›keeps both moves when a task is moved twice in quick succession",
+      "title": "keeps both moves when a task is moved twice in quick succession",
+      "file": "tests/e2e/reorder-quick-succession.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 10580,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.task-title').nth(2)\nExpected: \u001b[32m\"Draft the release notes\"\u001b[39m\nReceived: \u001b[31m\"Renew the staging certificate\"\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.task-title').nth(2)\u001b[22m\n\u001b[2m    24 × locator resolved to <p class=\"task-title\">Renew the staging certificate</p>\u001b[22m\n\u001b[2m       - unexpected value \"Renew the staging certificate\"\u001b[22m\n",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.task-title').nth(2)\nExpected: \u001b[32m\"Draft the release notes\"\u001b[39m\nReceived: \u001b[31m\"Renew the staging certificate\"\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.task-title').nth(2)\u001b[22m\n\u001b[2m    24 × locator resolved to <p class=\"task-title\">Renew the staging certificate</p>\u001b[22m\n\u001b[2m       - unexpected value \"Renew the staging certificate\"\u001b[22m\n\n    at tests/e2e/reorder-quick-succession.spec.ts:124:37",
+        "snippet": "  122 |   // And the list should agree with it. When this fails the row is at index 3 —\n  123 |   // the order as of the first move, restored by its own late response.\n> 124 |   await expect(titles(page).nth(2)).toHaveText(TASK)\n      |                                     ^\n  125 | })\n  126 |\n  127 | /**"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/reorder-quick-succession.spec.ts›keeps both moves when a task is moved twice in quick succession",
+      "flakinessScore": 0.68,
+      "consecutiveFailures": 2,
+      "totalRuns": 20,
+      "firstSeenAt": "2026-08-17T12:20:39.396Z",
+      "lastPassedAt": "2026-08-17T12:24:22.364Z",
+      "statusHistory": "PFFPFPPPPFPFPPFPFPFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const moveUp = (page: Page, title: string): Promise<void> =>\n  row(page, title).getByRole('button', { name: 'Move up' }).click()\n\nfunction reorderResponses(page: Page): () => number {\n  let answered = 0\n  page.on('response', (response) => {\n    if (response.url().endsWith('/api/tasks/reorder')) answered += 1\n  })\n  return () => answered\n}\n\ntest.beforeEach(async ({ page }) => {\n  await open(page)\n})\n\ntest('keeps both moves when a task is moved twice in quick succession', async ({ page, db }) => {\n  const answered = reorderResponses(page)\n\n  await moveUp(page, TASK)\n  await expect(titles(page).nth(3)).toHaveText(TASK)\n\n  await moveUp(page, TASK)\n  await expect(titles(page).nth(2)).toHaveText(TASK)\n\n  await expect.poll(answered).toBe(2)\n  await expect.poll(() => stored(db)[2]?.title).toBe(TASK)\n\n  await expect(titles(page).nth(2)).toHaveText(TASK)\n})\n"
+}
