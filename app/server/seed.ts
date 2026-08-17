@@ -12,6 +12,19 @@ import { clear, create, update, type Db, type Task } from './db.js'
  *
  * Small on purpose. Five rows is enough for ordering, filtering and drag targets,
  * and few enough to read in a failure message.
+ *
+ * Two details are load-bearing rather than decorative, and both exist so that
+ * #53 has a realistically fragile locator to be flaky about:
+ *
+ * - **Two rows are completed.** Every row renders the same status label, so a
+ *   text locator matches three "To do" and two "Done" under no filter, and two
+ *   "Done" and nothing else under `?filter=completed`. A Playwright locator that
+ *   resolves to more than one element fails in strict mode, so a spec written
+ *   against one filter fails under another for reasons that have nothing to do
+ *   with timing.
+ * - **Two titles begin "Review the".** A locator built from a partial title
+ *   matches two rows under one filter and one under another, which is the same
+ *   failure arriving through the more common mistake.
  */
 
 export const SEED_TIME = '2026-01-15T09:00:00.000Z'
@@ -26,6 +39,7 @@ export const SEED: readonly SeedRow[] = [
   { title: 'Write the incident postmortem', description: 'Due Friday. Include the timeline.' },
   { title: 'Review the migration plan', description: 'Second pass — check the rollback path.' },
   { title: 'Renew the staging certificate', description: '', completed: true },
+  { title: 'Review the release checklist', description: 'Signed off last week.', completed: true },
   { title: 'Draft the release notes', description: 'Wait for the eval numbers first.' },
   { title: 'Triage the flaky board spec', description: 'It has failed four times this week.' },
 ]

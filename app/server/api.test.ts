@@ -255,8 +255,20 @@ describe('the seed', () => {
     expect(seed(db).map((task) => task.createdAt)).toEqual(SEED.map(() => SEED_TIME))
   })
 
-  it('leaves one task completed, so a status filter has something to hide', () => {
-    expect(seed(db).filter((task) => task.status === 'completed')).toHaveLength(1)
+  /**
+   * Two, not one. Every row renders the same status label, so two completed rows
+   * make a text locator match two elements under `?filter=completed` and one
+   * under no filter — the strict-mode ambiguity #53 needs, arriving from the
+   * data rather than from timing.
+   */
+  it('leaves two tasks completed, so a filtered list can show duplicate text', () => {
+    expect(seed(db).filter((task) => task.status === 'completed')).toHaveLength(2)
+  })
+
+  it('gives two tasks titles with a shared prefix, so a partial locator is ambiguous', () => {
+    const reviews = seed(db).filter((task) => task.title.startsWith('Review the'))
+    expect(reviews).toHaveLength(2)
+    expect(reviews.filter((task) => task.status === 'completed')).toHaveLength(1)
   })
 
   it('replaces whatever was there rather than appending', () => {
