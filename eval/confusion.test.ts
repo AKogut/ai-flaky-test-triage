@@ -258,7 +258,7 @@ describe('the baseline against the committed dataset', () => {
     // Rows app_code / test_code / environment, columns the same.
     expect(confusionMatrix(judgements, 'owner').counts).toEqual([
       [17, 5, 0],
-      [9, 1, 0],
+      [9, 2, 0],
       [3, 0, 1],
     ])
   })
@@ -266,21 +266,22 @@ describe('the baseline against the committed dataset', () => {
   it('pins the determinism confusion matrix', () => {
     expect(confusionMatrix(judgements, 'determinism').counts).toEqual([
       [17, 4],
-      [4, 11],
+      [4, 12],
     ])
   })
 
-  it('shows almost the whole `test_code` row collapsing into `app_code`', () => {
-    // Nine of ten called app_code. This is the single most informative cell in
-    // the report and accuracy alone never shows it.
+  it('shows most of the `test_code` row collapsing into `app_code`', () => {
+    // Nine of eleven called app_code. This is the single most informative cell
+    // in the report and accuracy alone never shows it.
     //
-    // The one that escapes is the captured fixture from #53, which has no diff
-    // for the second rule to fire on. It is the exception that shows what the
-    // cell is really measuring: not that the baseline cannot recognise a test
-    // fault, but that a product diff overrides everything else it knows.
+    // The two that escape are captured fixtures with no commit under test, so
+    // there is no product diff for the second rule to fire on and the baseline
+    // reaches its locator rule. They are the exception that shows what the cell
+    // is really measuring: not that the baseline cannot recognise a test fault,
+    // but that a product diff overrides everything else it knows.
     const matrix = confusionMatrix(judgements, 'owner')
     const row = matrix.counts[matrix.labels.indexOf('test_code')]
-    expect(row).toEqual([9, 1, 0])
+    expect(row).toEqual([9, 2, 0])
   })
 
   it('scores 3 of 11 on the hard quadrant', () => {
@@ -317,6 +318,7 @@ describe('the baseline against the committed dataset', () => {
       'misleading-history',
       'stale-test',
       'straightforward',
+      'unsynchronised-test',
     ])
   })
 
@@ -332,13 +334,21 @@ describe('the baseline against the committed dataset', () => {
     expect(bucket('straightforward')?.joint.point).toBe(1)
   })
 
-  it('is defeated by stale-test on owner, the axis that bucket attacks', () => {
-    // 1 of 8, not 0 of 7: #53's captured fixture joined this bucket without a
-    // diff for the second rule to fire on, so the baseline reaches its locator
-    // rule and gets that one owner right. It loses it back on determinism, which
-    // is why this bucket no longer scores 100% there either.
-    expect(bucket('stale-test')?.owner.accuracy.point).toBeCloseTo(1 / 8, 10)
-    expect(bucket('stale-test')?.determinism.accuracy.point).toBeCloseTo(7 / 8, 10)
+  it('is defeated by stale-test on owner alone, the axis that bucket attacks', () => {
+    expect(bucket('stale-test')?.owner.accuracy.point).toBe(0)
+    expect(bucket('stale-test')?.determinism.accuracy.point).toBe(1)
+  })
+
+  /**
+   * The newest bucket, and the mirror image of `stale-test`: the baseline reads
+   * "locator" in both messages and answers `test_code`, which is right both
+   * times and for a reason that is not the reason. It then splits on
+   * determinism, getting the timeout fixture right and the ambiguous-locator one
+   * wrong on a two-run failure streak.
+   */
+  it('is not defeated by unsynchronised-test on owner, and is on determinism', () => {
+    expect(bucket('unsynchronised-test')?.owner.accuracy.point).toBe(1)
+    expect(bucket('unsynchronised-test')?.determinism.accuracy.point).toBeCloseTo(0.5, 10)
   })
 
   it('is defeated by misleading-history on determinism alone', () => {

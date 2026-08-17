@@ -77,7 +77,7 @@ describe('checkComposition', () => {
 
   it('reports a share for every bucket, including empty ones', () => {
     const { composition } = checkComposition(labels({ 'hard-quadrant': 4 }))
-    expect(composition).toHaveLength(6)
+    expect(composition).toHaveLength(7)
     expect(composition.find((c) => c.bucket === 'cross-file-state-leak')?.count).toBe(0)
   })
 
@@ -163,6 +163,6 @@ describe('the committed dataset', () => {
     // When this flips, the drift check starts failing the build — which is the
     // point at which the remaining buckets have to be filled in.
     expect(report.compositionEnforced).toBe(false)
-    expect(report.fixtures).toBe(36)
+    expect(report.fixtures).toBe(37)
   })
 })

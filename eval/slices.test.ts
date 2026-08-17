@@ -75,7 +75,7 @@ describe('adding a fixture never moves an existing one', () => {
    * permanent: a fixture that changes slice invalidates every held-out number
    * published before the change, with nothing going red.
    */
-  it('leaves all 35 committed fixtures where they were after 500 more arrive', () => {
+  it('leaves all 37 committed fixtures where they were after 500 more arrive', () => {
     const before = new Map(listFixtures().map((name) => [name, sliceOf(name)]))
 
     const grown = [...listFixtures(), ...Array.from({ length: 500 }, (_, i) => `new-${String(i)}`)]
@@ -181,7 +181,7 @@ describe('the committed dataset split', () => {
   })
 
   it('leaves enough in the development slice to iterate against', () => {
-    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(24)
+    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(25)
   })
 })
 

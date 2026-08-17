@@ -1,0 +1,33 @@
+{
+  "name": "added-row-not-on-screen-inside-the-allowed-time",
+  "scenario": "A check that a newly added task appears within a fixed number of milliseconds gives up before it does.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board-updates.spec.ts›shows an added task promptly",
+      "title": "shows an added task promptly",
+      "file": "tests/e2e/board-updates.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 313,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('task-item')\nExpected: \u001b[32m7\u001b[39m\nReceived: \u001b[31m6\u001b[39m\nTimeout:  120ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 120ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('task-item')\u001b[22m\n\u001b[2m    6 × locator resolved to 6 elements\u001b[22m\n\u001b[2m      - unexpected value \"6\"\u001b[22m\n",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('task-item')\nExpected: \u001b[32m7\u001b[39m\nReceived: \u001b[31m6\u001b[39m\nTimeout:  120ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" with timeout 120ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('task-item')\u001b[22m\n\u001b[2m    6 × locator resolved to 6 elements\u001b[22m\n\u001b[2m      - unexpected value \"6\"\u001b[22m\n\n    at tests/e2e/board-updates.spec.ts:80:29",
+        "snippet": "  78 |   await add(page, 'Book the retrospective room')\n  79 |\n> 80 |   await expect(items(page)).toHaveCount(SEED.length + 1, { timeout: BUDGET })\n     |                             ^\n  81 |   await expect(titles(page).last()).toHaveText('Book the retrospective room')\n  82 | })\n  83 |"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board-updates.spec.ts›shows an added task promptly",
+      "flakinessScore": 0.56,
+      "consecutiveFailures": 1,
+      "totalRuns": 19,
+      "firstSeenAt": "2026-08-17T13:41:17.499Z",
+      "lastPassedAt": "2026-08-17T13:42:01.541Z",
+      "statusHistory": "FPPPPFPFFFPPFFPFPPF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const BUDGET = 120\n\ntest.beforeEach(async ({ page }) => {\n  await open(page)\n})\n\ntest('shows an added task promptly', async ({ page }) => {\n  await add(page, 'Book the retrospective room')\n\n  await expect(items(page)).toHaveCount(SEED.length + 1, { timeout: BUDGET })\n  await expect(titles(page).last()).toHaveText('Book the retrospective room')\n})\n\ntest('shows an added task, given the default deadline', async ({ page }) => {\n  await add(page, 'Book the retrospective room')\n\n  await expect(items(page)).toHaveCount(SEED.length + 1)\n  await expect(titles(page).last()).toHaveText('Book the retrospective room')\n})\n"
+}

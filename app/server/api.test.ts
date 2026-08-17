@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Server } from 'node:http'
 import { createApp } from './app.js'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
@@ -36,6 +36,22 @@ import { seed, SEED, SEED_TIME } from './seed.js'
  * a dev server was running, which is a flaky test with a very boring cause — in
  * a repository about flaky tests.
  */
+
+/**
+ * Longer than the five-second default, and for the reason #55 is about.
+ *
+ * This file opens a file-backed SQLite database and an HTTP listener per test —
+ * around seventy of each — and it is the control group, so a failure here is
+ * supposed to mean the API is wrong. Twice during this milestone it failed
+ * instead because the machine was busy running something else: once on the
+ * health route, once on a reorder. Nothing was wrong with the API either time.
+ *
+ * A default that fits a quiet machine is an assumption about machine speed, and
+ * a spec in this repository has a whole file explaining why that is a defect
+ * rather than bad luck. Sixty seconds is far past anything the API can
+ * legitimately take, so a test that reaches it is genuinely stuck.
+ */
+vi.setConfig({ testTimeout: 60_000 })
 
 /** One directory for the whole file, removed once. Per-test dirs are 84 syscalls for nothing. */
 const workspace = mkdtempSync(join(tmpdir(), 'taskflow-api-'))

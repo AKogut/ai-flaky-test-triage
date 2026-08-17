@@ -28,12 +28,21 @@ export type Provenance = z.infer<typeof ProvenanceSchema>
  * Metrics are reported per bucket, so a high headline number cannot be produced
  * purely by easy cases — which is the single most common way an AI evaluation
  * flatters itself.
+ *
+ * `unsynchronised-test` arrived late and it is worth saying why. The list was
+ * written before any fixture existed, from the traps that seemed likely, and it
+ * named the `test_code` + `deterministic` cell — a stale test — while leaving the
+ * `test_code` + `intermittent` cell beside it in `docs/taxonomy.md` without a
+ * home. The first two fixtures to land there had to be filed somewhere wrong,
+ * which showed up as bucket claims that kept needing restatement rather than as
+ * anything failing. The target shares also summed to 90%; they now sum to 100.
  */
 export const BucketSchema = z.enum([
   'hard-quadrant',
   'misleading-history',
   'environment-as-regression',
   'stale-test',
+  'unsynchronised-test',
   'cross-file-state-leak',
   'straightforward',
 ])
