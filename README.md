@@ -133,7 +133,7 @@ schema, the report — never the model's behaviour today; that is measured separ
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-npm test                # 🚧 M5 — unit + e2e, produces results.json
+npm test                # unit + e2e, produces results.json and results-unit.json
 npm run analyze         # 🚧 M8 — flakemetry + agents, produces report.md
 ```
 
@@ -181,8 +181,8 @@ cat eval/report.md
 | `npm run build`              | M4        | Build the TaskFlow client bundle                                          |
 | `npm run test:unit`          | M0        | Vitest — API, flakemetry-lib, prompts, contracts; emits results-unit.json |
 | `npm run test:coverage`      | M2        | Vitest with coverage, enforcing the floor in vitest.config.ts             |
-| `npm run test:e2e`           | M5 🚧     | Playwright — TaskFlow UI flows including the flaky specs                  |
-| `npm test`                   | M5 🚧     | Unit and E2E together; emits results.json                                 |
+| `npm run test:e2e`           | M5        | Playwright — TaskFlow UI flows, one server per worker; emits results.json |
+| `npm test`                   | M5        | Unit and E2E together                                                     |
 | `npm run flakemetry:analyze` | M6 🚧     | Test report + history → analysis.json                                     |
 | `npm run agents:analyze`     | M7 🚧     | analysis.json → report.md                                                 |
 | `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                                         |

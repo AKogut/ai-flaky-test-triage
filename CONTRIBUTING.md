@@ -31,12 +31,13 @@ npm run eval:lint       # dataset composition and label-leakage check
 npm run lint && npm run typecheck
 ```
 
-And what does not yet, with the milestone it arrives in:
+And the ones that need a browser or a running application:
 
 ```bash
 npm run demo            # full pipeline, no API key — writes report.md
 npm run dev             # start TaskFlow locally — API + client, Ctrl-C stops both
-npm test                # 🚧 M5 · #50 — unit and e2e together
+npm run test:e2e        # Playwright, one TaskFlow per worker — needs `npx playwright install chromium`
+npm test                # unit and e2e together
 ```
 
 Requires Node ≥ 22.13 — the floor ESLint 10 sets, not an arbitrary one. An `ANTHROPIC_API_KEY` is

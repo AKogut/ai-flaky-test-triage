@@ -82,13 +82,17 @@ suspicious outcome.
 ```bash
 cp .env.example .env
 # add ANTHROPIC_API_KEY
-npm test          # 🚧 M5 · #50 — runs the suite, writes results.json
+npm test          # runs the suite, writes results.json and results-unit.json
 npm run analyze   # 🚧 M8 · #71 — flakemetry + agents, writes report.md
 ```
 
 `npm test` deliberately includes tests that fail intermittently. That is the point — they are the
 input the pipeline exists to interpret. See [Architecture Overview](Architecture-Overview) for what
 happens to their output.
+
+**The end-to-end run does not retry.** The conventional setting is `retries: 2`, and it would erase
+the intermittency this project consumes before anything downstream could see it. Retries are
+available for a specific investigation — `SENTRA_E2E_RETRIES=3 npm run test:e2e` — and never in CI.
 
 ## Running the demo application
 
@@ -113,7 +117,8 @@ optimistic-update race is captured for the dataset rather than waited for.
 
 | File                       | Written by                  | Committed?                                |
 | -------------------------- | --------------------------- | ----------------------------------------- |
-| `results.json`             | the test run                | no                                        |
+| `results.json`             | `npm run test:e2e`          | no                                        |
+| `results-unit.json`        | `npm run test:unit`         | no                                        |
 | `analysis.json`            | `flakemetry:analyze`        | no                                        |
 | `report.md`                | `agents:analyze`            | no                                        |
 | `otel-spans.json`          | the agents' instrumentation | no                                        |

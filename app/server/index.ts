@@ -28,6 +28,8 @@ export interface ServeOptions {
   database?: string
   /** Replace the contents with the deterministic seed before serving. */
   reseed?: boolean
+  /** Serve the built client bundle from this origin too — see `AppDeps.client`. */
+  client?: string
   log?: (message: string) => void
 }
 
@@ -40,7 +42,11 @@ export function serve(options: ServeOptions = {}): { close: () => Promise<void>;
   if (options.reseed === true) seed(db)
 
   const chaos = chaosFrom(process.env)
-  const server = createApp({ db, chaos }).listen(port)
+  const server = createApp({
+    db,
+    chaos,
+    ...(options.client !== undefined && { client: options.client }),
+  }).listen(port)
   const bound = address(server, port)
   log(`  TaskFlow API on http://localhost:${String(bound)} (${path})`)
   if (chaos.enabled) {

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@sentra/contracts": "*"
+    "@sentra/contracts": "*",
+    "@sentra/taskflow-server": "*"
   }
 }
