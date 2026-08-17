@@ -186,6 +186,7 @@ cat eval/report.md
 | `npm run flakemetry:analyze` | M6 🚧     | Test report + history → analysis.json                                     |
 | `npm run agents:analyze`     | M7 🚧     | analysis.json → report.md                                                 |
 | `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                                         |
+| `npm run capture`            | M5        | Real Playwright report → golden-dataset payloads                          |
 | `npm run eval`               | M2        | Golden-dataset evaluation → eval/report.md                                |
 | `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                                 |
 | `npm run demo`               | M3        | Full pipeline in replay mode, no credentials                              |

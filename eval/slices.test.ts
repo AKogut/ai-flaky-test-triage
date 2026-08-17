@@ -75,7 +75,7 @@ describe('adding a fixture never moves an existing one', () => {
    * permanent: a fixture that changes slice invalidates every held-out number
    * published before the change, with nothing going red.
    */
-  it('leaves all 37 committed fixtures where they were after 500 more arrive', () => {
+  it('leaves all 39 committed fixtures where they were after 500 more arrive', () => {
     const before = new Map(listFixtures().map((name) => [name, sliceOf(name)]))
 
     const grown = [...listFixtures(), ...Array.from({ length: 500 }, (_, i) => `new-${String(i)}`)]
@@ -163,9 +163,9 @@ describe('the committed dataset split', () => {
   )
   const held = composition.reduce((n, row) => n + row.holdout, 0)
 
-  it('holds out 12 of 35', () => {
-    // Pinned. 34% against a 20% target is ordinary binomial variance at n=35
-    // (sd ≈ 2.4 on an expected 7), not a defect in the rule. If this number
+  it('holds out 12 of 39', () => {
+    // Pinned. 31% against a 20% target is ordinary binomial variance at n=39
+    // (sd ≈ 2.5 on an expected 7.8), not a defect in the rule. If this number
     // moves without a fixture being added, the rule changed.
     expect(held).toBe(12)
   })
@@ -181,7 +181,7 @@ describe('the committed dataset split', () => {
   })
 
   it('leaves enough in the development slice to iterate against', () => {
-    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(25)
+    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(27)
   })
 })
 

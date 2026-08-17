@@ -9,22 +9,22 @@
       "status": "failed",
       "attempts": 1,
       "flakyWithinRun": false,
-      "durationMs": 105,
+      "durationMs": 394,
       "annotations": [],
       "error": {
         "message": "Error: unexpected task on the board: \"Prepare the quarterly review pack\"\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"Prepare the quarterly review pack\"\u001b[39m\nReceived array: \u001b[31m[\"Write the incident postmortem\", \"Review the migration plan\", \"Renew the staging certificate\", \"Review the release checklist\", \"Draft the release notes\", \"Investigate the board spec\"]\u001b[39m",
         "stack": "Error: unexpected task on the board: \"Prepare the quarterly review pack\"\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"Prepare the quarterly review pack\"\u001b[39m\nReceived array: \u001b[31m[\"Write the incident postmortem\", \"Review the migration plan\", \"Renew the staging certificate\", \"Review the release checklist\", \"Draft the release notes\", \"Investigate the board spec\"]\u001b[39m\n    at tests/e2e/visible-tasks.spec.ts:78:64",
-        "snippet": "  76 |\n  77 |   for (const title of rendered) {\n> 78 |     expect(SEEDED, `unexpected task on the board: \"${title}\"`).toContain(title)\n     |                                                                ^\n  79 |   }\n  80 | })\n  81 |"
+        "snippet": "\u001b[0m \u001b[90m 76 |\u001b[39m\n \u001b[90m 77 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m title \u001b[36mof\u001b[39m rendered) {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 78 |\u001b[39m     expect(\u001b[33mSEEDED\u001b[39m\u001b[33m,\u001b[39m \u001b[32m`unexpected task on the board: \"${title}\"`\u001b[39m)\u001b[33m.\u001b[39mtoContain(title)\n \u001b[90m    |\u001b[39m                                                                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 79 |\u001b[39m   }\n \u001b[90m 80 |\u001b[39m })\n \u001b[90m 81 |\u001b[39m\u001b[0m"
       }
     },
     "signal": {
       "testId": "tests/e2e/visible-tasks.spec.ts›shows only tasks the board was seeded with",
-      "flakinessScore": 0.32,
-      "consecutiveFailures": 1,
-      "totalRuns": 20,
-      "firstSeenAt": "2026-08-17T13:27:09.438Z",
-      "lastPassedAt": "2026-08-17T13:32:47.662Z",
-      "statusHistory": "FPPPFPPPPFFPPPPPPPPF",
+      "flakinessScore": 0,
+      "consecutiveFailures": 3,
+      "totalRuns": 3,
+      "statusHistory": "FFF",
+      "firstSeenAt": "2026-08-17T13:39:10.421Z",
+      "lastPassedAt": null,
       "isNew": false
     }
   },

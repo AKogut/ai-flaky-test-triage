@@ -26,6 +26,7 @@
     "agents:analyze": "node scripts/pending.mjs agents:analyze",
     "analyze": "node scripts/pending.mjs analyze",
     "build": "npm run build --workspace @sentra/taskflow-client",
+    "capture": "tsx scripts/capture.ts",
     "cassettes:check": "tsx scripts/cassettes.ts",
     "cassettes:record": "tsx scripts/record.ts",
     "changelog": "tsx scripts/changelog.ts",

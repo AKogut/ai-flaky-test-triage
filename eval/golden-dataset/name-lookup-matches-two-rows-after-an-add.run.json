@@ -9,22 +9,22 @@
       "status": "failed",
       "attempts": 1,
       "flakyWithinRun": false,
-      "durationMs": 367,
+      "durationMs": 560,
       "annotations": [],
       "error": {
         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Review the')\nExpected: visible\nError: strict mode violation: getByText('Review the') resolved to 2 elements:\n    1) <p class=\"task-title\">Review the migration plan</p> aka getByText('Review the migration plan')\n    2) <p class=\"task-title\">Review the incident timeline</p> aka getByText('Review the incident timeline')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Review the')\u001b[22m\n",
         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Review the')\nExpected: visible\nError: strict mode violation: getByText('Review the') resolved to 2 elements:\n    1) <p class=\"task-title\">Review the migration plan</p> aka getByText('Review the migration plan')\n    2) <p class=\"task-title\">Review the incident timeline</p> aka getByText('Review the incident timeline')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Review the')\u001b[22m\n\n    at tests/e2e/find-by-name.spec.ts:102:40",
-        "snippet": "  100 |   await expect(page.getByText('Write the incident postmortem')).toBeVisible()\n  101 |\n> 102 |   await expect(page.getByText(PREFIX)).toBeVisible()\n      |                                        ^\n  103 | })\n  104 |\n  105 | /**"
+        "snippet": "\u001b[0m \u001b[90m 100 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'Write the incident postmortem'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\n \u001b[90m 101 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 102 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[33mPREFIX\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\n \u001b[90m     |\u001b[39m                                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 103 |\u001b[39m })\n \u001b[90m 104 |\u001b[39m\n \u001b[90m 105 |\u001b[39m \u001b[90m/**\u001b[39m\u001b[0m"
       }
     },
     "signal": {
       "testId": "tests/e2e/find-by-name.spec.ts›finds a newly added task in the active list",
-      "flakinessScore": 0.39,
-      "consecutiveFailures": 2,
-      "totalRuns": 19,
-      "firstSeenAt": "2026-08-17T12:47:45.754Z",
-      "lastPassedAt": "2026-08-17T12:50:33.222Z",
-      "statusHistory": "PPPFPPFPFPPPPPPPPFF",
+      "flakinessScore": 0.4,
+      "consecutiveFailures": 4,
+      "totalRuns": 6,
+      "statusHistory": "FPFFFF",
+      "firstSeenAt": "2026-08-17T13:00:50.778Z",
+      "lastPassedAt": "2026-08-17T13:04:25.241Z",
       "isNew": false
     }
   },

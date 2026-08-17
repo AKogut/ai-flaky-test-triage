@@ -1,0 +1,10 @@
+{
+  "name": "stored-status-read-before-the-write-answered",
+  "owner": "test_code",
+  "determinism": "intermittent",
+  "justification": "The tempting reading is app_code: a completion was requested, the screen showed it, and the stored row still said otherwise, which sounds like a write that did not happen. It did happen, a moment later. The interaction paints before it sends — that is what the client does for this one action — so the screen turning is not evidence the server agreed. The spec then reads the stored row once, with no retry, and compares. Rule 2 fires: asserting on a value straight after an asynchronous effect, without waiting for it, is the unsafe assumption the rule names first, and it makes the spec an invalid detector rather than evidence about the product. The fix is one call: poll the stored value instead of reading it. Intermittent because the read usually wins: 1 failure in the 6 runs the history covers.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "captured",
+  "bucket": "unsynchronised-test",
+  "lowConfidenceGroundTruth": false
+}

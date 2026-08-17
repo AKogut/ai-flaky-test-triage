@@ -2,9 +2,9 @@
   "name": "board-shows-a-row-nothing-in-the-file-created",
   "owner": "test_code",
   "determinism": "intermittent",
-  "justification": "Everything in the evidence points at the wrong file, which is what makes this shape worth a fixture. The assertion, the stack and the snippet are all in the failing spec, and that spec is correct: it reads what the board shows and compares it against the seed. The extra row was left by a different spec that adds a task and never removes it, and nothing in the failing test touches it. The tempting alternative is app_code — the application did put a row on the board — but it was asked to create that row and did, so there is no product defect to point at. Rule 2 fires: the suite depends on state another test left, so the failing spec is not a valid detector. Intermittent because whether the two files land in one worker in sequence depends on how long the others took: 6 failures in 18 runs, alternating.",
+  "justification": "Everything in the evidence points at the wrong file. The assertion, the stack and the snippet are all in the failing spec, and that spec is correct: it reads what the board shows and compares it against the seed. The extra row was left by a different spec that adds a task and never removes it, and nothing in the failing test touches it. The tempting alternative is app_code — a row was created and shown — but that is what the application was asked to do. Rule 2 fires: the suite depends on state another test left. The determinism axis is the arguable part and is marked low confidence: the test is intermittent, measured at 5 failures in 20 runs, but the history this fixture carries shows three failures and no pass, and a labeller working from the payload alone would read that as deterministic. Short histories are what captured fixtures have.",
   "ruleApplied": "rule-2-unsafe-test-assumption",
   "provenance": "captured",
   "bucket": "cross-file-state-leak",
-  "lowConfidenceGroundTruth": false
+  "lowConfidenceGroundTruth": true
 }

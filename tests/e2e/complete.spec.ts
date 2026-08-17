@@ -29,7 +29,13 @@ test('marks a task done', async ({ page, db }) => {
   await action(page, ACTIVE, 'Complete').click()
 
   await expect(row(page, ACTIVE).getByTestId('task-status')).toHaveText('Done')
-  expect(stored(db).find((task) => task.title === ACTIVE)?.status).toBe('completed')
+  // `expect.poll`, not a plain read. The row above turns "Done" the instant it
+  // is clicked — that is what optimistic means — so the screen agreeing says
+  // nothing about the server having agreed yet. Read once, this assertion is a
+  // race, and it is the one CI caught: expected "completed", received "active".
+  await expect
+    .poll(() => stored(db).find((task) => task.title === ACTIVE)?.status)
+    .toBe('completed')
 })
 
 test('offers to reopen what it just completed', async ({ page }) => {
@@ -48,7 +54,7 @@ test('reopens a completed task', async ({ page, db }) => {
 
   await expect(row(page, DONE).getByTestId('task-status')).toHaveText('To do')
   await expect(action(page, DONE, 'Complete')).toBeVisible()
-  expect(stored(db).find((task) => task.title === DONE)?.status).toBe('active')
+  await expect.poll(() => stored(db).find((task) => task.title === DONE)?.status).toBe('active')
 })
 
 test('keeps the change after a reload', async ({ page }) => {

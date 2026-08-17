@@ -1,0 +1,10 @@
+{
+  "name": "two-moved-rows-and-one-of-them-goes-back",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "The message names a locator and a timeout, which is the signature of a spec that looked before the page settled, and that is the tempting reading. It does not hold here: the spec counts the write responses and only asserts once both have arrived, so nothing was in flight when the wait began, and the line above it shows the stored rows already holding the order the client is not showing. The list is wrong while the database is right, which is a reconciliation defect in the client rather than a synchronisation defect in the test — it applies whichever response arrives last instead of whichever request was sent last. Rule 2 does not fire because the test encodes no unsafe assumption, so rule 3 decides. Intermittent: 2 failures in the 8 runs of this test the history covers, with passes throughout.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "captured",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

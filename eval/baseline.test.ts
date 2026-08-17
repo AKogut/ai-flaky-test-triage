@@ -224,8 +224,8 @@ describe('scored against the committed dataset', () => {
       (s) =>
         s.predicted.owner !== s.labels.owner || s.predicted.determinism !== s.labels.determinism,
     )
-    expect(hard.length).toBe(11)
-    expect(missed.length).toBe(8)
+    expect(hard.length).toBe(12)
+    expect(missed.length).toBe(9)
   })
 
   it('does not read a documentation-only commit as a product change (#112)', () => {
@@ -267,12 +267,12 @@ describe('scored against the committed dataset', () => {
 
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
     // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(20 / 37, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(20 / 39, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {
     expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(
-      29 / 37,
+      30 / 39,
       5,
     )
   })

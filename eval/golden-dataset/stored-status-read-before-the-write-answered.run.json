@@ -1,0 +1,33 @@
+{
+  "name": "stored-status-read-before-the-write-answered",
+  "scenario": "A check reads the stored status straight after the screen shows the change, and finds the old value.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/complete.spec.ts›marks a task done",
+      "title": "marks a task done",
+      "file": "tests/e2e/complete.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 808,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"completed\"\u001b[39m\nReceived: \u001b[31m\"active\"\u001b[39m",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"completed\"\u001b[39m\nReceived: \u001b[31m\"active\"\u001b[39m\n    at tests/e2e/complete.spec.ts:32:68",
+        "snippet": "\u001b[0m \u001b[90m 30 |\u001b[39m\n \u001b[90m 31 |\u001b[39m   \u001b[36mawait\u001b[39m expect(row(page\u001b[33m,\u001b[39m \u001b[33mACTIVE\u001b[39m)\u001b[33m.\u001b[39mgetByTestId(\u001b[32m'task-status'\u001b[39m))\u001b[33m.\u001b[39mtoHaveText(\u001b[32m'Done'\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 32 |\u001b[39m   expect(stored(db)\u001b[33m.\u001b[39mfind((task) \u001b[33m=>\u001b[39m task\u001b[33m.\u001b[39mtitle \u001b[33m===\u001b[39m \u001b[33mACTIVE\u001b[39m)\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[32m'completed'\u001b[39m)\n \u001b[90m    |\u001b[39m                                                                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 33 |\u001b[39m })\n \u001b[90m 34 |\u001b[39m\n \u001b[90m 35 |\u001b[39m test(\u001b[32m'offers to reopen what it just completed'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/complete.spec.ts›marks a task done",
+      "flakinessScore": 0.2,
+      "consecutiveFailures": 1,
+      "totalRuns": 6,
+      "statusHistory": "PPPPPF",
+      "firstSeenAt": "2026-08-17T12:35:55.551Z",
+      "lastPassedAt": "2026-08-17T13:39:10.421Z",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const ACTIVE = 'Draft the release notes'\n\ntest.beforeEach(async ({ page }) => {\n  await open(page)\n})\n\ntest('marks a task done', async ({ page, db }) => {\n  await action(page, ACTIVE, 'Complete').click()\n\n  await expect(row(page, ACTIVE).getByTestId('task-status')).toHaveText('Done')\n  expect(stored(db).find((task) => task.title === ACTIVE)?.status).toBe('completed')\n})\n"
+}
