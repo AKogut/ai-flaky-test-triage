@@ -24,7 +24,7 @@
     },
     {
       "name": "test:unit",
-      "description": "Vitest \u2014 API, flakemetry-lib, prompt builders, contracts",
+      "description": "Vitest \u2014 API, flakemetry-lib, prompt builders, contracts; emits results-unit.json",
       "milestone": "M0",
       "issue": 9,
       "status": "implemented"

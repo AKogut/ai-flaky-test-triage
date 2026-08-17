@@ -8,6 +8,7 @@ package-lock.json
 
 # Pipeline outputs — generated, never hand-edited.
 results.json
+results-unit.json
 analysis.json
 report.md
 otel-spans.json

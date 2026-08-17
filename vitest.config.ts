@@ -1,5 +1,18 @@
 import { defineConfig } from 'vitest/config'
 
+/**
+ * Where the unit run leaves its machine-readable report.
+ *
+ * Separate from Playwright's `results.json` rather than sharing it: both would
+ * be written by `npm test`, and whichever finished second would silently erase
+ * the other's failures. Two files, one merge, no lost run.
+ *
+ * Exported so a test can assert the file is gitignored rather than trusting
+ * that somebody remembered — a pipeline output committed by accident is a diff
+ * that changes on every run and stops being read within a week.
+ */
+export const UNIT_RESULTS = 'results-unit.json'
+
 export default defineConfig({
   test: {
     include: [
@@ -14,6 +27,27 @@ export default defineConfig({
       'app/client/**/*.test.tsx',
     ],
     exclude: ['**/node_modules/**', '**/dist/**'],
+
+    /**
+     * The unit run is a data source, not only a gate.
+     *
+     * Unit failures classify differently from browser failures — far more often
+     * `deterministic`, far more often `app_code` — and a golden dataset built
+     * only from Playwright output would teach the classifier that every failure
+     * has a locator in it. So the JSON report is emitted on every run and
+     * normalised by `normaliseVitestReport`, the same way Playwright's is.
+     *
+     * **Always on, not behind a flag.** A reporter somebody has to remember to
+     * switch on is one CI forgets, and the evidence is gone by the time anyone
+     * notices — the run that would have been worth capturing is the run that
+     * already finished.
+     *
+     * `default` stays first so a human still gets a human report; `json` is
+     * additional, not instead.
+     */
+    reporters: ['default', 'json'],
+    outputFile: { json: UNIT_RESULTS },
+
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],
