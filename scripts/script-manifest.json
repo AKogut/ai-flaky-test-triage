@@ -20,7 +20,7 @@
       "description": "Build the TaskFlow client bundle",
       "milestone": "M4",
       "issue": 43,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "test:unit",

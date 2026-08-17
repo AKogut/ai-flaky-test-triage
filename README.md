@@ -150,7 +150,7 @@ cat eval/report.md
 | ---------------------------- | --------- | ------------------------------------------------------------- |
 | `npm run help`               | M0        | Annotated listing of every pipeline command and its status    |
 | `npm run dev`                | M4 🚧     | Start TaskFlow (API + client) locally                         |
-| `npm run build`              | M4 🚧     | Build the TaskFlow client bundle                              |
+| `npm run build`              | M4        | Build the TaskFlow client bundle                              |
 | `npm run test:unit`          | M0        | Vitest — API, flakemetry-lib, prompt builders, contracts      |
 | `npm run test:coverage`      | M2        | Vitest with coverage, enforcing the floor in vitest.config.ts |
 | `npm run test:e2e`           | M5 🚧     | Playwright — TaskFlow UI flows including the flaky specs      |

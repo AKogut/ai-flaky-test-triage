@@ -47,3 +47,7 @@ yarn-error.log*
 
 # TaskFlow's development database. State, not source — the seed script rebuilds it.
 .taskflow/
+
+# The Vite bundle. `dist/` next to it holds TypeScript's declarations, and the two
+# tools would delete each other's output if they shared a directory.
+app/client/dist-bundle/
