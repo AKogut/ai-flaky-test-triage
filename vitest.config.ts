@@ -10,6 +10,8 @@ export default defineConfig({
       'prompts/**/*.test.ts',
       'eval/**/*.test.ts',
       'app/server/**/*.test.ts',
+      'app/client/**/*.test.ts',
+      'app/client/**/*.test.tsx',
     ],
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {

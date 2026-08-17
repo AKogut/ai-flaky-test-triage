@@ -26,6 +26,8 @@ export default tseslint.config(
   {
     ignores: [
       '**/dist/**',
+      // The Vite bundle: generated, minified, and not ours to lint.
+      'app/client/dist-bundle/**',
       '**/node_modules/**',
       'coverage/**',
       // Bundled fixture data for `npm run demo`, not project source. These are
