@@ -33,8 +33,15 @@ import { DATASET_DIR, loadLabels, loadPayload } from './dataset.js'
  * Only string **values** are scanned. Schema key names — `flakinessScore`,
  * `flakyWithinRun` — are part of the format rather than something a fixture
  * author chose, and flagging them would make the check unusable.
+ *
+ * Exported because the constraint reaches further than this directory. TaskFlow's
+ * seed data is quoted verbatim into captured fixtures — an assertion comparing
+ * the rendered board against the seed prints every title into the failure message
+ * — so a seeded title carrying one of these words makes every fixture that
+ * quotes the list unusable. One of them did. A test now checks the seed against
+ * this list rather than the rule living in somebody's memory.
  */
-const LEAK_TERMS: readonly RegExp[] = [
+export const LEAK_TERMS: readonly RegExp[] = [
   /\bapp_code\b/i,
   /\btest_code\b/i,
   /\benvironment\b/i,

@@ -16,6 +16,9 @@
     },
     {
       "path": "../app/server"
+    },
+    {
+      "path": "../eval"
     }
   ]
 }

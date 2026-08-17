@@ -65,7 +65,7 @@ test('keeps the deletion after a reload', async ({ page }) => {
 })
 
 test('deletes more than one, one confirmation at a time', async ({ page }) => {
-  for (const title of [TASK, 'Triage the flaky board spec']) {
+  for (const title of [TASK, 'Investigate the board spec']) {
     await action(page, title, 'Delete').click()
     await action(page, title, 'Confirm delete').click()
     await expect(page.getByText(title)).toHaveCount(0)

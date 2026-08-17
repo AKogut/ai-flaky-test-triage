@@ -27,6 +27,16 @@ import { clear, create, update, type Db, type Task } from './db.js'
  *   failure arriving through the more common mistake.
  */
 
+/**
+ * One rule the titles must follow, learned the hard way.
+ *
+ * **No title may contain a word from the label vocabulary.** A captured fixture
+ * quotes the board — an assertion that compares what is rendered against the
+ * seed prints every title into the failure message — and the dataset's leakage
+ * lint reads every string in a payload. One of these rows used to be called
+ * "Triage the flaky board spec", which was good flavour and made every fixture
+ * that printed the list unusable.
+ */
 export const SEED_TIME = '2026-01-15T09:00:00.000Z'
 
 interface SeedRow {
@@ -41,7 +51,7 @@ export const SEED: readonly SeedRow[] = [
   { title: 'Renew the staging certificate', description: '', completed: true },
   { title: 'Review the release checklist', description: 'Signed off last week.', completed: true },
   { title: 'Draft the release notes', description: 'Wait for the eval numbers first.' },
-  { title: 'Triage the flaky board spec', description: 'It has failed four times this week.' },
+  { title: 'Investigate the board spec', description: 'It has failed four times this week.' },
 ]
 
 /** Replaces whatever was there. Returns the rows so a caller can assert on ids without re-reading. */

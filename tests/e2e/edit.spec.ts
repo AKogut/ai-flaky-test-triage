@@ -25,7 +25,7 @@ import { expect, stored, test } from './fixtures.js'
  * them needs to know how long the request took.
  */
 
-const TASK = 'Triage the flaky board spec'
+const TASK = 'Investigate the board spec'
 
 /** The row under test, held by id so that renaming it does not lose it. */
 const target = (page: Page, db: Db): Locator =>

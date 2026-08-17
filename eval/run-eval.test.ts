@@ -145,8 +145,8 @@ describe('slice wiring', () => {
     // A reader of the dev report has to be able to answer "what did this number
     // not see" without opening the other file.
     const total = (e: Evaluation): number => e.composition.reduce((n, row) => n + row.total, 0)
-    expect(total(await evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(35)
-    expect(total(await evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(35)
+    expect(total(await evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(36)
+    expect(total(await evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(36)
   })
 })
 
@@ -212,9 +212,9 @@ describe('datasetRevision', () => {
 
 describe('evaluating the committed dataset', () => {
   it('runs end to end with no model and no network', () => {
-    // 23, not 34 — the default slice is `dev` and 11 fixtures are held out.
-    expect(evaluation.fixtures).toHaveLength(23)
-    expect(evaluation.metrics.n).toBe(23)
+    // 24, not 36 — the default slice is `dev` and 12 fixtures are held out.
+    expect(evaluation.fixtures).toHaveLength(24)
+    expect(evaluation.metrics.n).toBe(24)
   })
 
   it('orders fixtures by name, so a regenerated report diffs cleanly', () => {
