@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { EventEmitter } from 'node:events'
 import { describe, expect, it, vi } from 'vitest'
@@ -8,6 +9,7 @@ import {
   DEFAULT_WEB_PORT,
   isFree,
   kill,
+  VITE_CONFIG,
   main,
   plan,
   spawnPrefixed,
@@ -106,6 +108,20 @@ describe('starting both halves', () => {
     const { started } = await run({ PORT: '4000', VITE_PORT: '4001' })
     expect(started[0]?.env.PORT).toBe('4000')
     expect(started[1]?.args).toContain('4001')
+  })
+
+  /**
+   * Vite reads its config from the working directory, and this runs from the
+   * repository root. Without `--config` it serves the root with no React plugin
+   * and no `/api` proxy, and the only symptom is a 404 on a page that used to
+   * work — which is exactly how it was found: by running the command, not by
+   * reading the arguments.
+   */
+  it('points the client at its own config', async () => {
+    const { started } = await run({})
+    expect(started[1]?.args).toContain('--config')
+    expect(started[1]?.args).toContain(VITE_CONFIG)
+    expect(existsSync(VITE_CONFIG)).toBe(true)
   })
 
   /**

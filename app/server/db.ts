@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 import Database from 'better-sqlite3'
 
 /**
@@ -57,6 +59,13 @@ export type Db = Database.Database
  * argument in tests; the CLI passes a real file.
  */
 export function open(path: string): Db {
+  // SQLite creates the file and refuses to create the directory, so the default
+  // path — `.taskflow/tasks.db`, which is gitignored and therefore absent on
+  // every clean clone — made `npm run dev` fail on the first run and only the
+  // first run. Every test used `:memory:`, so nothing caught it; a test that
+  // opens a path under a directory that does not exist does now.
+  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true })
+
   const db = new Database(path)
 
   // Without this SQLite runs with foreign keys off and, more importantly here,
