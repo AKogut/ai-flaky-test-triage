@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.repository.test.ts›createTask › gives concurrent callers distinct identifiers",
-      "flakinessScore": 0.36,
+      "flakinessScore": 0.45,
       "consecutiveFailures": 0,
       "totalRuns": 67,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

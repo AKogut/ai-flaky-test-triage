@@ -131,7 +131,8 @@ export function readHistory(file: string = HISTORY_FILE): History {
  * 2. An entry already carrying this `runId` is **replaced**, not duplicated, so
  *    re-analysing the same report twice leaves the same history.
  * 3. Tests in the history and not in the run are untouched.
- * 4. `firstSeenAt` only ever moves earlier.
+ * 4. `firstSeenAt` only ever moves earlier, and `totalRuns` counts every run
+ *    ever recorded — both survive the eviction that `entries` does not.
  * 5. Entries are ordered by run start time, not by arrival, so a job for an
  *    older commit finishing late cannot make its result the most recent one.
  *    `consecutiveFailures` reads the tail of that order; getting it wrong would
@@ -158,9 +159,14 @@ export function mergeRun(history: History, run: TestRun, options: MergeOptions =
       flakyWithinRun: result.flakyWithinRun,
     }
     const kept = (previous?.entries ?? []).filter((e) => e.runId !== run.runId)
+    // Only a run this test has not been recorded in before adds to the lifetime
+    // count. Re-merging a report must leave the number where it was, for the
+    // same reason it must not append a second entry.
+    const alreadyRecorded = (previous?.entries.length ?? 0) !== kept.length
 
     tests[result.testId] = {
       firstSeenAt: earlier(previous?.firstSeenAt, run.startedAt),
+      totalRuns: (previous?.totalRuns ?? 0) + (alreadyRecorded ? 0 : 1),
       entries: ordered([...kept, entry]).slice(-cap),
     }
   }

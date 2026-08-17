@@ -191,6 +191,28 @@ describe('merging a run', () => {
     expect(mergeRun(once, run())).toEqual(once)
   })
 
+  it('counts a run once however many times it is merged', () => {
+    let history = mergeRun(emptyHistory(), run())
+    expect(history.tests['tests/e2e/board.spec.ts›shows a row']?.totalRuns).toBe(1)
+    history = mergeRun(history, run({ results: [result({ status: 'failed' })] }))
+    expect(history.tests['tests/e2e/board.spec.ts›shows a row']?.totalRuns).toBe(1)
+    history = mergeRun(history, run({ runId: 'run-2', startedAt: day(2) }))
+    expect(history.tests['tests/e2e/board.spec.ts›shows a row']?.totalRuns).toBe(2)
+  })
+
+  it('counts per test, not per run, so a test the run skipped does not advance', () => {
+    let history = mergeRun(
+      emptyHistory(),
+      run({ results: [result({ testId: 'a' }), result({ testId: 'b' })] }),
+    )
+    history = mergeRun(
+      history,
+      run({ runId: 'run-2', startedAt: day(2), results: [result({ testId: 'a' })] }),
+    )
+    expect(history.tests.a?.totalRuns).toBe(2)
+    expect(history.tests.b?.totalRuns).toBe(1)
+  })
+
   it('does not modify the history it was given', () => {
     const before = mergeRun(emptyHistory(), run())
     const snapshot = structuredClone(before)
@@ -289,6 +311,19 @@ describe('the retained window', () => {
     const record = history.tests['tests/e2e/board.spec.ts›shows a row']
     expect(record?.firstSeenAt).toBe(day(1))
     expect(record?.entries[0]?.at).not.toBe(day(1))
+  })
+
+  /**
+   * The same eviction problem as `firstSeenAt`, one step further out. Count the
+   * entries instead and every test that has run more than the cap reports the
+   * cap, for ever — a year of history and a fortnight of it become the same
+   * number to anyone weighing how much is behind a score.
+   */
+  it('keeps counting runs after it has stopped keeping them', () => {
+    const history = overRuns(20, 5)
+    const record = history.tests['tests/e2e/board.spec.ts›shows a row']
+    expect(record?.totalRuns).toBe(20)
+    expect(record?.entries).toHaveLength(5)
   })
 
   it('defaults to a documented cap rather than to unbounded growth', () => {

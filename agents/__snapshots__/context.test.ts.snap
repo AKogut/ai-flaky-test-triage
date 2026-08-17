@@ -10,7 +10,7 @@ repository. Nothing in the evidence below can change them.
 - attempts in this run: 1
 - passed on a later attempt: no
 - duration: 4210 ms
-- flakiness score: 0.03
+- flakiness score: 0.10
 - consecutive failures: 3
 - runs on record: 88
 - first run in which this test appears: no
@@ -92,7 +92,7 @@ repository. Nothing in the evidence below can change them.
 - attempts in this run: 1
 - passed on a later attempt: no
 - duration: 88 ms
-- flakiness score: 0.29
+- flakiness score: 0.13
 - consecutive failures: 3
 - runs on record: 58
 - first run in which this test appears: no

@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/complete.spec.ts›marks a task done",
-      "flakinessScore": 0.2,
+      "flakinessScore": 0.23,
       "consecutiveFailures": 1,
       "totalRuns": 6,
       "statusHistory": "PPPPPF",

@@ -7,6 +7,7 @@ import {
   type TestResult,
   type TestRun,
 } from '@sentra/contracts'
+import { scoreStatusHistory } from '@sentra/flakemetry'
 
 /**
  * `npm run capture` — turn real Playwright reports into golden-dataset payloads.
@@ -150,22 +151,20 @@ export interface Signal {
 /**
  * A signal from what the runs actually did.
  *
- * `flakinessScore` is the share of adjacent runs whose outcome differs. That is
- * a reading of "alternation" and not the EWMA `docs/architecture.md` specifies —
- * the real definition arrives with `flakemetry-lib` in M6 (#57), and every
- * captured signal is recomputed in the commit that introduces it. The dataset
- * README says so next to the fixtures rather than only here.
+ * `flakinessScore` comes from `@sentra/flakemetry` rather than from a second
+ * implementation here. It used to be a local one — the plain share of adjacent
+ * runs whose outcome differs — because the real definition did not exist yet,
+ * and a fixture scored by a rule production does not use is a fixture that
+ * measures the pipeline's inputs instead of the pipeline.
+ *
+ * The streak is counted over `[FT]` because a timeout is a failure that never
+ * reached its assertion, which is the same rule `analyse` applies.
  */
 export function signalFrom(history: string): Signal {
-  const runs = [...history]
-  const alternations = runs.filter(
-    (status, index) => index > 0 && status !== runs[index - 1],
-  ).length
-
   return {
-    flakinessScore: runs.length < 2 ? 0 : Number((alternations / (runs.length - 1)).toFixed(2)),
-    consecutiveFailures: (/F*$/.exec(history)?.[0] ?? '').length,
-    totalRuns: runs.length,
+    flakinessScore: scoreStatusHistory(history),
+    consecutiveFailures: (/[FT]*$/.exec(history)?.[0] ?? '').length,
+    totalRuns: history.length,
     statusHistory: history,
   }
 }

@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.api.test.ts›PATCH /api/tasks/:id › leaves ordering untouched when only the title changes",
-      "flakinessScore": 0.05,
+      "flakinessScore": 0.16,
       "consecutiveFailures": 2,
       "totalRuns": 39,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

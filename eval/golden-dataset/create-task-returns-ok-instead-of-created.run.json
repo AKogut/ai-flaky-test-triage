@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.api.test.ts›POST /api/tasks › answers 201 with the created task",
-      "flakinessScore": 0.04,
+      "flakinessScore": 0.12,
       "consecutiveFailures": 3,
       "totalRuns": 61,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

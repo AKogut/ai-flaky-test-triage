@@ -22,6 +22,7 @@ const valid: History = {
   tests: {
     [testId]: {
       firstSeenAt: '2026-08-01T00:00:00.000Z',
+      totalRuns: 1,
       entries: [
         {
           runId: '1',
@@ -44,7 +45,7 @@ describe('an empty history', () => {
   /** A shared constant would put one caller's tests into the next caller's history. */
   it('is a new object every time', () => {
     const first = emptyHistory()
-    first.tests[testId] = { firstSeenAt: '2026-08-01T00:00:00.000Z', entries: [] }
+    first.tests[testId] = { firstSeenAt: '2026-08-01T00:00:00.000Z', totalRuns: 0, entries: [] }
     expect(emptyHistory().tests).toEqual({})
   })
 })
@@ -129,7 +130,7 @@ describe('refusing a document it cannot use', () => {
     const entries = Array.from({ length: 8 }, (_, i) => ({ runId: String(i) }))
     const many = {
       schemaVersion: HISTORY_SCHEMA_VERSION,
-      tests: { x: { firstSeenAt: '2026-08-01T00:00:00.000Z', entries } },
+      tests: { x: { firstSeenAt: '2026-08-01T00:00:00.000Z', totalRuns: 8, entries } },
     }
     try {
       parseHistory(many, 'h.json')

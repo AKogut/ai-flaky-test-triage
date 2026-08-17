@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.client.test.ts›client › parses the task list",
-      "flakinessScore": 0.18,
+      "flakinessScore": 0.43,
       "consecutiveFailures": 0,
       "totalRuns": 131,
       "firstSeenAt": "2026-02-11T09:03:47.000Z",

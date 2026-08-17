@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.api.test.ts›POST /api/v1/tasks › accepts the seed payload",
-      "flakinessScore": 0.03,
+      "flakinessScore": 0.15,
       "consecutiveFailures": 2,
       "totalRuns": 55,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

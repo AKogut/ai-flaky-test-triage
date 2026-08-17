@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.repository.test.ts›createTask › persists the row",
-      "flakinessScore": 0.09,
+      "flakinessScore": 0.13,
       "consecutiveFailures": 1,
       "totalRuns": 142,
       "firstSeenAt": "2026-02-11T09:03:47.000Z",

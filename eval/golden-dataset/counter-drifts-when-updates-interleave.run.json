@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › the heading agrees with the list after rapid edits",
-      "flakinessScore": 0.33,
+      "flakinessScore": 0.52,
       "consecutiveFailures": 1,
       "totalRuns": 79,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

@@ -10,7 +10,7 @@
 | model                  | none — a heuristic, no model call    |
 | prompt version         | none                                 |
 | dataset                | 27 fixtures in `eval/golden-dataset` |
-| dataset revision       | `0e4004df1ac48783`                   |
+| dataset revision       | `27afa05e78187a00`                   |
 | slice                  | `dev`                                |
 | samples per fixture    | 1                                    |
 | scored in the headline | 26 (1 excluded)                      |

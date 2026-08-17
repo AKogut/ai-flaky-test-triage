@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.client.test.ts›saveTask › completes even when the session is refreshed mid-request",
-      "flakinessScore": 0.21,
+      "flakinessScore": 0.13,
       "consecutiveFailures": 2,
       "totalRuns": 61,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.api.test.ts›GET /api/tasks › returns tasks with titles",
-      "flakinessScore": 0.04,
+      "flakinessScore": 0.14,
       "consecutiveFailures": 3,
       "totalRuns": 48,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

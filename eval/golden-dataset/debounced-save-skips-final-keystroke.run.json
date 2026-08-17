@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/editor.spec.ts›editor › keeps every character typed before closing",
-      "flakinessScore": 0.4,
+      "flakinessScore": 0.55,
       "consecutiveFailures": 1,
       "totalRuns": 88,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

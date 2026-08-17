@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › a deleted task stays deleted",
-      "flakinessScore": 0.44,
+      "flakinessScore": 0.66,
       "consecutiveFailures": 0,
       "totalRuns": 83,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

@@ -79,10 +79,19 @@ keeps the lines beside its assertions plain.
 path is part of what a classifier sees. A spec called `reorder-race.spec.ts` gives the answer away,
 and a model that gets it right from the filename has learned nothing that generalises.
 
-One value is provisional. `flakinessScore` is specified as an EWMA of pass/fail alternation and the
-implementation lands with `flakemetry-lib` in M6 (#57); until then a captured fixture records the
-plain alternation rate over its observed history — the share of adjacent runs that differ. It will
-be recomputed when the real definition exists, in the same commit that introduces it.
+**Every derived field is one production could have produced.** `flakinessScore` and
+`consecutiveFailures` are computed from the fixture's own `statusHistory` by the same functions
+`flakemetry-lib` uses, and `eval:lint` fails if a committed fixture disagrees with them.
+
+That check exists because the alternative had already happened. Before the scoring function existed
+(#58), synthetic fixtures carried hand-picked scores: two fixtures with the identical history
+`PPPPPPPFFF` carried `0.03` and `0.29`, which no definition produces both of. A dataset scored by a
+rule production does not use measures the fixtures rather than the classifier.
+
+Eight histories still end somewhere production cannot put them — `analyse` always ends the history
+with the run being triaged. `eval:lint` warns about each by name; #177 tracks fixing them, and it is
+a labelling job rather than an arithmetic one, because a longer history can change what the right
+answer is.
 
 ## Target composition
 
