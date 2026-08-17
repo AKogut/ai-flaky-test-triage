@@ -133,6 +133,58 @@ export function update(db: Db, id: number, patch: TaskPatch, now: string): Task 
   return find(db, id)
 }
 
+/**
+ * Move a task so that it lands at `index` in the resulting list.
+ *
+ * Fractional insertion rather than renumbering: one row is written, and the
+ * partial-update behaviour under a race is what makes the failure in #46
+ * interesting rather than simulated.
+ *
+ * **The defined outcome under concurrency**, which the issue asks to be written
+ * down rather than discovered:
+ *
+ * 1. Requests serialise — the handlers are synchronous and SQLite is
+ *    single-writer — so the second reorder computes against the list the first
+ *    one produced. Last write wins, applied to current state.
+ * 2. That is *not* the same as last intent winning. Two clients that both read
+ *    the list, then both say "put mine at index 2", produce a final order
+ *    neither of them painted optimistically: the second index means something
+ *    different once the first move has landed. This is the race #46 exists to
+ *    reproduce, and it is a genuine product behaviour, not an injected one.
+ * 3. Two moves to the same gap compute the same midpoint and store the same
+ *    position. Order between them is then decided by `id`, not by who was later
+ *    — so a client that moved a task *after* another can find it rendered
+ *    before it.
+ *
+ * The known limit: each insertion into a gap halves it only when the inserted
+ * task becomes a neighbour of the next one — dragging item after item to just
+ * below the same row, which is an ordinary thing to do. After 52 of those the
+ * midpoint equals the neighbour below and case 3 applies permanently. A
+ * production system would renumber; this one is a demonstration app and would
+ * rather have the collision. A test pins the 52, because a number in a comment
+ * is a guess somebody later relies on.
+ */
+export function reorder(db: Db, id: number, index: number, now: string): Task[] | null {
+  if (find(db, id) === null) return null
+
+  const others = list(db).filter((task) => task.id !== id)
+  const at = Math.min(Math.max(Math.trunc(index), 0), others.length)
+  const before = others[at - 1]
+  const after = others[at]
+
+  const position =
+    before === undefined && after === undefined
+      ? 1
+      : before === undefined
+        ? (after?.position ?? 1) - 1
+        : after === undefined
+          ? before.position + 1
+          : (before.position + after.position) / 2
+
+  db.prepare('UPDATE tasks SET position = ?, updated_at = ? WHERE id = ?').run(position, now, id)
+  return list(db)
+}
+
 /** True when a row was deleted. False means it was already gone, which is not an error twice. */
 export function remove(db: Db, id: number): boolean {
   return db.prepare('DELETE FROM tasks WHERE id = ?').run(id).changes > 0
