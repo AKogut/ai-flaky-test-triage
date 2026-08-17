@@ -35,7 +35,7 @@ And what does not yet, with the milestone it arrives in:
 
 ```bash
 npm run demo            # full pipeline, no API key — writes report.md
-npm run dev             # 🚧 M4 · #48 — start TaskFlow locally
+npm run dev             # start TaskFlow locally — API + client, Ctrl-C stops both
 npm test                # 🚧 M5 · #50 — unit and e2e together
 ```
 
