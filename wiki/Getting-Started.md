@@ -93,7 +93,7 @@ happens to their output.
 ## Running the demo application
 
 ```bash
-npm run dev        # 🚧 M4 · #48
+npm run dev        # API on :3001, client on :5173
 ```
 
 TaskFlow is a small task board: create, edit, delete, complete, filter, drag-to-reorder. It exists
@@ -103,7 +103,7 @@ product, and it is deliberately not good software.
 To reproduce a specific race:
 
 ```bash
-SENTRA_CHAOS=<seed> npm run dev   # 🚧 M4 · #47
+SENTRA_CHAOS=37 npm run dev       # reproduces the reorder race
 ```
 
 Seeded latency injection makes a particular interleaving reproducible, which is how the

@@ -13,7 +13,7 @@
       "description": "Start TaskFlow (API + client) locally",
       "milestone": "M4",
       "issue": 48,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "build",

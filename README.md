@@ -137,10 +137,19 @@ npm test                # 🚧 M5 — unit + e2e, produces results.json
 npm run analyze         # 🚧 M8 — flakemetry + agents, produces report.md
 ```
 
+**Run TaskFlow locally:**
+
+```bash
+npm run dev             # API on :3001, client on :5173, Ctrl-C stops both
+```
+
+Ports come from `PORT` and `VITE_PORT`; a collision says so in a sentence rather than a stack
+trace. The client proxies `/api` to the API, so there is no CORS layer to reason about.
+
 **Reproduce the deliberate bug:**
 
 ```bash
-SENTRA_CHAOS=37 npm run dev     # 🚧 M4 · #48 — seeded latency, off unless you ask
+SENTRA_CHAOS=37 npm run dev     # seeded latency, off unless you ask
 ```
 
 TaskFlow's optimistic reorder applies responses in the order they _arrive_ and never checks that an
@@ -168,7 +177,7 @@ cat eval/report.md
 | Script                       | Milestone | What it does                                                  |
 | ---------------------------- | --------- | ------------------------------------------------------------- |
 | `npm run help`               | M0        | Annotated listing of every pipeline command and its status    |
-| `npm run dev`                | M4 🚧     | Start TaskFlow (API + client) locally                         |
+| `npm run dev`                | M4        | Start TaskFlow (API + client) locally                         |
 | `npm run build`              | M4        | Build the TaskFlow client bundle                              |
 | `npm run test:unit`          | M0        | Vitest — API, flakemetry-lib, prompt builders, contracts      |
 | `npm run test:coverage`      | M2        | Vitest with coverage, enforcing the floor in vitest.config.ts |

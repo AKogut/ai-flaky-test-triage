@@ -31,7 +31,7 @@
     "changelog": "tsx scripts/changelog.ts",
     "changelog:check": "tsx scripts/changelog.ts --check",
     "demo": "tsx scripts/demo.ts",
-    "dev": "node scripts/pending.mjs dev",
+    "dev": "tsx scripts/dev.ts",
     "docs:status": "tsx scripts/status-banner.ts",
     "docs:status:check": "tsx scripts/status-banner.ts --check",
     "eval": "tsx eval/run-eval.ts",
