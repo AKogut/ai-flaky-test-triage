@@ -22,13 +22,29 @@
  *
  * ## The seed that reproduces the reorder race
  *
- * `SENTRA_CHAOS=37`. On the request sequence a session actually makes — load the
- * list, then two drags — it delays the first reorder by 399ms and the second by
- * 11ms. Any two drags less than about 350ms apart therefore have their responses
- * arrive in the wrong order, which is the interleaving documented on `move` in
- * `app/client/useTasks.ts`. A test pins those numbers, because a documented
- * reproduction that quietly stops reproducing is worse than none: somebody
- * follows it, sees nothing happen, and concludes the bug was fixed.
+ * `SENTRA_CHAOS=284549`, and the number is ugly because it was measured rather
+ * than chosen.
+ *
+ * The generator advances once per delayed request, so which pair of draws a pair
+ * of drags receives depends on how many requests came before them. That count is
+ * not one: React StrictMode double-invokes effects in development, so opening the
+ * board in `npm run dev` loads the list **twice**, while a production build loads
+ * it once. A seed that works for one does not work for the other, and the first
+ * seed documented here — 37 — worked only for the count nothing actually
+ * produces. It delivered 399ms then 11ms after a single load, and 11ms then 296ms
+ * after two, which is the inversion the wrong way round. Nobody noticed for two
+ * milestones because nobody had opened the page.
+ *
+ * This seed gives 397ms then 199ms after one load, and 199ms then 1ms after two.
+ * Two drags less than about 198ms apart therefore have their responses arrive in
+ * the wrong order either way, which is the interleaving documented on `move` in
+ * `app/client/useTasks.ts`. Verified in a browser, not derived: the board ends up
+ * showing the state after the first drag while the database holds both, and a
+ * refresh corrects it.
+ *
+ * A test pins both sequences, because a documented reproduction that quietly
+ * stops reproducing is worse than none — somebody follows it, sees nothing
+ * happen, and concludes the bug was fixed.
  */
 
 /** Per-endpoint delay ranges, in milliseconds. */

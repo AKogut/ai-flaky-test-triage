@@ -49,6 +49,19 @@ function scriptNamesInReadmeTable(): string[] {
   return names
 }
 
+/**
+ * The same rows, with their descriptions. The status column is skipped: it
+ * carries a 🚧 that the manifest expresses as a `status` field instead.
+ */
+function descriptionsInReadmeTable(): Map<string, string> {
+  const rows = new Map<string, string>()
+  for (const line of readme.split('\n')) {
+    const match = /^\|\s*`npm (?:run )?([a-z0-9:-]+)`\s*\|[^|]*\|\s*(.*?)\s*\|\s*$/.exec(line)
+    if (match?.[1] !== undefined && match[2] !== undefined) rows.set(match[1], match[2])
+  }
+  return rows
+}
+
 describe('script contract', () => {
   const manifestNames = manifest.scripts.map((s) => s.name)
 
@@ -66,6 +79,19 @@ describe('script contract', () => {
 
   it('README table and manifest list the same scripts', () => {
     expect([...scriptNamesInReadmeTable()].sort()).toEqual([...manifestNames].sort())
+  })
+
+  /**
+   * And describe them the same way. The names were already compared; the
+   * descriptions were not, and three of them had drifted — the README and
+   * `npm run help` were telling a reader two different things about the same
+   * command, which is the sort of difference nobody notices because neither
+   * source looks wrong on its own.
+   */
+  it('README table and manifest describe them the same way', () => {
+    for (const entry of manifest.scripts) {
+      expect(descriptionsInReadmeTable().get(entry.name), entry.name).toBe(entry.description)
+    }
   })
 
   it('every pending script routes through the placeholder', () => {

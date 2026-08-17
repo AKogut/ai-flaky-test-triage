@@ -528,7 +528,7 @@ describe('starting up', () => {
    */
   it('announces the chaos seed when the environment sets one', async () => {
     const previous = process.env.SENTRA_CHAOS
-    process.env.SENTRA_CHAOS = '37'
+    process.env.SENTRA_CHAOS = '284549'
     const said: string[] = []
 
     try {
@@ -539,7 +539,7 @@ describe('starting up', () => {
       else process.env.SENTRA_CHAOS = previous
     }
 
-    expect(said.join('\n')).toContain('SENTRA_CHAOS=37')
+    expect(said.join('\n')).toContain('SENTRA_CHAOS=284549')
   })
 
   it('says nothing about chaos when the environment has not asked for any', async () => {

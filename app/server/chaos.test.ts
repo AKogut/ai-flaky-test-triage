@@ -116,25 +116,52 @@ describe('when it is on', () => {
  * The seed the README tells people to use, pinned so the README cannot rot.
  *
  * A documented reproduction that quietly stops reproducing is worse than none:
- * somebody follows it, sees the bug not happen, and concludes it was fixed.
+ * somebody follows it, sees the bug not happen, and concludes it was fixed. That
+ * is not hypothetical here — the first seed documented, 37, was pinned against a
+ * request sequence the application does not produce, and it was wrong for two
+ * milestones. The fix was to pin **both** sequences, because which one occurs
+ * depends on React StrictMode rather than on anything the seed can control.
  */
 describe('the seed that reproduces the reorder race', () => {
-  const RACE_SEED = '37'
+  const RACE_SEED = '284549'
 
-  it('delays the first reorder far longer than the second', () => {
+  const afterLoads = (loads: number): [number, number] => {
     const chaos = chaosFrom({ SENTRA_CHAOS: RACE_SEED })
+    for (let i = 0; i < loads; i++) chaos.delay('GET /api/tasks')
+    return [chaos.delay('PATCH /api/tasks/reorder'), chaos.delay('PATCH /api/tasks/reorder')]
+  }
 
-    // The sequence a session actually makes: load the list, then two drags.
+  /** A production build mounts the effect once, so the board loads once. */
+  it('delays the first reorder far longer than the second after one load', () => {
+    expect(afterLoads(1)).toEqual([397, 199])
+  })
+
+  /** `npm run dev` runs under StrictMode, which invokes the effect twice. */
+  it('does the same after two loads, which is what development produces', () => {
+    expect(afterLoads(2)).toEqual([199, 1])
+  })
+
+  /**
+   * The window is what matters: the second response can arrive first as long as
+   * the two drags are less than this far apart. It has to hold for both counts,
+   * which is the whole reason this seed is a six-digit number rather than 37.
+   */
+  it('leaves a window wide enough for two quick drags, whichever count occurs', () => {
+    for (const loads of [1, 2]) {
+      const [first, second] = afterLoads(loads)
+      expect(first - second, `after ${String(loads)} load(s)`).toBeGreaterThan(190)
+    }
+  })
+
+  /** The seed that used to be documented, kept as the counter-example it became. */
+  it('is not 37, which inverts the wrong way round after two loads', () => {
+    const chaos = chaosFrom({ SENTRA_CHAOS: '37' })
     chaos.delay('GET /api/tasks')
+    chaos.delay('GET /api/tasks')
+
     const first = chaos.delay('PATCH /api/tasks/reorder')
     const second = chaos.delay('PATCH /api/tasks/reorder')
-
-    expect(first).toBe(399)
-    expect(second).toBe(11)
-
-    // The window is what matters: the second response can arrive first as long
-    // as the two drags are less than this far apart.
-    expect(first - second).toBeGreaterThan(350)
+    expect(first).toBeLessThan(second)
   })
 })
 
