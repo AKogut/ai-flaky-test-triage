@@ -3,7 +3,7 @@
   "classifier": "baseline",
   "promptVersion": null,
   "slice": "dev",
-  "datasetRevision": "5ce9721387a4b800",
+  "datasetRevision": "f35876ebfe37b8b4",
   "n": 23,
   "joint": {
     "point": 0.34782608695652173,
@@ -17,10 +17,10 @@
     "macroF1": 0.375
   },
   "determinism": {
-    "point": 0.782608695652174,
-    "lower": 0.5809651698373599,
-    "upper": 0.9033602197341379,
-    "macroF1": 0.7667342799188641
+    "point": 0.8260869565217391,
+    "lower": 0.6286235235977385,
+    "upper": 0.9302134643693744,
+    "macroF1": 0.8174603174603174
   },
   "hardQuadrant": {
     "point": 0.2857142857142857,

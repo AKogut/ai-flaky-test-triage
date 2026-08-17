@@ -58,6 +58,23 @@ import { expect, stored, test } from './fixtures.js'
  * into this file. A spec with a sleep in it is a spec that says what it expects
  * to happen. This one says nothing about timing, and the race happens anyway.
  *
+ * ## What each test does, since the bodies carry no commentary
+ *
+ * The lines around an assertion end up in the captured fixture's `snippet`, and
+ * a comment there is the author's argument about a failure the author already
+ * understood. So the bodies are plain and the explanation is here.
+ *
+ * Both tests move a row, wait for the list to show the move, move again, then
+ * wait for **both** writes to have answered before asserting. `expect.poll` on
+ * the stored rows shows the server kept both moves in the order they were sent;
+ * the assertion after it is the same claim about the screen. When it fails, the
+ * row is one place off — the order as of the first move, restored by that move's
+ * own late response.
+ *
+ * The second test moves two rows far enough apart that neither move changes
+ * where the other lands, so the expected order is the same whichever request the
+ * server happens to see first.
+ *
  * ## Why this file is not called `reorder-race.spec.ts`
  *
  * It was, until the fixture it produces was run through the dataset's own
@@ -112,15 +129,9 @@ test('keeps both moves when a task is moved twice in quick succession', async ({
   await moveUp(page, TASK)
   await expect(titles(page).nth(2)).toHaveText(TASK)
 
-  // Both writes have answered. Nothing is in flight, so whatever the list shows
-  // now is what it will keep showing — this assertion is not racing anything.
   await expect.poll(answered).toBe(2)
-
-  // The server kept both moves, in the order they were sent.
   await expect.poll(() => stored(db)[2]?.title).toBe(TASK)
 
-  // And the list should agree with it. When this fails the row is at index 3 —
-  // the order as of the first move, restored by its own late response.
   await expect(titles(page).nth(2)).toHaveText(TASK)
 })
 
@@ -133,8 +144,6 @@ test('keeps both moves when a task is moved twice in quick succession', async ({
 test('keeps both moves when two different tasks are moved', async ({ page, db }) => {
   const answered = reorderResponses(page)
 
-  // Two rows far enough apart that neither move changes where the other lands,
-  // so the expected order is the same whichever request the server sees first.
   await moveUp(page, TASK)
   await expect(titles(page).nth(3)).toHaveText(TASK)
 
@@ -144,8 +153,6 @@ test('keeps both moves when two different tasks are moved', async ({ page, db })
   await expect.poll(answered).toBe(2)
   await expect.poll(() => stored(db)[0]?.title).toBe(OTHER)
 
-  // When this fails the list has gone back to the order after the first move,
-  // with the second one undone — and the line above says the server disagrees.
   await expect(titles(page).first()).toHaveText(OTHER)
   await expect(titles(page).nth(3)).toHaveText(TASK)
 })

@@ -145,8 +145,8 @@ describe('slice wiring', () => {
     // A reader of the dev report has to be able to answer "what did this number
     // not see" without opening the other file.
     const total = (e: Evaluation): number => e.composition.reduce((n, row) => n + row.total, 0)
-    expect(total(await evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(34)
-    expect(total(await evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(34)
+    expect(total(await evaluate({ ...DEFAULTS, slice: 'dev' }))).toBe(35)
+    expect(total(await evaluate({ ...DEFAULTS, slice: 'holdout' }))).toBe(35)
   })
 })
 
