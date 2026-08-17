@@ -26,6 +26,8 @@ blob-report/
 
 # Run history lives in the CI cache (ADR-0004), not in git.
 .flakemetry/history.json
+# The temp file an atomic write renames from, left behind only by a killed job.
+.flakemetry/*.tmp
 
 # Local SQLite data for the demo app.
 app/server/*.db

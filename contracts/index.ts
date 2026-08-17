@@ -9,6 +9,7 @@
 export * from './test-run.js'
 export * from './reporters/playwright.js'
 export * from './reporters/vitest.js'
+export * from './history.js'
 export * from './analysis.js'
 export * from './agent-output.js'
 export * from './fixture.js'
