@@ -1,0 +1,10 @@
+{
+  "name": "added-row-not-on-screen-inside-the-allowed-time",
+  "owner": "test_code",
+  "determinism": "intermittent",
+  "justification": "The tempting answer is environment, and every fact supporting it is true: the operation took longer than usual, the machine was busier, nothing in the application changed, and a rerun on a quiet machine passes. None of it makes the run itself broken, which is what the environment label is for — no port failed to bind, no browser failed to launch, nothing was killed. A page loaded, a button was clicked, a request was answered and an assertion ran. What failed is a claim the spec made: that all of it would be done inside 120 milliseconds. The message says so, naming the deadline it was given rather than a default. Rule 2 fires — the test source encodes an unsafe assumption — and it fires before anything about the runner is weighed. The fix is in the file: the assertion is already a condition and does not need a stopwatch attached. Intermittent because the operation is sometimes inside the budget and sometimes not: 9 failures in 19 runs, alternating.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "captured",
+  "bucket": "unsynchronised-test",
+  "lowConfidenceGroundTruth": false
+}

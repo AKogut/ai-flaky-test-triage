@@ -69,6 +69,7 @@ const TARGET_SHARE: Record<Bucket, number> = {
   'misleading-history': 0.1,
   'environment-as-regression': 0.1,
   'stale-test': 0.15,
+  'unsynchronised-test': 0.1,
   'cross-file-state-leak': 0.1,
   straightforward: 0.25,
 }

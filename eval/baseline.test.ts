@@ -199,26 +199,20 @@ describe('scored against the committed dataset', () => {
     for (const s of easy) expect(s.predicted.owner, s.name).toBe(s.labels.owner)
   })
 
-  it('gets every stale-test fixture with a product diff wrong, exactly as documented', () => {
-    // Not a defect. Those fixtures have a product diff, so the second rule fires
-    // and calls them app_code. Patching around it would mean tuning the control
-    // against the dataset it exists to control for.
+  it('gets every stale-test fixture wrong, exactly as documented', () => {
+    // Not a defect. Each of those fixtures has a product diff, so the second
+    // rule fires and calls it app_code. Patching around it would mean tuning the
+    // control against the dataset it exists to control for.
     //
-    // The qualifier is new and it is a real change, not a weakening. #53 added a
-    // captured fixture to this bucket that has **no** diff — it was reproduced
-    // locally, so there is no commit under test — and with no diff to reason
-    // from the baseline falls through to its locator rule and gets the owner
-    // right. It is still wrong about the fixture, on the other axis.
+    // This briefly needed a qualifier. #53's captured fixture was filed here for
+    // want of a better bucket, it has no commit under test, and with no diff to
+    // reason from the baseline reached its locator rule and got the owner right.
+    // #55 added `unsynchronised-test` — the cell `docs/taxonomy.md` always had
+    // and the bucket list never did — and both fixtures moved there, which is
+    // what restored the absolute claim rather than any change to the rules.
     const stale = scored.filter((s) => s.labels.bucket === 'stale-test')
-    const withDiff = stale.filter((s) => (s.payload.diff ?? '') !== '')
-
-    expect(withDiff.length).toBeGreaterThan(0)
-    for (const s of withDiff) expect(s.predicted.owner, s.name).toBe('app_code')
-
-    for (const s of stale.filter((s) => (s.payload.diff ?? '') === '')) {
-      expect(s.predicted.owner, s.name).toBe('test_code')
-      expect(s.predicted.determinism, s.name).not.toBe(s.labels.determinism)
-    }
+    expect(stale.length).toBeGreaterThan(0)
+    for (const s of stale) expect(s.predicted.owner, s.name).toBe('app_code')
   })
 
   it('gets a majority of the hard quadrant wrong, which is why the dataset can discriminate', () => {
@@ -273,12 +267,12 @@ describe('scored against the committed dataset', () => {
 
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
     // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(19 / 36, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(20 / 37, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {
     expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(
-      28 / 36,
+      29 / 37,
       5,
     )
   })

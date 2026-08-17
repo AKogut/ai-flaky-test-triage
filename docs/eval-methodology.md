@@ -58,32 +58,32 @@ the project demonstrates something rarer than a working classifier: a willingnes
 
 ### What it scores today
 
-Against the 36 committed fixtures, with 95% Wilson intervals:
+Against the 37 committed fixtures, with 95% Wilson intervals:
 
 | Metric                | Baseline              | Macro-F1 |
 | --------------------- | --------------------- | -------- |
-| **Joint** (both axes) | **33.3% [20.2–49.7]** | —        |
-| `owner`               | 52.8% [37.0–68.0]     | 0.40     |
-| `determinism`         | 77.8% [61.9–88.3]     | 0.77     |
+| **Joint** (both axes) | **35.1% [21.8–51.2]** | —        |
+| `owner`               | 54.1% [38.4–69.0]     | 0.43     |
+| `determinism`         | 78.4% [62.8–88.6]     | 0.78     |
 
 Three things in that table are worth reading carefully, because they are the reason the metrics are
 shaped this way.
 
-**Joint accuracy is 20pp below the `owner` axis and 45pp below `determinism`.** Reporting either
-axis alone would describe a classifier that half works; 33.3% is how often it produces an answer a
+**Joint accuracy is 19pp below the `owner` axis and 43pp below `determinism`.** Reporting either
+axis alone would describe a classifier that half works; 35.1% is how often it produces an answer a
 developer could act on without checking.
 
-**`test_code` has an F1 of 0.125.** The baseline identifies one test-code failure out of ten —
-support 10, six predictions, one correct — and that one is a captured fixture with no commit under
-test, where there is no product diff for the ownership rule to fire on. It was exactly 0 until that
-fixture arrived. Accuracy hides this completely; macro-F1 is what makes it visible, which is the
+**`test_code` has an F1 of 0.22.** The baseline identifies two test-code failures out of eleven —
+support 11, seven predictions, two correct — and both are captured fixtures with no commit under
+test, where there is no product diff for the ownership rule to fire on. It was exactly 0 until those
+fixtures arrived. Accuracy hides this completely; macro-F1 is what makes it visible, which is the
 argument for reporting both.
 
 **A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 62.9%
-against 52.8%, because 22 of 36 fixtures are `app_code`. That is not a defect in the baseline — it
+against 54.1%, because 22 of 37 fixtures are `app_code`. That is not a defect in the baseline — it
 is the adversarial dataset doing its job. The constant classifier's macro-F1 is 0.25 against the
-baseline's 0.40, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
-two intervals overlap heavily, so at n=36 neither result is evidence of a difference at all. That
+baseline's 0.43, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
+two intervals overlap heavily, so at n=37 neither result is evidence of a difference at all. That
 is the honest reading, and it is also the argument for growing the dataset to 60.
 
 Every number above is pinned in `eval/metrics.test.ts`. A change to the rules or to the dataset
@@ -99,6 +99,7 @@ fails the suite with the old and new values side by side.
 | Misleading history (long-flaky test failing for a new reason) | ~10%  | Punishes flakiness-score-only reasoning                                  |
 | Environment failures dressed as regressions                   | ~10%  | Punishes diff-only reasoning                                             |
 | Stale tests after refactors                                   | ~15%  | Common in practice, easy to over-call as `app_code`                      |
+| Unsynchronised tests                                          | ~10%  | `test_code` faults that read as a product race or as a slow runner       |
 | Cross-file state leaks                                        | ~10%  | Cause and symptom in different files                                     |
 | Straightforward cases                                         | ~25%  | Sanity floor; a classifier that fails these is broken                    |
 | `lowConfidenceGroundTruth`                                    | ~10%  | Genuinely ambiguous; excluded from headline metrics, reported separately |
@@ -121,7 +122,8 @@ measured against it. Scoring the baseline per bucket is that measurement:
 | --------------------------- | --: | ------ | ------- | ------------- |
 | `straightforward`           |   8 | 100.0% | 100.0%  | 100.0%        |
 | `hard-quadrant`             |  11 | 27.3%  | 54.5%   | 72.7%         |
-| `stale-test`                |   8 | 0.0%   | 12.5%   | 87.5%         |
+| `stale-test`                |   7 | 0.0%   | 0.0%    | 100.0%        |
+| `unsynchronised-test`       |   2 | 50.0%  | 100.0%  | 50.0%         |
 | `misleading-history`        |   4 | 0.0%   | 75.0%   | 0.0%          |
 | `environment-as-regression` |   4 | 25.0%  | 25.0%   | 100.0%        |
 | `cross-file-state-leak`     |   1 | 0.0%   | 0.0%    | 100.0%        |
@@ -129,12 +131,12 @@ measured against it. Scoring the baseline per bucket is that measurement:
 Each adversarial bucket defeats the baseline **on the axis it was built to attack, and only that
 axis**:
 
-- `stale-test` targets diff-only reasoning about ownership. Owner drops to 12.5%; determinism
-  stays at 87.5%. Both numbers used to be absolute — 0% and 100% — and the one fixture that moved
-  them is worth naming: the captured fixture from #53 has no commit under test, so there is no
-  product diff for the ownership rule to fire on, the baseline falls through to its locator rule
-  and gets the owner right. It loses the point back on the other axis. The bucket's story is
-  unchanged; the exception is what shows the story was about the diff all along.
+- `stale-test` targets diff-only reasoning about ownership. Owner drops to 0%; determinism stays
+  at 100%.
+- `unsynchronised-test` is the mirror image, and the baseline is not defeated by it on ownership at
+  all: both fixtures name a locator in their message, its crude rule reads that and answers
+  `test_code`, and it is right twice for a reason that is not the reason. It splits 50/50 on
+  determinism instead.
 - `misleading-history` targets flakiness-score-only reasoning about stability. Determinism drops
   to 0%; owner stays at a respectable 75%.
 - `environment-as-regression` targets diff-only reasoning again, from the other direction, and
@@ -343,19 +345,20 @@ So the per-bucket balance is **best-effort and measured**, not guaranteed:
 | `environment-as-regression` |     4 |   3 |        1 |
 | `hard-quadrant`             |    11 |   7 |        4 |
 | `misleading-history`        |     4 |   3 |        1 |
-| `stale-test`                |     8 |   5 |        3 |
+| `stale-test`                |     7 |   5 |        2 |
 | `straightforward`           |     8 |   5 |        3 |
-| **Total**                   |    36 |  24 |   **12** |
+| `unsynchronised-test`       |     2 |   1 |        1 |
+| **Total**                   |    37 |  25 |   **12** |
 
-12 of 36 is 33%, not 20%. That is ordinary binomial variance at this size — the expected count is
-7.2 with a standard deviation of 2.4 — and it narrows as the dataset grows towards 60. A bucket of
+12 of 37 is 32%, not 20%. That is ordinary binomial variance at this size — the expected count is
+7.4 with a standard deviation of 2.4 — and it narrows as the dataset grows towards 60. A bucket of
 four has a 41% chance of receiving no held-out fixture at all, and the newest bucket — one fixture,
 from #54 — has none. The report states which buckets the held-out slice is silent about rather than
 letting a reader assume the split guarantees coverage.
 
 One methodological note, since this is a document about not fooling yourself. Two reasonable
 constructions exist for turning a hash into a uniform value — dividing by 2³², and the slightly
-biased `hash % 100` — and on these 36 fixtures they produce **different splits**, 12 held out
+biased `hash % 100` — and on these 37 fixtures they produce **different splits**, 12 held out
 against 6. Choosing between them after seeing that would be picking a test set by how convenient it
 looks. The unbiased one is used; the result is reported, not selected.
 
