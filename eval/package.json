@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./index.ts"
+    },
+    "./run-eval": {
+      "types": "./dist/run-eval.d.ts",
+      "default": "./run-eval.ts"
     }
   },
   "dependencies": {

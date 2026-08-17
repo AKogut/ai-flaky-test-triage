@@ -12,6 +12,7 @@ import {
 import {
   callModel,
   type CallDeps,
+  type CallOptions,
   type CallTelemetry,
   type ModelConfig,
   type TokenBudget,
@@ -77,9 +78,35 @@ export interface TriageResult {
   unverifiedEvidence: string[]
 }
 
-export async function triage(input: ClassificationInput, deps: TriageDeps): Promise<TriageResult> {
+/**
+ * Everything a triage call is, before anything is sent.
+ *
+ * Split out so the cassette staleness check can compute the exact key this agent
+ * would request without making the call — and, more importantly, without a
+ * second copy of how the request is assembled. A check built on a copy passes
+ * about requests nobody makes.
+ */
+export function triageOptions(
+  input: ClassificationInput,
+  deps: Pick<TriageDeps, 'system' | 'promptVersion' | 'context' | 'label' | 'sample'>,
+): { options: CallOptions<Classification>; bundle: ContextBundle } {
   const bundle = assembleContext(input, deps.context ?? {})
-  const prompt = renderContext(bundle)
+  return {
+    bundle,
+    options: {
+      schema: ClassificationSchema,
+      schemaName: 'classification',
+      system: deps.system,
+      prompt: renderContext(bundle),
+      promptVersion: deps.promptVersion,
+      label: deps.label ?? `triage ${input.subject.result.testId}`,
+      ...(deps.sample !== undefined && { sample: deps.sample }),
+    },
+  }
+}
+
+export async function triage(input: ClassificationInput, deps: TriageDeps): Promise<TriageResult> {
+  const { options, bundle } = triageOptions(input, deps)
 
   const call: CallDeps = {
     transport: deps.transport,
@@ -88,24 +115,13 @@ export async function triage(input: ClassificationInput, deps: TriageDeps): Prom
     ...(deps.onTelemetry !== undefined && { onTelemetry: deps.onTelemetry }),
   }
 
-  const { value, telemetry } = await callModel(
-    {
-      schema: ClassificationSchema,
-      schemaName: 'classification',
-      system: deps.system,
-      prompt,
-      promptVersion: deps.promptVersion,
-      label: deps.label ?? `triage ${input.subject.result.testId}`,
-      ...(deps.sample !== undefined && { sample: deps.sample }),
-    },
-    call,
-  )
+  const { value, telemetry } = await callModel(options, call)
 
   return {
     classification: value,
     telemetry,
     bundle,
-    unverifiedEvidence: unverified(value.evidence, prompt),
+    unverifiedEvidence: unverified(value.evidence, options.prompt),
   }
 }
 

@@ -13,10 +13,31 @@ through stub transports instead. The machinery that reads and writes these files
 ## Recording
 
 ```bash
-SENTRA_RECORD=1 npm run eval -- --classifier=agent
+npm run cassettes:record
 ```
 
-Commit whatever it writes. Recording needs credentials; everything else does not.
+One command, two passes — the golden dataset and the bundled demo run. They ask for different
+things, and re-recording only one leaves the other replaying answers to questions nobody asks any
+more. Commit whatever it writes.
+
+Recording needs credentials and costs money; it is the only script here that does, which is why it
+refuses to start without them rather than producing a confident-looking run that recorded nothing.
+
+## Checking
+
+```bash
+npm run cassettes:check
+```
+
+Offline, free, and run in CI on every push. It asks the triage agent to assemble the requests it
+*would* send and compares their keys against these files, reporting three things separately:
+
+- **missing** — a request with nothing recorded for it. Replay fails here.
+- **stale** — recorded under a prompt version or model no longer in use. Expected after a bump.
+- **orphaned** — recorded under the *current* version and model, and still unrequested. The
+  alarming one: same version, same model, different content means the prompt or the assembled
+  context moved without the version being bumped, so any published number attributed to that
+  version describes text that no longer exists.
 
 ## Reading a diff
 

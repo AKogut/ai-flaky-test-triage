@@ -189,6 +189,31 @@ export class SchemaViolationError extends Error {
   }
 }
 
+/**
+ * The request a call turns into, on its own.
+ *
+ * Exported because the cassette staleness check has to ask exactly what the
+ * agent would ask. Rebuilding the request there would work until the day the two
+ * drift, at which point the check would go on passing about requests nobody
+ * makes — the failure it exists to prevent, relocated into itself.
+ */
+export function buildRequest<T>(
+  options: CallOptions<T>,
+  config: ModelConfig = MODEL_CONFIG,
+): ModelRequest {
+  return {
+    model: config.model,
+    maxTokens: config.maxTokens,
+    effort: config.effort,
+    system: options.system,
+    prompt: options.prompt,
+    schemaName: options.schemaName,
+    jsonSchema: toolSchema(options.schema),
+    promptVersion: options.promptVersion,
+    ...(options.sample !== undefined && { sample: options.sample }),
+  }
+}
+
 export async function callModel<T>(
   options: CallOptions<T>,
   deps: CallDeps,
@@ -203,17 +228,7 @@ export async function callModel<T>(
   const counters = { attempts: 0, schemaViolations: 0, transientFailures: 0 }
   const usage = { inputTokens: 0, outputTokens: 0 }
 
-  const request: ModelRequest = {
-    model: config.model,
-    maxTokens: config.maxTokens,
-    effort: config.effort,
-    system: options.system,
-    prompt: options.prompt,
-    schemaName: options.schemaName,
-    jsonSchema: toolSchema(options.schema),
-    promptVersion: options.promptVersion,
-    ...(options.sample !== undefined && { sample: options.sample }),
-  }
+  const request = buildRequest(options, config)
 
   let corrections = ''
   let lastIssues = ''

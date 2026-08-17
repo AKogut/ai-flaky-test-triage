@@ -16,3 +16,14 @@ export * from './confusion.js'
 export * from './classifier.js'
 export * from './consistency.js'
 export * from './calibration.js'
+
+/**
+ * Only the sampling default.
+ *
+ * `run-eval.ts` is a CLI, not a library entry point, and re-exporting it
+ * wholesale would hand a consumer a module that reads and writes committed files
+ * on import. The cassette staleness check needs this one constant and nothing
+ * else: a check expecting one sample while the harness asks for five would
+ * report four imaginary gaps on every run.
+ */
+export { DEFAULT_SAMPLES } from './run-eval.js'
