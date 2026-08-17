@@ -49,8 +49,11 @@ decorative.
 **`environment`** — value on the `owner` axis. Neither the product nor the test; the run itself was
 broken.
 
-**Emergent flakiness** — flakiness arising from a real race in the application, as opposed to
-flakiness scripted into a test. Only the former produces a classification problem worth solving.
+**Emergent flakiness** — flakiness that arises from how a system behaves rather than from a sleep
+or a random number written into a test. The source may be the application (a race in its
+optimistic updates), the network (a response that takes longer than usual), or the runner (which
+file a worker happened to pick up next). What it is never is scripted: a test that fails on purpose
+poses a classification problem that is trivial and worthless.
 
 **EWMA** — exponentially weighted moving average, used for the flakiness score so that recent runs
 count more than old ones.
