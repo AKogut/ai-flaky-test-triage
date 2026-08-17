@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.api.test.ts›GET /api/v1/tasks › lists the seeded tasks",
-      "flakinessScore": 0.06,
+      "flakinessScore": 0.13,
       "consecutiveFailures": 2,
       "totalRuns": 97,
       "firstSeenAt": "2026-02-11T09:03:47.000Z",

@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.concurrency.test.ts›updates › two overlapping writes both survive",
-      "flakinessScore": 0.29,
+      "flakinessScore": 0.13,
       "consecutiveFailures": 3,
       "totalRuns": 58,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

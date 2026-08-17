@@ -88,6 +88,17 @@ export const TestHistorySchema = z
      */
     firstSeenAt: z.iso.datetime(),
 
+    /**
+     * Runs this test has ever been recorded in — **not** the number retained.
+     *
+     * The same eviction problem as `firstSeenAt`, one step further. Count the
+     * entries instead and the answer is the cap: every test that has run more
+     * than fifty times reports fifty, for ever, and a consumer weighing how much
+     * evidence there is behind a score is told the same thing about a test with
+     * a year of history and one with a fortnight.
+     */
+    totalRuns: z.int().min(0),
+
     /** Oldest first, matching `statusHistory`, which is most recent last. */
     entries: z.array(HistoryEntrySchema),
   })

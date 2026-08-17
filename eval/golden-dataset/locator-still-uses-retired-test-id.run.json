@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › opens the editor for a task",
-      "flakinessScore": 0.02,
+      "flakinessScore": 0.09,
       "consecutiveFailures": 4,
       "totalRuns": 91,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › completion survives a reload",
-      "flakinessScore": 0.04,
+      "flakinessScore": 0.1,
       "consecutiveFailures": 4,
       "totalRuns": 77,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

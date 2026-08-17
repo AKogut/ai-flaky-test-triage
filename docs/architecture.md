@@ -89,15 +89,45 @@ signal:
 ```ts
 type FlakySignal = {
   testId: string
-  flakinessScore: number // 0..1, EWMA of pass/fail alternation
+  flakinessScore: number // 0..1, recency-weighted share of transitions that changed
   consecutiveFailures: number
-  totalRuns: number
+  totalRuns: number // runs ever, not runs retained
   firstSeenAt: string
   lastPassedAt: string | null
-  statusHistory: string // e.g. "PPPFPFPPF" — most recent last
+  statusHistory: string // e.g. "PPPFPFPPF" — most recent last, capped
   isNew: boolean // first run in which this test exists
 }
 ```
+
+#### The score
+
+A **transition** is a run with a run before it to differ from, and the score is the share of
+transitions that changed the outcome, each weighing `0.5 ^ (age / halfLife)` with age counting back
+from the newest. The half-life defaults to 10 runs — the question a report answers is whether a test
+is unstable _now_, and a test that thrashed a month ago and has been solid since should not read as
+flaky today.
+
+Three consequences, and they are the reason it is defined this way rather than as a failure rate:
+
+- `FFFFFFFF` scores **0**. Nothing changed, so nothing alternated. A test that fails every run is
+  broken, not flaky, and scoring it high would put every genuine regression into the `intermittent`
+  bucket — the one mistake the two-axis taxonomy exists to prevent. It falls out of the definition
+  rather than needing a rule.
+- `PFPFPFPF` scores **1**, at any length.
+- As the half-life grows the weights flatten, and in the limit the score is exactly the plain
+  alternation rate. That is deliberate: it is what the dataset fixtures were scored with before the
+  real definition existed, so recency weighting was the only thing that moved when they were
+  rescored.
+
+Skipped runs are dropped before scoring — a skip produced no evidence, and reading it as "did not
+fail" invents an alternation on both sides of it, so a quarantined test would score as the flakiest
+in the suite. A run that was flaky _within itself_ counts as a transition even in first position: it
+failed and passed without needing a neighbour, and that is the only alternation the status string
+cannot express.
+
+`isNew` is read from the history as it stood **before** the run, never derived from the merged
+history — the cap evicts a test's earliest entries, and with a small enough cap every test in the
+suite would read as new.
 
 #### The history file
 
@@ -112,6 +142,7 @@ type History = {
     string, // deriveTestId(file, title)
     {
       firstSeenAt: string
+      totalRuns: number // runs ever recorded, not entries retained
       entries: {
         runId: string
         at: string // the run's start time
@@ -132,9 +163,11 @@ type History = {
 3. Tests in the history and not in the run are untouched. Absence has too many innocent causes —
    sharding, a `--grep` filter, a suite that failed to start — and recording it as a status would
    inject invented alternations into the signal.
-4. `firstSeenAt` only ever moves earlier. It is stored rather than read off the oldest retained
-   entry, because the cap evicts from the front: a test first seen in March would otherwise start
-   reporting itself as new.
+4. `firstSeenAt` only ever moves earlier, and `totalRuns` counts every run the test has been
+   recorded in. Both are stored rather than derived from `entries`, because the cap evicts from the
+   front: a test first seen in March would otherwise start reporting itself as new, and every test
+   that has run more than the cap would report the cap for ever — telling a reader weighing a score
+   that a year of history and a fortnight of it are equally evidenced.
 5. Entries are ordered by run start time, not by arrival, so a job for an older commit finishing
    late cannot make its result the most recent one. `consecutiveFailures` reads the tail of that
    order.

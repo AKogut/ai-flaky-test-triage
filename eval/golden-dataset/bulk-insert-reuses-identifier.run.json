@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.repository.test.ts›createMany › assigns a distinct identifier to every task",
-      "flakinessScore": 0.06,
+      "flakinessScore": 0.18,
       "consecutiveFailures": 2,
       "totalRuns": 33,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

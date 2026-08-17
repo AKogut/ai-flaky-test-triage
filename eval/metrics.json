@@ -3,7 +3,7 @@
   "classifier": "baseline",
   "promptVersion": null,
   "slice": "dev",
-  "datasetRevision": "0e4004df1ac48783",
+  "datasetRevision": "27afa05e78187a00",
   "n": 26,
   "joint": {
     "point": 0.34615384615384615,

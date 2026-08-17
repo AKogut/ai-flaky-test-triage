@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.ordering.test.ts›ordering › keeps creation order for tasks added together",
-      "flakinessScore": 0.31,
+      "flakinessScore": 0.32,
       "consecutiveFailures": 1,
       "totalRuns": 74,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",

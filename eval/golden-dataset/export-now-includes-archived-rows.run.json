@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.export.test.ts›export › contains only rows the board shows",
-      "flakinessScore": 0.64,
+      "flakinessScore": 0.77,
       "consecutiveFailures": 1,
       "totalRuns": 176,
       "firstSeenAt": "2026-02-11T09:03:47.000Z",

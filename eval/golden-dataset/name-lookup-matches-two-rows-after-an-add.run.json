@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/find-by-name.spec.ts›finds a newly added task in the active list",
-      "flakinessScore": 0.4,
+      "flakinessScore": 0.36,
       "consecutiveFailures": 4,
       "totalRuns": 6,
       "statusHistory": "FPFFFF",

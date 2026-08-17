@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › renders every task in the list",
-      "flakinessScore": 0.03,
+      "flakinessScore": 0.1,
       "consecutiveFailures": 3,
       "totalRuns": 88,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

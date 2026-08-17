@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › explains what to do when there are no tasks",
-      "flakinessScore": 0.03,
+      "flakinessScore": 0.13,
       "consecutiveFailures": 3,
       "totalRuns": 52,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",

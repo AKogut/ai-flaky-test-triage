@@ -19,7 +19,7 @@
     },
     "signal": {
       "testId": "tests/e2e/board-updates.spec.ts›shows an added task promptly",
-      "flakinessScore": 0.56,
+      "flakinessScore": 0.59,
       "consecutiveFailures": 1,
       "totalRuns": 19,
       "firstSeenAt": "2026-08-17T13:41:17.499Z",

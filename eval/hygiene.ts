@@ -8,6 +8,7 @@ import {
   LABELS_SUFFIX,
   PAYLOAD_SUFFIX,
 } from '@sentra/contracts'
+import { scoreStatusHistory } from '@sentra/flakemetry'
 import { DATASET_DIR, loadLabels, loadPayload } from './dataset.js'
 
 /**
@@ -127,6 +128,80 @@ export function checkLeakage(name: string, payload: FixturePayload): Finding[] {
   return findings
 }
 
+/** The letters the reporters produce, so a run's status can be compared to the history's tail. */
+const STATUS_LETTER: Record<string, string> = {
+  passed: 'P',
+  failed: 'F',
+  timedOut: 'T',
+  skipped: 'S',
+}
+
+/**
+ * A fixture's signal has to be one production could have produced.
+ *
+ * The dataset is what the accuracy number is computed over, so a signal that no
+ * pipeline would emit means the classifier is being scored on inputs it will
+ * never see — measuring the fixtures rather than the classifier. Thirty-six of
+ * these carried a hand-picked `flakinessScore`; two histories were spelled with
+ * a failure streak that contradicted their own letters, and one pair of
+ * identical histories carried two different scores, which is the shape of the
+ * problem in one line: no definition produces both.
+ *
+ * `flakinessScore` and `consecutiveFailures` are **errors** — they are derived,
+ * so there is exactly one right answer and a wrong one is a defect.
+ *
+ * A history whose last letter disagrees with the run being triaged is a
+ * **warning**. `analyse` always ends the history with the run it is analysing,
+ * so a fixture ending in `P` for a failing test is a shape production cannot
+ * emit — but extending it is a labelling decision, not arithmetic: a longer
+ * history can change what the right answer is. Tracked in #177.
+ */
+export function checkSignal(name: string, payload: FixturePayload): Finding[] {
+  const { signal } = payload.subject
+  const history = signal.statusHistory
+  const findings: Finding[] = []
+
+  const score = scoreStatusHistory(history)
+  if (signal.flakinessScore !== score) {
+    findings.push({
+      fixture: name,
+      message: `flakinessScore is ${String(signal.flakinessScore)}, but ${history} scores ${String(score)}`,
+    })
+  }
+
+  const streak = (/[FT]*$/.exec(history)?.[0] ?? '').length
+  if (signal.consecutiveFailures !== streak) {
+    findings.push({
+      fixture: name,
+      message: `consecutiveFailures is ${String(signal.consecutiveFailures)}, but ${history} ends in ${String(streak)}`,
+    })
+  }
+
+  if (signal.totalRuns < history.length) {
+    findings.push({
+      fixture: name,
+      message: `totalRuns is ${String(signal.totalRuns)}, fewer than the ${String(history.length)} runs the history shows`,
+    })
+  }
+
+  return findings
+}
+
+/** Separated from {@link checkSignal} because it is a labelling question, not arithmetic. */
+export function checkHistoryEndsWithRun(name: string, payload: FixturePayload): Finding[] {
+  const { signal, result } = payload.subject
+  const expected = STATUS_LETTER[result.status] ?? '?'
+  const actual = signal.statusHistory.slice(-1)
+  return actual === expected
+    ? []
+    : [
+        {
+          fixture: name,
+          message: `history ends in ${actual} but the run being triaged ${result.status} — analyse() always ends it with this run (#177)`,
+        },
+      ]
+}
+
 function excerpt(text: string, term: RegExp): string {
   const at = text.search(term)
   const from = Math.max(0, at - 25)
@@ -162,6 +237,8 @@ export function runHygiene(dir: string = DATASET_DIR): HygieneReport {
   for (const name of paired.names) {
     const { payload } = loadPayload(name, dir)
     errors.push(...checkLeakage(name, payload))
+    errors.push(...checkSignal(name, payload))
+    warnings.push(...checkHistoryEndsWithRun(name, payload))
 
     const label = loadLabels(name, dir)
     labels.push(label)

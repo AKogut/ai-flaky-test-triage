@@ -156,7 +156,36 @@ describe('the committed dataset', () => {
   })
 
   it('has no thin justifications', () => {
-    expect(report.warnings).toEqual([])
+    expect(report.warnings.filter((w) => w.message.includes('justification'))).toEqual([])
+  })
+
+  /**
+   * Every derived field is one production could have produced. Errors rather
+   * than warnings, because there is exactly one right answer to arithmetic.
+   */
+  it('has a signal on every fixture that the shared definition agrees with', () => {
+    expect(report.errors.filter((e) => e.message.includes('flakinessScore'))).toEqual([])
+    expect(report.errors.filter((e) => e.message.includes('consecutiveFailures'))).toEqual([])
+  })
+
+  /**
+   * Pinned, not tolerated. These eight are #177's list; a ninth would mean a new
+   * fixture was written with a history that ends somewhere production cannot put
+   * it, and this is where that gets noticed rather than in the next audit.
+   */
+  it('has exactly the eight histories that #177 is open about', () => {
+    expect(report.warnings.filter((w) => w.message.includes('#177')).map((w) => w.fixture)).toEqual(
+      [
+        'button-lookup-uses-superseded-label',
+        'control-shows-earlier-state-after-quick-toggle',
+        'debounced-save-skips-final-keystroke',
+        'delete-resurrected-by-in-flight-refetch',
+        'duplicate-key-when-two-clients-create-at-once',
+        'locator-still-uses-retired-test-id',
+        'proxy-answers-a-data-request-with-a-login-page',
+        'reorder-reconciliation-overwrites-later-drag',
+      ],
+    )
   })
 
   it('is still below the size where composition is enforced', () => {
