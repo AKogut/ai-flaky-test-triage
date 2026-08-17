@@ -8,20 +8,22 @@ unusually clear about its own.
 
 ## What the agents are not allowed to do
 
-The distinction that matters: these are not promises, they are **absent capabilities**, and an
-executable test suite asserts each one.
+The distinction that matters: the enforced ones are not promises, they are **absent capabilities**.
+The planned ones are labelled as planned, because a guardrail nobody has built yet reads exactly
+like one that works.
 
-| Guarantee                         | How it holds                                                                                                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Never modify the working tree     | No agent has a filesystem-write tool. The orchestrator writes exactly one file. A static check fails the build if any module under `agents/` imports an `fs` write API. |
-| Never push, tag, or commit        | `simple-git` is reachable only through a facade exposing `diff`, `log`, `show`. Importing it elsewhere is a lint error.                                                 |
-| Never approve or merge            | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests.                                                           |
-| Fix suggestions are never applied | `patch` is a string rendered inside a fenced code block. There is no code path from it to an apply step.                                                                |
-| Cost cannot run away              | A per-run token budget stops dispatch and reports the truncation.                                                                                                       |
-| Cannot fail your build            | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red.                                                                              |
+| Guarantee                         | Status            | How it holds                                                                                                                                                                   |
+| --------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Never modify the working tree     | **enforced**      | No agent module can import `fs` or `child_process` — a lint rule fails the build, and a test feeds that rule a real violation to prove it fires.                               |
+| Cannot fail your build            | **enforced**      | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red.                                                                                     |
+| Never approve or merge            | **enforced**      | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests.                                                                  |
+| Cost cannot run away              | **partly** — #66  | A per-run token budget is checked before dispatch and enforced in the eval harness. The orchestrator half — stopping dispatch and reporting the truncation — is not built yet. |
+| Never push, tag, or commit        | **planned** — #63 | A read-only git facade exposing `diff`, `log`, `show`. Today no agent reads git at all, so this holds by absence rather than by design.                                        |
+| Fix suggestions are never applied | **planned** — #65 | `patch` will be a string in a fenced code block with no path to an apply step. There is no fix-suggestion agent yet, so there is nothing to apply and nothing preventing it.   |
 
 A promise enforced by discipline is not a guardrail. A promise enforced by the absence of a
-capability holds in six months, in a hurry, when nobody is thinking about it.
+capability holds in six months, in a hurry, when nobody is thinking about it — which is why the
+ones that are not yet enforced say so.
 
 ## What it genuinely cannot do
 
