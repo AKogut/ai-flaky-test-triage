@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App.js'
@@ -723,5 +723,219 @@ describe('filtering', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Active' }))
     expect(screen.getAllByText('To do')).toHaveLength(1)
     expect(screen.queryAllByText('Done')).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Reordering
+// ---------------------------------------------------------------------------
+
+describe('reordering', () => {
+  const three = (): Task[] => [
+    task({ id: 1, title: 'first', position: 1 }),
+    task({ id: 2, title: 'second', position: 2 }),
+    task({ id: 3, title: 'third', position: 3 }),
+  ]
+
+  const titles = (): (string | undefined)[] =>
+    screen
+      .getAllByTestId('task-item')
+      .map((row) => row.querySelector('.task-title')?.textContent ?? undefined)
+
+  const rowFor = (title: string): HTMLElement => {
+    const row = screen
+      .getAllByTestId('task-item')
+      .find((element) => element.textContent?.includes(title))
+    if (row === undefined) throw new Error(`no row showing "${title}"`)
+    return row
+  }
+
+  const listed = (tasks: Task[]): Response =>
+    new Response(JSON.stringify({ tasks }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+
+  const ready = async (): Promise<void> => {
+    fetchMock.mockResolvedValueOnce(respond(three()))
+    render(<App />)
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+  }
+
+  describe('by keyboard', () => {
+    it('moves a task up one place', async () => {
+      await ready()
+      fetchMock.mockResolvedValueOnce(
+        listed([
+          task({ id: 1, title: 'first' }),
+          task({ id: 3, title: 'third' }),
+          task({ id: 2, title: 'second' }),
+        ]),
+      )
+
+      await userEvent.click(within(rowFor('third')).getByRole('button', { name: 'Move up' }))
+      await waitFor(() => expect(titles()).toEqual(['first', 'third', 'second']))
+    })
+
+    it('moves a task down one place', async () => {
+      await ready()
+      fetchMock.mockResolvedValueOnce(
+        listed([
+          task({ id: 2, title: 'second' }),
+          task({ id: 1, title: 'first' }),
+          task({ id: 3, title: 'third' }),
+        ]),
+      )
+
+      await userEvent.click(within(rowFor('first')).getByRole('button', { name: 'Move down' }))
+      await waitFor(() => expect(titles()).toEqual(['second', 'first', 'third']))
+    })
+
+    /** A control reachable only by drag is unusable without a pointer. */
+    it('offers no move at the ends of the list', async () => {
+      await ready()
+      expect(within(rowFor('first')).getByRole('button', { name: 'Move up' })).toHaveProperty(
+        'disabled',
+        true,
+      )
+      expect(within(rowFor('third')).getByRole('button', { name: 'Move down' })).toHaveProperty(
+        'disabled',
+        true,
+      )
+    })
+  })
+
+  describe('by drag', () => {
+    it('reorders on drop', async () => {
+      await ready()
+      fetchMock.mockResolvedValueOnce(
+        listed([
+          task({ id: 3, title: 'third' }),
+          task({ id: 1, title: 'first' }),
+          task({ id: 2, title: 'second' }),
+        ]),
+      )
+
+      fireEvent.dragStart(rowFor('third'))
+      fireEvent.dragOver(rowFor('first'))
+      fireEvent.drop(rowFor('first'))
+
+      await waitFor(() => expect(titles()).toEqual(['third', 'first', 'second']))
+    })
+
+    it('ignores a drop on the row being dragged', async () => {
+      await ready()
+      fireEvent.dragStart(rowFor('first'))
+      fireEvent.drop(rowFor('first'))
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('ignores a drop with nothing being dragged', async () => {
+      await ready()
+      fireEvent.drop(rowFor('second'))
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  /** The optimistic half. Without it a drag would wait on a round trip to show anything. */
+  it('paints the new order before the server answers', async () => {
+    await ready()
+    fetchMock.mockReturnValueOnce(new Promise(() => undefined))
+
+    await userEvent.click(within(rowFor('third')).getByRole('button', { name: 'Move up' }))
+    expect(titles()).toEqual(['first', 'third', 'second'])
+  })
+
+  /** Dropping onto a row above lands before it; the server is asked for the same thing. */
+  it('asks the server for the index it painted', async () => {
+    await ready()
+    fetchMock.mockReturnValueOnce(new Promise(() => undefined))
+
+    fireEvent.dragStart(rowFor('third'))
+    fireEvent.drop(rowFor('first'))
+
+    expect(titles()).toEqual(['third', 'first', 'second'])
+    const call = fetchMock.mock.calls.at(-1) as unknown as [string, RequestInit]
+    const body = call[1].body
+    expect(call[0]).toBe('/api/tasks/reorder')
+    expect(typeof body === 'string' ? JSON.parse(body) : null).toEqual({ id: 3, index: 0 })
+  })
+
+  it('re-reads the list when the reorder fails', async () => {
+    await ready()
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    fetchMock.mockResolvedValueOnce(respond(three()))
+
+    await userEvent.click(within(rowFor('third')).getByRole('button', { name: 'Move up' }))
+
+    await waitFor(() => expect(screen.getByTestId('write-error')).toBeDefined())
+    await waitFor(() => expect(titles()).toEqual(['first', 'second', 'third']))
+  })
+})
+
+/**
+ * The bug this application exists to have, asserted rather than hidden.
+ *
+ * It is `app_code` + `intermittent` — the hard quadrant — and the whole project
+ * is built to classify it from a trace. A test that pins it is the only thing
+ * standing between "a deliberate fixture" and "somebody tidied it away on a
+ * Friday", so this one fails if the race is fixed, and says so.
+ *
+ * See the comment on `move` in useTasks.ts for the interleaving.
+ */
+describe('the deliberate reconciliation race', () => {
+  const order = (...titles: string[]): Response =>
+    new Response(
+      JSON.stringify({
+        tasks: titles.map((title, index) => task({ id: index + 10, title, position: index + 1 })),
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )
+
+  it('applies whichever response arrives last, not whichever was sent last', async () => {
+    fetchMock.mockResolvedValueOnce(
+      respond([
+        task({ id: 1, title: 'first', position: 1 }),
+        task({ id: 2, title: 'second', position: 2 }),
+        task({ id: 3, title: 'third', position: 3 }),
+      ]),
+    )
+    render(<App />)
+    await waitFor(() => expect(screen.getAllByTestId('task-item')).toHaveLength(3))
+
+    const titles = (): (string | undefined)[] =>
+      screen
+        .getAllByTestId('task-item')
+        .map((element) => element.querySelector('.task-title')?.textContent ?? undefined)
+    const move = async (title: string, direction: 'Move up' | 'Move down'): Promise<void> => {
+      const row = screen
+        .getAllByTestId('task-item')
+        .find((element) => element.textContent?.includes(title))
+      if (row === undefined) throw new Error(`no row showing "${title}"`)
+      await userEvent.click(within(row).getByRole('button', { name: direction }))
+    }
+
+    // R1 goes out and is held open.
+    let answerFirst: (response: Response) => void = () => undefined
+    fetchMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answerFirst = resolve
+      }),
+    )
+    await move('third', 'Move up')
+
+    // R2 goes out second and answers first, with the server's order after both.
+    fetchMock.mockResolvedValueOnce(order('after', 'both', 'moves'))
+    await move('second', 'Move up')
+    await waitFor(() => expect(titles()).toEqual(['after', 'both', 'moves']))
+
+    // R1 answers late, carrying the server's order after only the first move.
+    answerFirst(order('after', 'the', 'first'))
+
+    // The newer request's result is overwritten by the older one's response.
+    // The user's second drag is visibly undone; the server still has it, which
+    // is what makes this so hard to catch by hand.
+    await waitFor(() => expect(titles()).toEqual(['after', 'the', 'first']))
   })
 })

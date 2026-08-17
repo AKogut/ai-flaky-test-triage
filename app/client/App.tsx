@@ -198,22 +198,105 @@ function CreateForm({ onCreate }: { onCreate: Tasks['create'] }): React.JSX.Elem
   )
 }
 
+/**
+ * Native HTML drag events, no library.
+ *
+ * Fewer moving parts, and the Playwright interaction is explicit rather than
+ * mediated by a library's event synthesis. The dragged id lives in component
+ * state rather than in `dataTransfer`: the payload is only needed for drags
+ * between windows, and reading it back is unreliable in both jsdom and
+ * Playwright's synthesised events.
+ *
+ * The drop index is the position in the **filtered** list mapped back to the
+ * full one. Dropping onto row three of a filtered view means "after the two rows
+ * above it", not "at index 3 of everything" — the latter would move a task
+ * somewhere the user cannot see, which is a bug that only appears when a filter
+ * is set and is therefore very hard to notice.
+ */
 function TaskList({ tasks, shown }: { tasks: Tasks; shown: readonly Task[] }): React.JSX.Element {
+  const [dragging, setDragging] = useState<number | null>(null)
+
+  const drop = (target: Task): void => {
+    if (dragging === null || dragging === target.id) return
+    void tasks.move(dragging, indexOf(tasks.tasks, target))
+    setDragging(null)
+  }
+
   return (
     <ul className="task-list" data-testid="task-list">
-      {shown.map((task) => (
-        <TaskRow key={task.id} task={task} tasks={tasks} />
+      {shown.map((task, position) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          tasks={tasks}
+          neighbours={{ above: shown[position - 1], below: shown[position + 1] }}
+          onDragStart={() => setDragging(task.id)}
+          onDrop={() => drop(task)}
+        />
       ))}
     </ul>
   )
 }
 
-function TaskRow({ task, tasks }: { task: Task; tasks: Tasks }): React.JSX.Element {
+/**
+ * Where a drop onto `target` lands, as an index in the unfiltered list.
+ *
+ * `move` reads its index against the list with the dragged task removed, which
+ * gives drag-up and drag-down the asymmetry a person expects for free: dragging
+ * *down* onto a row lands after it, because removing the dragged task shifts the
+ * target up one; dragging *up* lands before it, because it does not.
+ */
+const indexOf = (all: readonly Task[], target: Task): number =>
+  Math.max(
+    0,
+    all.findIndex((task) => task.id === target.id),
+  )
+
+function TaskRow({
+  task,
+  tasks,
+  neighbours,
+  onDragStart,
+  onDrop,
+}: {
+  task: Task
+  tasks: Tasks
+  neighbours: { above?: Task | undefined; below?: Task | undefined }
+  onDragStart: () => void
+  onDrop: () => void
+}): React.JSX.Element {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
+  /**
+   * Swap with a neighbour, by index in the full list.
+   *
+   * The keyboard path exists because it must — a control reachable only by drag
+   * is unusable without a pointer — and because HTML drag-and-drop is
+   * notoriously hard to drive from Playwright. The specs in #51 and #53 use
+   * these buttons; the drag is what a person uses.
+   */
+  const swapWith = (other: Task | undefined): void => {
+    if (other === undefined) return
+    void tasks.move(
+      task.id,
+      tasks.tasks.findIndex((row) => row.id === other.id),
+    )
+  }
+
   return (
-    <li className={`task task-${task.status}`} data-testid="task-item" data-task-id={task.id}>
+    <li
+      className={`task task-${task.status}`}
+      data-testid="task-item"
+      data-task-id={task.id}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault()
+        onDrop()
+      }}
+    >
       <span className="task-status" data-testid="task-status">
         {task.status === 'completed' ? 'Done' : 'To do'}
       </span>
@@ -235,6 +318,21 @@ function TaskRow({ task, tasks }: { task: Task; tasks: Tasks }): React.JSX.Eleme
       )}
 
       <div className="task-actions">
+        <button
+          type="button"
+          disabled={neighbours.above === undefined}
+          onClick={() => swapWith(neighbours.above)}
+        >
+          Move up
+        </button>
+        <button
+          type="button"
+          disabled={neighbours.below === undefined}
+          onClick={() => swapWith(neighbours.below)}
+        >
+          Move down
+        </button>
+
         <button type="button" onClick={() => void tasks.toggle(task)}>
           {task.status === 'completed' ? 'Reopen' : 'Complete'}
         </button>

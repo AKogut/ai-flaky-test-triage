@@ -47,6 +47,7 @@ export interface Tasks extends TasksState {
   edit: (id: number, patch: { title?: string; description?: string }) => Promise<void>
   remove: (id: number) => Promise<void>
   toggle: (task: Task) => Promise<void>
+  move: (id: number, index: number) => Promise<void>
   dismissWriteError: () => void
 }
 
@@ -156,9 +157,82 @@ export function useTasks(): Tasks {
     }
   }, [])
 
+  /**
+   * Optimistic reorder — and the deliberate bug this application exists to have.
+   *
+   * ## What it does
+   *
+   * Move the row locally, send the index, then replace the list with whatever
+   * the server returns. The optimistic half is why a drag feels immediate; the
+   * reconciliation is what makes the client agree with the server about an order
+   * the server computes.
+   *
+   * ## The race, and the exact interleaving that triggers it
+   *
+   * Responses are applied in the order they **arrive**, and nothing checks that
+   * an arriving response is the newest one. So:
+   *
+   * 1. Drag A. The list paints order `A'`, request R1 goes out.
+   * 2. Drag B, before R1 has answered. The list paints order `B'`, request R2
+   *    goes out.
+   * 3. The server applies R1 then R2 and is now in the order the user intended.
+   * 4. **R1's response arrives after R2's.** The last `setState` wins, so the
+   *    list is replaced with the server's order *as of R1* — the second drag is
+   *    visibly undone, and a refresh brings it back, because the server had it
+   *    all along.
+   *
+   * ## Why it is still here
+   *
+   * On purpose, and this comment is the documentation the issue asks for. It is
+   * `app_code` + `intermittent` — the hard quadrant — and it is the failure the
+   * whole project is built to classify. A correctly written test catches it some
+   * of the time and passes the rest, which is precisely the shape a rerun-until-
+   * green culture ships to users.
+   *
+   * It is not reproducible on a normal machine: the two responses come back in
+   * microseconds and in order. `SENTRA_CHAOS=<seed>` (#47) delays the first more
+   * than the second and makes the interleaving happen every time, which is what
+   * separates emergent flakiness from a scripted sleep.
+   *
+   * **Do not fix this without deleting the fixtures that depend on it.** The
+   * one-line fix is a request sequence number, ignoring any response older than
+   * the newest sent.
+   */
+  const move = useCallback(
+    async (id: number, index: number): Promise<void> => {
+      setState((current) => ({
+        ...current,
+        writeError: null,
+        tasks: reposition(current.tasks, id, index),
+      }))
+
+      try {
+        const tasks = await api.reorderTask(id, index)
+        setState((current) => ({ ...current, tasks }))
+      } catch (failure) {
+        // A failed reorder does re-read, because unlike the other writes there is
+        // no single field to put back: the optimistic move already renumbered the
+        // list, and guessing at the previous order would invent one.
+        setState((current) => ({ ...current, writeError: message(failure) }))
+        await reload()
+      }
+    },
+    [reload],
+  )
+
   const dismissWriteError = useCallback(() => {
     setState((current) => ({ ...current, writeError: null }))
   }, [])
 
-  return { ...state, reload, create, edit, remove, toggle, dismissWriteError }
+  return { ...state, reload, create, edit, remove, toggle, move, dismissWriteError }
+}
+
+/** Local preview of the move the server is about to make. Same rule: index in the result. */
+export function reposition(tasks: readonly Task[], id: number, index: number): Task[] {
+  const moved = tasks.find((task) => task.id === id)
+  if (moved === undefined) return [...tasks]
+
+  const others = tasks.filter((task) => task.id !== id)
+  const at = Math.min(Math.max(Math.trunc(index), 0), others.length)
+  return [...others.slice(0, at), moved, ...others.slice(at)]
 }

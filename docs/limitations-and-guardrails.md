@@ -20,6 +20,19 @@ about honest reporting.
 | Agents never push, tag, or open PRs                  | **planned** — #63 | A read-only `simple-git` facade exposing `diff`, `log`, `show`. Today the dependency is not installed and no agent reads git at all, so the guarantee holds by absence rather than by design — which is not the same thing and will stop being true in M7.                   |
 | Fix suggestions are never applied                    | **planned** — #65 | `patch` will be a string rendered inside a fenced code block, with no code path to an apply step, and a test asserting it. Today there is no fix-suggestion agent, so there is nothing to apply and nothing enforcing that there never will be.                              |
 
+## The bug that is left in on purpose
+
+TaskFlow's optimistic reorder applies responses in the order they **arrive** and never checks that
+an arriving response is the newest one. Two drags in quick succession, with the first response
+landing last, leave the list showing the server's order as of the _first_ drag — the second is
+visibly undone, and a refresh brings it back because the server had it all along.
+
+It is `app_code` + `intermittent`, the hard quadrant, and it is the failure this whole project is
+built to classify. Documented in `app/client/useTasks.ts` with the exact interleaving, pinned by a
+test that fails if somebody fixes it, and reproducible on demand under `SENTRA_CHAOS` (#47) rather
+than by a sleep in a spec. The point is that the classifier has to work it out from a trace, not
+that the bug is a secret.
+
 ## What the system genuinely cannot do
 
 - **It cannot reproduce a failure.** It reads a trace after the fact. It cannot rerun a test in
