@@ -25,14 +25,19 @@ commitlint because a well-formed history needs them, but they are not release no
 - **agents:** fence, cap and scrub untrusted text before it reaches a prompt ([#143](https://github.com/AKogut/ai-flaky-test-triage/pull/143))
 - **agents:** npm run demo, on a clean clone, with no key ([#149](https://github.com/AKogut/ai-flaky-test-triage/pull/149))
 - **agents:** the triage agent, and the seam that scores it like the control ([#146](https://github.com/AKogut/ai-flaky-test-triage/pull/146))
+- **app:** one dev command for the API and the client ([#161](https://github.com/AKogut/ai-flaky-test-triage/pull/161))
 - **ci:** catch cassettes that answer questions nobody asks any more ([#151](https://github.com/AKogut/ai-flaky-test-triage/pull/151))
 - **ci:** define the npm script contract ([#98](https://github.com/AKogut/ai-flaky-test-triage/pull/98))
+- **client:** drag-to-reorder, and the race it is meant to have ([#159](https://github.com/AKogut/ai-flaky-test-triage/pull/159))
+- **client:** filter by status, and the ambiguity it makes possible ([#158](https://github.com/AKogut/ai-flaky-test-triage/pull/158))
+- **client:** the task lifecycle, with one optimistic path and no others ([#157](https://github.com/AKogut/ai-flaky-test-triage/pull/157))
 - **client:** the task list, and a documented selector policy ([#155](https://github.com/AKogut/ai-flaky-test-triage/pull/155))
 - **dataset:** add the golden-dataset fixture and label format ([#107](https://github.com/AKogut/ai-flaky-test-triage/pull/107))
 - **dataset:** add the golden-dataset hygiene lint ([#115](https://github.com/AKogut/ai-flaky-test-triage/pull/115))
 - **dataset:** author the 10 hard-quadrant fixtures ([#111](https://github.com/AKogut/ai-flaky-test-triage/pull/111))
 - **dataset:** author the 15 baseline golden-dataset fixtures ([#109](https://github.com/AKogut/ai-flaky-test-triage/pull/109))
 - **dataset:** author the 8 adversarial fixtures ([#114](https://github.com/AKogut/ai-flaky-test-triage/pull/114))
+- **dataset:** fixtures captured from CI, and the gap stated in words ([#172](https://github.com/AKogut/ai-flaky-test-triage/pull/172))
 - **eval:** add confusion matrices, quadrants and grouped breakdowns ([#131](https://github.com/AKogut/ai-flaky-test-triage/pull/131))
 - **eval:** add TestRun domain types and Zod schemas ([#102](https://github.com/AKogut/ai-flaky-test-triage/pull/102))
 - **eval:** add the non-LLM baseline classifier ([#110](https://github.com/AKogut/ai-flaky-test-triage/pull/110))
@@ -48,12 +53,15 @@ commitlint because a well-formed history needs them, but they are not release no
 - **prompts:** give the rubric one copy and make published versions immutable ([#144](https://github.com/AKogut/ai-flaky-test-triage/pull/144))
 - **release:** generate the changelog from Conventional Commits ([#100](https://github.com/AKogut/ai-flaky-test-triage/pull/100))
 - **server:** reorder by target index, with the race written down ([#154](https://github.com/AKogut/ai-flaky-test-triage/pull/154))
+- **server:** seeded latency injection, off unless asked for ([#160](https://github.com/AKogut/ai-flaky-test-triage/pull/160))
 - **server:** TaskFlow's API — five routes, one table, no service layer ([#152](https://github.com/AKogut/ai-flaky-test-triage/pull/152))
 
 ### Fixes
 
 - **agents:** cover the transport, and stop documenting a parameter that 400s ([#141](https://github.com/AKogut/ai-flaky-test-triage/pull/141))
+- **app:** npm run dev did not work, and 1378 tests did not notice ([#162](https://github.com/AKogut/ai-flaky-test-triage/pull/162))
 - **docs:** make the repository's claims true again after M3 ([#150](https://github.com/AKogut/ai-flaky-test-triage/pull/150))
+- **docs:** say which guardrails are enforced and which are still planned ([#156](https://github.com/AKogut/ai-flaky-test-triage/pull/156))
 - **docs:** stop the wiki claiming unbuilt commands work ([#120](https://github.com/AKogut/ai-flaky-test-triage/pull/120))
 - **eval:** stop the baseline reading documentation as product source ([#113](https://github.com/AKogut/ai-flaky-test-triage/pull/113))
 - **eval:** test the guards nothing was watching, and set a coverage floor ([#139](https://github.com/AKogut/ai-flaky-test-triage/pull/139))
@@ -65,10 +73,18 @@ commitlint because a well-formed history needs them, but they are not release no
 - derive the README status banner from ROADMAP.md ([#101](https://github.com/AKogut/ai-flaky-test-triage/pull/101))
 - **ci:** record Evaluation gate as a required check ([#136](https://github.com/AKogut/ai-flaky-test-triage/pull/136))
 - **ci:** write down who can merge and gate CI for outside contributors ([#133](https://github.com/AKogut/ai-flaky-test-triage/pull/133))
+- **release:** mark M4 and M5 done, and say where M5 fell short ([#173](https://github.com/AKogut/ai-flaky-test-triage/pull/173))
 
 ### Tests
 
+- **e2e:** a deadline that is a guess about a machine ([#170](https://github.com/AKogut/ai-flaky-test-triage/pull/170))
+- **e2e:** a row nobody in the file created ([#169](https://github.com/AKogut/ai-flaky-test-triage/pull/169))
+- **e2e:** a selector that names two things, and only sometimes ([#167](https://github.com/AKogut/ai-flaky-test-triage/pull/167))
+- **e2e:** one TaskFlow per worker, and a report that is checked ([#164](https://github.com/AKogut/ai-flaky-test-triage/pull/164))
+- **e2e:** the control group — five flows, written to be beyond reproach ([#165](https://github.com/AKogut/ai-flaky-test-triage/pull/165))
+- **e2e:** the spec that is right and fails anyway ([#166](https://github.com/AKogut/ai-flaky-test-triage/pull/166))
 - **eval:** pin the reporter contract to committed real output ([#108](https://github.com/AKogut/ai-flaky-test-triage/pull/108))
+- **server:** a database per test, and a report the pipeline can read ([#163](https://github.com/AKogut/ai-flaky-test-triage/pull/163))
 
 <!-- changelog:end -->
 

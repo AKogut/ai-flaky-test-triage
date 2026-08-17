@@ -255,6 +255,90 @@ describe('the command', () => {
     expect(errors.join('')).toContain('already exists')
   })
 
+  it('reads a directory of reports and builds the history from all of them', () => {
+    const written: Record<string, string> = {}
+    const code = main(['--history', 'runs', '--all', '--dir', 'out'], {
+      read: () => JSON.stringify(report),
+      list: () => ['run-2.json', 'run-1.json', 'notes.txt'],
+      write: (path, contents) => {
+        written[path] = contents
+      },
+      exists: () => false,
+      log: () => undefined,
+      now: () => '2026-08-01T00:00:00.000Z',
+    })
+
+    expect(code).toBe(0)
+    const payload = JSON.parse(Object.values(written)[0] ?? '{}') as {
+      historyAvailable: boolean
+      subject: { signal: { statusHistory: string; isNew: boolean } }
+    }
+    // Two reports, both failing, ordered by the number in the filename.
+    expect(payload.subject.signal.statusHistory).toBe('FF')
+    expect(payload.historyAvailable).toBe(true)
+    expect(payload.subject.signal.isNew).toBe(false)
+  })
+
+  /**
+   * One report is honest and much less useful: with nothing to compare against,
+   * the determinism axis has no evidence at all, and the payload says so rather
+   * than implying a history it does not have.
+   */
+  it('marks a single report as having no history to draw on', () => {
+    const written: Record<string, string> = {}
+    main(['--report', 'r.json', '--all', '--dir', 'out'], {
+      read: () => JSON.stringify(report),
+      list: () => [],
+      write: (path, contents) => {
+        written[path] = contents
+      },
+      exists: () => false,
+      log: () => undefined,
+      now: () => '2026-08-01T00:00:00.000Z',
+    })
+
+    const payload = JSON.parse(Object.values(written)[0] ?? '{}') as {
+      historyAvailable: boolean
+      subject: { signal: { isNew: boolean } }
+      testSource?: string
+    }
+    expect(payload.historyAvailable).toBe(false)
+    expect(payload.subject.signal.isNew).toBe(true)
+    // No source either: nothing on disk answers to that path in this test.
+    expect(payload.testSource).toBeUndefined()
+  })
+
+  it('selects one test by a fragment of its title', () => {
+    const written: Record<string, string> = {}
+    const code = main(['--report', 'r.json', '--test', 'shows a row', '--dir', 'out'], {
+      read: () => JSON.stringify(report),
+      list: () => [],
+      write: (path, contents) => {
+        written[path] = contents
+      },
+      exists: () => false,
+      log: () => undefined,
+      now: () => '2026-08-01T00:00:00.000Z',
+    })
+    expect(code).toBe(0)
+    expect(Object.keys(written)).toHaveLength(1)
+  })
+
+  it('says how much it looked at when nothing matched', () => {
+    const errors: string[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => {
+      errors.push(String(m))
+    })
+
+    try {
+      expect(capture(['--report', 'r.json', '--test', 'no such test']).code).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
+    expect(errors.join('')).toContain('failed and matched')
+    expect(errors.join('')).toContain('1 report(s)')
+  })
+
   it('refuses to run without being told what to read', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     try {

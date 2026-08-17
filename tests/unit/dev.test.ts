@@ -94,7 +94,7 @@ describe('the plan', () => {
   it('reports chaos only when a seed is set', () => {
     expect(plan({}).chaos).toBeNull()
     expect(plan({ SENTRA_CHAOS: '' }).chaos).toBeNull()
-    expect(plan({ SENTRA_CHAOS: '37' }).chaos).toBe('37')
+    expect(plan({ SENTRA_CHAOS: '284549' }).chaos).toBe('284549')
   })
 })
 
@@ -134,9 +134,23 @@ describe('starting both halves', () => {
     expect(started[1]?.args).toContain('--strictPort')
   })
 
-  it('points the client at the API it just started', async () => {
+  /**
+   * `SENTRA_API_URL`, and the name is the whole point. Vite exposes every
+   * `VITE_`-prefixed variable to the browser, and `app/client/api.ts` reads that
+   * name to decide whether to fetch absolutely — so setting it here pointed the
+   * proxy at the API *and* told the client to skip the proxy, which the API has
+   * no CORS headers for. The board never loaded. The client's own variable is
+   * cleared rather than left to whatever the shell had.
+   */
+  it('points the proxy at the API it just started, without telling the browser', async () => {
     const { started } = await run({ PORT: '4000' })
-    expect(started[1]?.env.VITE_API_URL).toBe('http://localhost:4000')
+    expect(started[1]?.env.SENTRA_API_URL).toBe('http://localhost:4000')
+    expect(started[1]?.env.VITE_API_URL).toBe('')
+  })
+
+  it('does not leak a stray VITE_API_URL from the shell into the page', async () => {
+    const { started } = await run({ VITE_API_URL: 'http://somewhere-else' })
+    expect(started[1]?.env.VITE_API_URL).toBe('')
   })
 
   /** A dev database that starts empty makes every session begin with typing. */
@@ -146,8 +160,8 @@ describe('starting both halves', () => {
   })
 
   it('passes the chaos seed through to the API', async () => {
-    const { started } = await run({ SENTRA_CHAOS: '37' })
-    expect(started[0]?.env.SENTRA_CHAOS).toBe('37')
+    const { started } = await run({ SENTRA_CHAOS: '284549' })
+    expect(started[0]?.env.SENTRA_CHAOS).toBe('284549')
   })
 
   it('says where both are, and that Ctrl-C stops them', async () => {
@@ -159,7 +173,7 @@ describe('starting both halves', () => {
 
   /** A server quietly injecting latency makes every test in the suite suspect. */
   it('says out loud when chaos is on, and nothing when it is not', async () => {
-    expect((await run({ SENTRA_CHAOS: '37' })).output).toContain('SENTRA_CHAOS=37')
+    expect((await run({ SENTRA_CHAOS: '284549' })).output).toContain('SENTRA_CHAOS=284549')
     expect((await run({})).output).not.toContain('SENTRA_CHAOS')
   })
 

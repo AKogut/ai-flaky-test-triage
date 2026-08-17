@@ -112,7 +112,7 @@ export function createApp(deps: AppDeps): Express {
    * and the server end up agreeing on an order the user did not ask for. That is
    * a race, but it is not *this* application's race, and no refresh fixes it.
    *
-   * Measured, with the delay before the handler and `SENTRA_CHAOS=37`:
+   * Measured, with the delay before the handler and `SENTRA_CHAOS=284549`:
    *
    * ```
    * R1 arrived + 406 ms -> Triage… | Draft… | Write…      (handler ran second)

@@ -6,6 +6,7 @@
   "dependencies": {
     "@sentra/contracts": "*",
     "@sentra/taskflow-server": "*",
-    "@sentra/eval": "*"
+    "@sentra/eval": "*",
+    "@sentra/taskflow-client": "*"
   }
 }

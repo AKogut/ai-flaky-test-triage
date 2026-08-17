@@ -5,7 +5,12 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["**/*.ts", "../vitest.config.ts", "../playwright.config.ts"],
+  "include": [
+    "**/*.ts",
+    "../vitest.config.ts",
+    "../playwright.config.ts",
+    "../app/client/vite.config.ts"
+  ],
   "exclude": ["dist"],
   "references": [
     {
@@ -16,6 +21,9 @@
     },
     {
       "path": "../app/server"
+    },
+    {
+      "path": "../app/client"
     },
     {
       "path": "../eval"

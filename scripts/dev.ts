@@ -116,13 +116,19 @@ export async function main(deps: DevDeps = {}): Promise<number> {
     // symptom is a 404 on a page that used to work. The unit tests check the
     // arguments; only running the command catches this, which is how it was
     // found.
+    // `SENTRA_API_URL`, not `VITE_API_URL`. Vite exposes every `VITE_`-prefixed
+    // variable to the browser, and the client reads that name to decide whether
+    // to fetch absolutely — so setting it here pointed the proxy at the API and
+    // told the client to skip the proxy at the same time. The API has no CORS
+    // headers, on purpose, so the board never loaded. See app/client/vite.config.ts.
     start(
       'web',
       'npx',
       ['vite', '--config', VITE_CONFIG, '--port', String(webPort), '--strictPort'],
       {
         ...env,
-        VITE_API_URL: `http://localhost:${String(apiPort)}`,
+        SENTRA_API_URL: `http://localhost:${String(apiPort)}`,
+        VITE_API_URL: '',
       },
     ),
   ]
