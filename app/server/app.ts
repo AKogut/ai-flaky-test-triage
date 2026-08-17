@@ -1,6 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import { z } from 'zod'
-import { create, find, list, remove, update, type Db, type Task } from './db.js'
+import { create, find, list, remove, reorder, update, type Db, type Task } from './db.js'
 
 /**
  * The TaskFlow API. Five routes, no service layer, no abstraction to speak of.
@@ -52,6 +52,23 @@ const PatchSchema = z
     message: 'a patch must change at least one field',
   })
 
+/**
+ * A target **index**, not a position.
+ *
+ * The server computes the fractional position from its own current list. A
+ * client sending a position would be sending one it computed from a list that
+ * may already have moved, and the resulting order would depend on how stale that
+ * read was — which is unpredictable rather than merely racy. An index computed
+ * against a stale list is still surprising, and that surprise is documented in
+ * `reorder`; it is at least a defined function of what the server holds.
+ */
+const ReorderSchema = z
+  .object({
+    id: z.number().int().positive(),
+    index: z.number().int().min(0),
+  })
+  .strict()
+
 export interface ApiError {
   error: { code: string; message: string; details?: unknown }
 }
@@ -81,6 +98,25 @@ export function createApp(deps: AppDeps): Express {
     if (!parsed.success) return invalid(response, parsed.error)
 
     response.status(201).json({ task: create(db, parsed.data, now()) })
+  })
+
+  /**
+   * Registered before `/api/tasks/:id`, and that order is the whole of it.
+   *
+   * Express matches in declaration order, so the other way round `:id` captures
+   * the literal string "reorder", the handler fails to parse it as a number, and
+   * every reorder answers 404 — a routing bug that reads as a missing task. A
+   * test pins the order rather than the comment.
+   */
+  app.patch('/api/tasks/reorder', (request, response) => {
+    const parsed = ReorderSchema.safeParse(request.body)
+    if (!parsed.success) return invalid(response, parsed.error)
+
+    const tasks = reorder(db, parsed.data.id, parsed.data.index, now())
+    if (tasks === null) return notFound(response)
+    // The resulting list, not the moved row: a reordering client needs the order,
+    // and making it ask again is the request that races the next drag.
+    response.json({ tasks })
   })
 
   app.patch('/api/tasks/:id', (request, response) => {

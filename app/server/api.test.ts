@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
-import { clear, open, type Db } from './db.js'
+import { clear, create, open, reorder, type Db } from './db.js'
 import { serve } from './index.js'
 import { seed, SEED, SEED_TIME } from './seed.js'
 
@@ -325,5 +325,190 @@ describe('starting up', () => {
     const b = serve({ port: 0, database: ':memory:', log: () => undefined })
     expect(a.port).not.toBe(b.port)
     await Promise.all([a.close(), b.close()])
+  })
+})
+
+describe('reordering', () => {
+  const titles = async (): Promise<string[]> =>
+    ((await api('/api/tasks')).body as ListBody).tasks.map((t) => t.title)
+
+  const three = async (): Promise<Record<string, number>> => {
+    const ids: Record<string, number> = {}
+    for (const title of ['a', 'b', 'c']) {
+      ids[title] = ((await post('/api/tasks', { title })).body as TaskBody).task.id
+    }
+    return ids
+  }
+
+  it('moves a task to the front', async () => {
+    const ids = await three()
+    await patch('/api/tasks/reorder', { id: ids.c, index: 0 })
+    expect(await titles()).toEqual(['c', 'a', 'b'])
+  })
+
+  it('moves a task to the end', async () => {
+    const ids = await three()
+    await patch('/api/tasks/reorder', { id: ids.a, index: 2 })
+    expect(await titles()).toEqual(['b', 'c', 'a'])
+  })
+
+  it('moves a task into the middle', async () => {
+    const ids = await three()
+    await patch('/api/tasks/reorder', { id: ids.c, index: 1 })
+    expect(await titles()).toEqual(['a', 'c', 'b'])
+  })
+
+  it('returns the resulting order rather than the moved row', async () => {
+    const ids = await three()
+    const response = await patch('/api/tasks/reorder', { id: ids.c, index: 0 })
+    expect((response.body as ListBody).tasks.map((t) => t.title)).toEqual(['c', 'a', 'b'])
+  })
+
+  /** An index past the end is what a drag to the bottom of a list sends. */
+  it('clamps an index beyond the end', async () => {
+    const ids = await three()
+    await patch('/api/tasks/reorder', { id: ids.a, index: 99 })
+    expect(await titles()).toEqual(['b', 'c', 'a'])
+  })
+
+  it('leaves the order alone when a task is moved where it already is', async () => {
+    const ids = await three()
+    await patch('/api/tasks/reorder', { id: ids.b, index: 1 })
+    expect(await titles()).toEqual(['a', 'b', 'c'])
+  })
+
+  it('writes one row, not the whole list', async () => {
+    const ids = await three()
+    const before = ((await api('/api/tasks')).body as ListBody).tasks
+    await patch('/api/tasks/reorder', { id: ids.c, index: 0 })
+    const after = ((await api('/api/tasks')).body as ListBody).tasks
+
+    const moved = (position: number, id: number): boolean =>
+      before.find((t) => t.id === id)?.position !== position
+    expect(after.filter((t) => moved(t.position, t.id)).map((t) => t.id)).toEqual([ids.c])
+  })
+
+  it('handles a single task without dividing by nothing', async () => {
+    const id = ((await post('/api/tasks', { title: 'only' })).body as TaskBody).task.id
+    const response = await patch('/api/tasks/reorder', { id, index: 0 })
+    expect(response.status).toBe(200)
+    expect(await titles()).toEqual(['only'])
+  })
+
+  it('404s for a task that is not there', async () => {
+    expect((await patch('/api/tasks/reorder', { id: 999, index: 0 })).status).toBe(404)
+  })
+
+  it.each([
+    ['a missing index', { id: 1 }],
+    ['a negative index', { id: 1, index: -1 }],
+    ['a fractional index', { id: 1, index: 1.5 }],
+    ['an unknown field', { id: 1, index: 0, animate: true }],
+  ])('rejects %s', async (_case, body) => {
+    expect((await patch('/api/tasks/reorder', body)).status).toBe(400)
+  })
+
+  /**
+   * Express matches in declaration order. Registered the other way round, `:id`
+   * captures the literal "reorder", the handler cannot parse it as a number, and
+   * every reorder answers 404 — a routing bug that reads as a missing task.
+   */
+  it('is not read as a task id', async () => {
+    const ids = await three()
+    const response = await patch('/api/tasks/reorder', { id: ids.a, index: 1 })
+    expect(response.status).toBe(200)
+  })
+})
+
+/**
+ * The outcomes the issue asks to be written down rather than discovered — and
+ * asserted, because a documented behaviour nothing checks is a comment.
+ */
+describe('reordering under a race', () => {
+  const titles = async (): Promise<string[]> =>
+    ((await api('/api/tasks')).body as ListBody).tasks.map((t) => t.title)
+
+  const four = async (): Promise<Record<string, number>> => {
+    const ids: Record<string, number> = {}
+    for (const title of ['a', 'b', 'c', 'd']) {
+      ids[title] = ((await post('/api/tasks', { title })).body as TaskBody).task.id
+    }
+    return ids
+  }
+
+  /**
+   * Both clients read the same list and both say "put mine at index 1". Applied
+   * in sequence, the second index means something different once the first move
+   * has landed — so the final order is one neither client painted. This is the
+   * race #46 reproduces, and it is genuine product behaviour.
+   */
+  it('gives an order neither client asked for when both move against a stale read', async () => {
+    const ids = await four()
+
+    await Promise.all([
+      patch('/api/tasks/reorder', { id: ids.c, index: 1 }),
+      patch('/api/tasks/reorder', { id: ids.d, index: 1 }),
+    ])
+
+    const order = await titles()
+    // Every task is still present exactly once — the race loses intent, not rows.
+    expect([...order].sort()).toEqual(['a', 'b', 'c', 'd'])
+    // And neither client's picture survives intact: they cannot both be at index 1.
+    expect(order.indexOf('c') === 1 && order.indexOf('d') === 1).toBe(false)
+  })
+
+  /**
+   * Two moves into the same gap compute the same midpoint and store the same
+   * position, so order between them falls to `id` rather than to who was later —
+   * a client that moved a task after another can find it rendered before it.
+   */
+  it('breaks a position collision by id, not by who wrote last', async () => {
+    const ids = await four()
+
+    // Both computed against the same list: the gap between a and b.
+    await patch('/api/tasks/reorder', { id: ids.d, index: 1 })
+    const positions = ((await api('/api/tasks')).body as ListBody).tasks
+    const target = positions.find((t) => t.id === ids.d)?.position ?? 0
+
+    // c lands on exactly the same position, later in time but earlier by id.
+    await patch(`/api/tasks/${String(ids.c)}`, { position: target })
+
+    const order = await titles()
+    expect(order.indexOf('c')).toBeLessThan(order.indexOf('d'))
+  })
+
+  /** A list that reorders itself between reads would swamp the interesting signal. */
+  it('returns the same order on repeated reads', async () => {
+    await four()
+    const reads = await Promise.all([titles(), titles(), titles()])
+    expect(reads[1]).toEqual(reads[0])
+    expect(reads[2]).toEqual(reads[0])
+  })
+})
+
+/**
+ * The documented limit of fractional positioning, pinned rather than estimated.
+ *
+ * The gap only halves when each inserted task becomes a neighbour of the next —
+ * dragging item after item to just below the same row. Driven against the
+ * database rather than over HTTP: fifty-two round trips to assert an arithmetic
+ * property would be slow for no extra confidence, and the property belongs to
+ * `reorder` rather than to the route.
+ */
+describe('the limit of halving a gap', () => {
+  it('collapses onto the neighbour after 52 insertions below the same row', () => {
+    clear(db)
+    const top = create(db, { title: 'top', position: 1 }, SEED_TIME)
+    create(db, { title: 'bottom', position: 2 }, SEED_TIME)
+
+    let inserted = 0
+    for (; inserted < 200; inserted++) {
+      const task = create(db, { title: `dragged ${String(inserted)}` }, SEED_TIME)
+      const after = reorder(db, task.id, 1, SEED_TIME)
+      const landed = after?.find((row) => row.id === task.id)?.position ?? 0
+      if (landed === top.position) break
+    }
+
+    expect(inserted).toBe(52)
   })
 })
