@@ -33,6 +33,15 @@ updates:
         patterns: ['vitest', '@vitest/*', '@playwright/*', 'playwright']
       otel:
         patterns: ['@opentelemetry/*']
+      # TaskFlow's runtime. Grouped because it is the system under test rather
+      # than the product: a bump here can only break the application the pipeline
+      # is pointed at, and reviewing those together is the whole of the review.
+      taskflow:
+        patterns:
+          - 'express'
+          - '@types/express'
+          - 'better-sqlite3'
+          - '@types/better-sqlite3'
     ignore:
       # The SDK version is pinned deliberately — a bump can move classifier behaviour,
       # so it is upgraded manually with an eval run attached to the PR.
