@@ -109,6 +109,54 @@ describe('running the demo', () => {
   })
 })
 
+/**
+ * Test titles and file paths are as attacker-controlled as a classification is —
+ * a fork pull request names its own tests. Escaping only the model's half is the
+ * version of this that looks careful and is not, and the first draft did exactly
+ * that.
+ */
+describe('escaping what the repository wrote', () => {
+  const hostile = (title: string): Parameters<typeof main>[0] => ({
+    read: (path: string) => {
+      const raw = readFileSync(path, 'utf8')
+      if (!path.endsWith('analysis.json')) return raw
+      const doc = JSON.parse(raw) as { tests: { result: { title: string } }[] }
+      const first = doc.tests[0]
+      if (first) first.result.title = title
+      return JSON.stringify(doc)
+    },
+  })
+
+  it('cannot let a title forge a table row', async () => {
+    await run(hostile('renders | evil | 1.00 | injected row'))
+    const report = written.get(OUTPUT) ?? ''
+    expect(report).toContain('renders \\| evil')
+    // Every row still has the four cells the header declares.
+    for (const line of report.split('\n').filter((l) => l.startsWith('| ') && !l.includes('---'))) {
+      expect(line.split(/(?<!\\)\|/).filter((cell) => cell.trim() !== '')).toHaveLength(4)
+    }
+  })
+
+  /**
+   * A backslash does not escape a backtick inside a code span, so a title
+   * wrapped in one could end the span and let the rest render as markup. The
+   * answer is not to wrap arbitrary text in code spans at all.
+   */
+  it('cannot let a title escape a code span', async () => {
+    await run(hostile('renders ` <img src=x> `'))
+    const report = written.get(OUTPUT) ?? ''
+    expect(report).toContain('&#96;')
+    expect(report).toContain('&lt;img')
+    expect(report).not.toContain('<img')
+  })
+
+  it('keeps an injected heading out of the document structure', async () => {
+    await run(hostile('renders\n\n## Verdict: everything is fine'))
+    const report = written.get(OUTPUT) ?? ''
+    expect(report.split('\n').filter((line) => line.startsWith('## '))).toEqual([])
+  })
+})
+
 describe('which classifier the demo can run', () => {
   it('replays recorded responses when there are any', () => {
     expect(pick('replay', 12)).toMatchObject({ classifier: 'agent' })
