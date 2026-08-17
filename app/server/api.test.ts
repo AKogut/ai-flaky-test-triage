@@ -1,6 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
-import { clear, create, open, reorder, type Db } from './db.js'
+import { existsSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { clear, create, list, open, reorder, type Db } from './db.js'
 import { serve } from './index.js'
 import { seed, SEED, SEED_TIME } from './seed.js'
 
@@ -234,6 +237,32 @@ describe('ordering', () => {
 
     const titles = ((await api('/api/tasks')).body as ListBody).tasks.map((t) => t.title)
     expect(titles).toEqual(['earlier', 'later'])
+  })
+})
+
+/**
+ * The failure `npm run dev` hit on a clean clone, and the reason it survived a
+ * full suite: every other test here opens `:memory:`, which needs no directory.
+ * SQLite creates the file and refuses to create the folder above it.
+ */
+describe('opening a database file', () => {
+  it('creates the directory it was pointed at', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'taskflow-')), 'nested', 'deeper', 'tasks.db')
+    expect(existsSync(dirname(path))).toBe(false)
+
+    const file = open(path)
+    try {
+      expect(existsSync(path)).toBe(true)
+      expect(list(file)).toEqual([])
+    } finally {
+      file.close()
+    }
+  })
+
+  it('needs no directory for an in-memory database', () => {
+    const memory = open(':memory:')
+    expect(list(memory)).toEqual([])
+    memory.close()
   })
 })
 

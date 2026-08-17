@@ -27,6 +27,9 @@ import { createServer } from 'node:net'
 export const DEFAULT_API_PORT = 3001
 export const DEFAULT_WEB_PORT = 5173
 
+/** Relative to the repository root, which is where npm scripts run. */
+export const VITE_CONFIG = 'app/client/vite.config.ts'
+
 export interface DevDeps {
   env?: NodeJS.ProcessEnv
   /** Injected so the tests can check the plan without starting anything. */
@@ -107,10 +110,21 @@ export async function main(deps: DevDeps = {}): Promise<number> {
       ...env,
       PORT: String(apiPort),
     }),
-    start('web', 'npx', ['vite', '--port', String(webPort), '--strictPort'], {
-      ...env,
-      VITE_API_URL: `http://localhost:${String(apiPort)}`,
-    }),
+    // `--config` is not optional. Vite looks for its config in the *working
+    // directory*, and this runs from the repository root — without it Vite
+    // serves the root with no React plugin and no `/api` proxy, and the only
+    // symptom is a 404 on a page that used to work. The unit tests check the
+    // arguments; only running the command catches this, which is how it was
+    // found.
+    start(
+      'web',
+      'npx',
+      ['vite', '--config', VITE_CONFIG, '--port', String(webPort), '--strictPort'],
+      {
+        ...env,
+        VITE_API_URL: `http://localhost:${String(apiPort)}`,
+      },
+    ),
   ]
 
   return await supervise(children, log)
