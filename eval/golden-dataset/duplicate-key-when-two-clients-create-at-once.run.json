@@ -6,7 +6,7 @@
       "testId": "tests/unit/tasks.repository.test.ts›createTask › gives concurrent callers distinct identifiers",
       "title": "createTask › gives concurrent callers distinct identifiers",
       "file": "tests/unit/tasks.repository.test.ts",
-      "status": "failed",
+      "status": "passed",
       "attempts": 2,
       "flakyWithinRun": true,
       "durationMs": 64,
@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.repository.test.ts›createTask › gives concurrent callers distinct identifiers",
-      "flakinessScore": 0.45,
+      "flakinessScore": 0.39,
       "consecutiveFailures": 0,
-      "totalRuns": 67,
+      "totalRuns": 68,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",
       "lastPassedAt": "2026-08-10T05:40:09.000Z",
-      "statusHistory": "PPPPFPFPPP",
+      "statusHistory": "PPPPFPFPPPP",
       "isNew": false
     }
   },

@@ -187,19 +187,45 @@ export function checkSignal(name: string, payload: FixturePayload): Finding[] {
   return findings
 }
 
-/** Separated from {@link checkSignal} because it is a labelling question, not arithmetic. */
-export function checkHistoryEndsWithRun(name: string, payload: FixturePayload): Finding[] {
+/**
+ * A fixture has to describe a run the reporters could have produced.
+ *
+ * Two invariants, both of which the normalisers guarantee for real data and
+ * neither of which a hand-written payload gets for free. Both were violated
+ * before #177.
+ *
+ * **The history ends with the run being triaged.** `analyse` builds it that way,
+ * so a fixture ending anywhere else is a shape production cannot emit.
+ *
+ * **A test that passed on a later attempt passed.** `flakyWithinRun` is set only
+ * when the final attempt succeeded — `contracts/reporters/playwright.ts` derives
+ * it from exactly that — so `failed` beside `passed on a later attempt: yes` is
+ * not a rare combination, it is an impossible one. Four hard-quadrant fixtures
+ * carried it, and the bundle renders both facts a line apart, which means the
+ * classifier was being asked to reason about a contradiction on the cases the
+ * dataset is hardest on.
+ */
+export function checkRunIsPossible(name: string, payload: FixturePayload): Finding[] {
   const { signal, result } = payload.subject
+  const findings: Finding[] = []
+
   const expected = STATUS_LETTER[result.status] ?? '?'
   const actual = signal.statusHistory.slice(-1)
-  return actual === expected
-    ? []
-    : [
-        {
-          fixture: name,
-          message: `history ends in ${actual} but the run being triaged ${result.status} — analyse() always ends it with this run (#177)`,
-        },
-      ]
+  if (actual !== expected) {
+    findings.push({
+      fixture: name,
+      message: `history ends in ${actual} but the run being triaged ${result.status} — analyse() always ends it with this run`,
+    })
+  }
+
+  if (result.flakyWithinRun && result.status !== 'passed') {
+    findings.push({
+      fixture: name,
+      message: `flakyWithinRun is true but the run ${result.status} — a later attempt passing is what makes the run pass`,
+    })
+  }
+
+  return findings
 }
 
 function excerpt(text: string, term: RegExp): string {
@@ -238,7 +264,7 @@ export function runHygiene(dir: string = DATASET_DIR): HygieneReport {
     const { payload } = loadPayload(name, dir)
     errors.push(...checkLeakage(name, payload))
     errors.push(...checkSignal(name, payload))
-    warnings.push(...checkHistoryEndsWithRun(name, payload))
+    errors.push(...checkRunIsPossible(name, payload))
 
     const label = loadLabels(name, dir)
     labels.push(label)

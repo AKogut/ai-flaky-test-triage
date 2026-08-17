@@ -38,10 +38,23 @@ describe('the golden dataset', () => {
   })
 
   it('describes a failure in every payload', () => {
-    // A fixture whose subject passed has nothing to classify.
     for (const { name, payload } of payloads) {
-      expect(['failed', 'timedOut'], name).toContain(payload.subject.result.status)
-      expect(payload.subject.result.error?.message, name).toBeTruthy()
+      const { status, flakyWithinRun, error } = payload.subject.result
+      /**
+       * A green run is still triageable when it only got there on a retry.
+       * `selectForTriage` has a clause for exactly that, and it is the clearest
+       * intermittency evidence a single run can carry — the alternation happened
+       * where the pass/fail sequence cannot show it.
+       *
+       * This read `['failed', 'timedOut']` until #177, which is why four
+       * fixtures had been carrying `failed` beside `flakyWithinRun: true` — a
+       * combination the Playwright normaliser cannot produce, because the flag
+       * is derived from the final attempt having passed.
+       */
+      expect(status === 'failed' || status === 'timedOut' || flakyWithinRun, name).toBe(true)
+      // Either way there is a failure to explain: a retried test keeps the error
+      // from the attempt that failed, which is what the normaliser preserves.
+      expect(error?.message, name).toBeTruthy()
     }
   })
 })

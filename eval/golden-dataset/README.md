@@ -88,10 +88,20 @@ That check exists because the alternative had already happened. Before the scori
 `PPPPPPPFFF` carried `0.03` and `0.29`, which no definition produces both of. A dataset scored by a
 rule production does not use measures the fixtures rather than the classifier.
 
-Eight histories still end somewhere production cannot put them — `analyse` always ends the history
-with the run being triaged. `eval:lint` warns about each by name; #177 tracks fixing them, and it is
-a labelling job rather than an arithmetic one, because a longer history can change what the right
-answer is.
+**And a run the reporters could have produced.** `eval:lint` also fails when a fixture's
+`statusHistory` does not end with the run being triaged, or when it claims the run passed on a later
+attempt while recording the run as failed.
+
+The second of those had happened four times, all in the hard quadrant. `flakyWithinRun` is derived
+from the final attempt having succeeded, so `failed` beside "passed on a later attempt: yes" is not
+a rare combination but an impossible one — and the context bundle renders both facts a line apart,
+so the classifier was being handed a contradiction on the cases the dataset is hardest on. Their
+justifications had said "which is why the retry passed" all along; the status was what disagreed.
+
+**A fixture whose run ended green is still a fixture.** A test that only got there on a retry is
+selected for triage by its own clause in `selectForTriage`, and it is the clearest intermittency
+evidence a single run can carry — the alternation happened where the pass/fail sequence cannot show
+it.
 
 ## Target composition
 

@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › the control reflects the final state after two quick toggles",
-      "flakinessScore": 0.59,
-      "consecutiveFailures": 0,
-      "totalRuns": 91,
+      "flakinessScore": 0.64,
+      "consecutiveFailures": 1,
+      "totalRuns": 92,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",
       "lastPassedAt": "2026-08-10T08:13:57.000Z",
-      "statusHistory": "PFPPPFPPFPP",
+      "statusHistory": "PFPPPFPPFPPT",
       "isNew": false
     }
   },

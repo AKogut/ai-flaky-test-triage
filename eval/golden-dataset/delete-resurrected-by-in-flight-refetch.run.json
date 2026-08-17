@@ -6,7 +6,7 @@
       "testId": "tests/e2e/board.spec.ts›board › a deleted task stays deleted",
       "title": "board › a deleted task stays deleted",
       "file": "tests/e2e/board.spec.ts",
-      "status": "failed",
+      "status": "passed",
       "attempts": 2,
       "flakyWithinRun": true,
       "durationMs": 7180,
@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › a deleted task stays deleted",
-      "flakinessScore": 0.66,
+      "flakinessScore": 0.57,
       "consecutiveFailures": 0,
-      "totalRuns": 83,
+      "totalRuns": 84,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",
       "lastPassedAt": "2026-08-10T07:55:31.000Z",
-      "statusHistory": "PFPPFPPPFP",
+      "statusHistory": "PFPPFPPPFPP",
       "isNew": false
     }
   },
