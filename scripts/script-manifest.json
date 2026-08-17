@@ -91,6 +91,13 @@
       "milestone": "M3",
       "issue": 39,
       "status": "implemented"
+    },
+    {
+      "name": "capture",
+      "description": "Turn a real Playwright report into golden-dataset payloads",
+      "milestone": "M5",
+      "issue": 56,
+      "status": "implemented"
     }
   ]
 }

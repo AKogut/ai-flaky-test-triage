@@ -38,11 +38,15 @@ test('moves a task up one place', async ({ page, db }) => {
 
   await expect(titles(page).first()).toHaveText(SECOND)
   await expect(titles(page).nth(1)).toHaveText(FIRST)
-  expect(
-    stored(db)
-      .map((task) => task.title)
-      .slice(0, 2),
-  ).toEqual([SECOND, FIRST])
+  // Polled, because reordering is optimistic: the list repaints before the write
+  // is sent, so the screen agreeing says nothing about the server yet.
+  await expect
+    .poll(() =>
+      stored(db)
+        .map((task) => task.title)
+        .slice(0, 2),
+    )
+    .toEqual([SECOND, FIRST])
 
   // Nothing else moved: a reorder writes one row, and a reorder that renumbered
   // the list would pass the two assertions above and still be a bug.
@@ -54,7 +58,7 @@ test('moves a task down one place', async ({ page, db }) => {
 
   await expect(titles(page).first()).toHaveText(SECOND)
   await expect(titles(page).nth(1)).toHaveText(FIRST)
-  expect(stored(db)[0]?.title).toBe(SECOND)
+  await expect.poll(() => stored(db)[0]?.title).toBe(SECOND)
 })
 
 test('cannot move the first task up', async ({ page }) => {

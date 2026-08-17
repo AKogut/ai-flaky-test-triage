@@ -29,6 +29,31 @@ fit a label already in mind.
 
 Use the [dataset fixture issue template](https://github.com/AKogut/ai-flaky-test-triage/issues/new/choose).
 
+## Capturing from a real run
+
+```sh
+# Everything that failed, from a directory of reports collected over several runs.
+npm run capture -- --history <dir> --all
+
+# One test, from a single report.
+npm run capture -- --report results.json --test "part of the title"
+```
+
+It writes **payloads only**, and the four steps it prints afterwards are the work: replace the
+scenario, trim the source, apply the ordered rules by hand, and regenerate. A tool that guessed a
+label would turn the dataset into a record of what the pipeline already believes.
+
+CI keeps every run's report as an artifact for fourteen days, so the input is a download:
+
+```sh
+gh run download <run-id> -n test-results -D runs/<n>
+```
+
+Name the directories so they sort in run order — the command reads the number in the filename — and
+point `--history` at the collection. The signal comes out of what those runs actually did, and it
+stops at the run being captured: a history that continued past the failure would describe a future
+the classifier could not have seen.
+
 ## Captured fixtures
 
 A fixture is `captured` when its `subject.result` came out of a real run rather than out of

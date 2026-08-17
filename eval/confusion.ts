@@ -283,14 +283,14 @@ export function renderBreakdownSections(fixtures: ScoredFixture[]): string {
       ),
     )
 
+  const provenance = by((l) => l.provenance)
+
   return [
     '### By provenance',
     '',
-    renderBreakdown(
-      'provenance',
-      by((l) => l.provenance),
-      headline.length,
-    ),
+    renderBreakdown('provenance', provenance, headline.length),
+    '',
+    provenanceGap(provenance),
     '',
     '### By difficulty bucket',
     '',
@@ -304,6 +304,50 @@ export function renderBreakdownSections(fixtures: ScoredFixture[]): string {
     '',
     renderLowConfidence(lowConfidence),
   ].join('\n')
+}
+
+/**
+ * The synthetic-versus-captured comparison, in words.
+ *
+ * This is the sharpest threat to validity `docs/eval-methodology.md` names: every
+ * fixture that was hand-authored was written by the person who also wrote the
+ * rubric and the prompt, so the dataset measures that person's imagination as
+ * well as the classifier. Captured fixtures are the check on it, and the check is
+ * only worth having if the answer is stated rather than left in a table for
+ * somebody to notice.
+ *
+ * Written by the generator rather than into a document, so it cannot go stale —
+ * and it refuses to draw a conclusion the interval will not support, because a
+ * gap between two point estimates whose intervals overlap is not a finding.
+ */
+export function provenanceGap(groups: GroupedMetrics[]): string {
+  const captured = groups.find((g) => g.group === 'captured')
+  const synthetic = groups.find((g) => g.group === 'synthetic')
+
+  if (captured === undefined || synthetic === undefined) {
+    return (
+      'Only one provenance is represented, so there is nothing to compare. Until captured ' +
+      'fixtures exist, every number above is measured against failures the author invented.'
+    )
+  }
+
+  const gap = (captured.metrics.joint.point - synthetic.metrics.joint.point) * 100
+  const overlap =
+    captured.metrics.joint.interval.lower <= synthetic.metrics.joint.interval.upper &&
+    synthetic.metrics.joint.interval.lower <= captured.metrics.joint.interval.upper
+
+  const direction = gap < 0 ? 'below' : 'above'
+  const sentence =
+    `Captured fixtures score ${Math.abs(gap).toFixed(1)}pp ${direction} synthetic ones on joint ` +
+    `accuracy (${String(captured.metrics.n)} against ${String(synthetic.metrics.n)} fixtures).`
+
+  return overlap
+    ? `${sentence} The two intervals overlap, so this is a difference between point estimates and ` +
+        `not evidence of a difference between the populations. At these counts it cannot be read ` +
+        `as one, and reporting it as one would be the exact error this section exists to catch.`
+    : `${sentence} The intervals do not overlap. That is a real divergence, and it means the ` +
+        `dataset-first ordering in ADR-0003 produced a classifier tuned to invented failures — a ` +
+        `finding for the README rather than a comment.`
 }
 
 function renderLowConfidence(fixtures: ScoredFixture[]): string {

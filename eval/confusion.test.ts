@@ -5,16 +5,18 @@ import { classifyWithBaseline } from './baseline.js'
 import {
   confusionMatrix,
   partitionByGroundTruthConfidence,
+  provenanceGap,
   quadrantBreakdown,
   renderBreakdown,
   renderBreakdownSections,
   renderConfusionMatrix,
   renderQuadrantTable,
   scoreBy,
+  type GroupedMetrics,
   type ScoredFixture,
 } from './confusion.js'
 import { loadAllPayloads, loadLabels } from './dataset.js'
-import type { Judgement } from './metrics.js'
+import { score, type Judgement } from './metrics.js'
 
 const judge = (
   actual: [Owner, Determinism],
@@ -257,8 +259,8 @@ describe('the baseline against the committed dataset', () => {
   it('pins the owner confusion matrix', () => {
     // Rows app_code / test_code / environment, columns the same.
     expect(confusionMatrix(judgements, 'owner').counts).toEqual([
-      [17, 5, 0],
-      [9, 2, 0],
+      [17, 6, 0],
+      [10, 2, 0],
       [3, 0, 1],
     ])
   })
@@ -266,12 +268,12 @@ describe('the baseline against the committed dataset', () => {
   it('pins the determinism confusion matrix', () => {
     expect(confusionMatrix(judgements, 'determinism').counts).toEqual([
       [17, 4],
-      [4, 12],
+      [5, 13],
     ])
   })
 
   it('shows most of the `test_code` row collapsing into `app_code`', () => {
-    // Nine of eleven called app_code. This is the single most informative cell
+    // Ten of twelve called app_code. This is the single most informative cell
     // in the report and accuracy alone never shows it.
     //
     // The two that escape are captured fixtures with no commit under test, so
@@ -281,15 +283,15 @@ describe('the baseline against the committed dataset', () => {
     // but that a product diff overrides everything else it knows.
     const matrix = confusionMatrix(judgements, 'owner')
     const row = matrix.counts[matrix.labels.indexOf('test_code')]
-    expect(row).toEqual([9, 2, 0])
+    expect(row).toEqual([10, 2, 0])
   })
 
-  it('scores 3 of 11 on the hard quadrant', () => {
+  it('scores 3 of 12 on the hard quadrant', () => {
     // The project's thesis number. The baseline being poor here is the dataset
     // working, not the control being unfair.
     const hard = quadrantBreakdown(judgements).find((r) => r.hard)
-    expect(hard).toMatchObject({ support: 11, correct: 3 })
-    expect(hard?.accuracy.point).toBeCloseTo(3 / 11, 10)
+    expect(hard).toMatchObject({ support: 12, correct: 3 })
+    expect(hard?.accuracy.point).toBeCloseTo(0.25, 10)
   })
 
   /**
@@ -347,8 +349,8 @@ describe('the baseline against the committed dataset', () => {
    * wrong on a two-run failure streak.
    */
   it('is not defeated by unsynchronised-test on owner, and is on determinism', () => {
-    expect(bucket('unsynchronised-test')?.owner.accuracy.point).toBe(1)
-    expect(bucket('unsynchronised-test')?.determinism.accuracy.point).toBeCloseTo(0.5, 10)
+    expect(bucket('unsynchronised-test')?.owner.accuracy.point).toBeCloseTo(2 / 3, 10)
+    expect(bucket('unsynchronised-test')?.determinism.accuracy.point).toBeCloseTo(2 / 3, 10)
   })
 
   it('is defeated by misleading-history on determinism alone', () => {
@@ -364,9 +366,9 @@ describe('the baseline against the committed dataset', () => {
     expect(bucket('environment-as-regression')?.determinism.accuracy.point).toBe(1)
   })
 
-  it('scores 3 of 11 joint on the hard-quadrant bucket', () => {
-    expect(bucket('hard-quadrant')?.joint.point).toBeCloseTo(3 / 11, 10)
-    expect(bucket('hard-quadrant')?.owner.accuracy.point).toBeCloseTo(6 / 11, 10)
+  it('scores 3 of 12 joint on the hard-quadrant bucket', () => {
+    expect(bucket('hard-quadrant')?.joint.point).toBeCloseTo(0.25, 10)
+    expect(bucket('hard-quadrant')?.owner.accuracy.point).toBeCloseTo(0.5, 10)
   })
 
   /**
@@ -383,6 +385,56 @@ describe('the baseline against the committed dataset', () => {
     expect(rendered).toContain('`synthetic`')
     expect(rendered).not.toContain('share one provenance')
     expect(rendered).toContain('### By difficulty bucket')
+  })
+})
+
+/**
+ * The synthetic-versus-captured comparison, which is the sharpest threat to
+ * validity this project has: every hand-authored fixture was written by the
+ * person who also wrote the rubric and the prompt.
+ */
+describe('the provenance gap, in words', () => {
+  const group = (name: string, successes: number, n: number): GroupedMetrics => ({
+    group: name,
+    metrics: score(
+      Array.from({ length: n }, (_unused, i) => ({
+        name: `${name}-${String(i)}`,
+        predicted: {
+          owner: i < successes ? ('app_code' as const) : ('test_code' as const),
+          determinism: 'intermittent' as const,
+          confidence: 0.5,
+          reasoning: 'r',
+          evidence: [],
+        },
+        actual: { owner: 'app_code' as const, determinism: 'intermittent' as const },
+      })),
+    ),
+  })
+
+  it('says there is nothing to compare when only one provenance exists', () => {
+    expect(provenanceGap([group('synthetic', 5, 10)])).toContain('nothing to compare')
+  })
+
+  it('refuses to call overlapping intervals a difference', () => {
+    const said = provenanceGap([group('captured', 1, 4), group('synthetic', 8, 22)])
+    expect(said).toContain('pp below synthetic')
+    expect(said).toContain('not evidence of a difference')
+  })
+
+  /**
+   * And says so plainly when they do not overlap, because that is the finding
+   * ADR-0003 said would belong in the README rather than in a comment.
+   */
+  it('calls a real divergence a real divergence', () => {
+    const said = provenanceGap([group('captured', 0, 40), group('synthetic', 40, 40)])
+    expect(said).toContain('intervals do not overlap')
+    expect(said).toContain('ADR-0003')
+  })
+
+  it('names which way round the gap runs', () => {
+    expect(provenanceGap([group('captured', 40, 40), group('synthetic', 0, 40)])).toContain(
+      'above synthetic',
+    )
   })
 })
 

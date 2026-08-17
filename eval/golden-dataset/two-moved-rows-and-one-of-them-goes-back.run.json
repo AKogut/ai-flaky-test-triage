@@ -1,0 +1,33 @@
+{
+  "name": "two-moved-rows-and-one-of-them-goes-back",
+  "scenario": "Two rows are moved one after the other and the list ends up showing the state after the first.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/reorder-quick-succession.spec.ts›keeps both moves when two different tasks are moved",
+      "title": "keeps both moves when two different tasks are moved",
+      "file": "tests/e2e/reorder-quick-succession.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 10808,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.task-title').first()\nExpected: \u001b[32m\"Review the migration plan\"\u001b[39m\nReceived: \u001b[31m\"Write the incident postmortem\"\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.task-title').first()\u001b[22m\n\u001b[2m    24 × locator resolved to <p class=\"task-title\">Write the incident postmortem</p>\u001b[22m\n\u001b[2m       - unexpected value \"Write the incident postmortem\"\u001b[22m\n",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('.task-title').first()\nExpected: \u001b[32m\"Review the migration plan\"\u001b[39m\nReceived: \u001b[31m\"Write the incident postmortem\"\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.task-title').first()\u001b[22m\n\u001b[2m    24 × locator resolved to <p class=\"task-title\">Write the incident postmortem</p>\u001b[22m\n\u001b[2m       - unexpected value \"Write the incident postmortem\"\u001b[22m\n\n    at tests/e2e/reorder-quick-succession.spec.ts:156:38",
+        "snippet": "\u001b[0m \u001b[90m 154 |\u001b[39m   \u001b[36mawait\u001b[39m expect\u001b[33m.\u001b[39mpoll(() \u001b[33m=>\u001b[39m stored(db)[\u001b[35m0\u001b[39m]\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mtitle)\u001b[33m.\u001b[39mtoBe(\u001b[33mOTHER\u001b[39m)\n \u001b[90m 155 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 156 |\u001b[39m   \u001b[36mawait\u001b[39m expect(titles(page)\u001b[33m.\u001b[39mfirst())\u001b[33m.\u001b[39mtoHaveText(\u001b[33mOTHER\u001b[39m)\n \u001b[90m     |\u001b[39m                                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 157 |\u001b[39m   \u001b[36mawait\u001b[39m expect(titles(page)\u001b[33m.\u001b[39mnth(\u001b[35m3\u001b[39m))\u001b[33m.\u001b[39mtoHaveText(\u001b[33mTASK\u001b[39m)\n \u001b[90m 158 |\u001b[39m })\n \u001b[90m 159 |\u001b[39m\u001b[0m"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/reorder-quick-succession.spec.ts›keeps both moves when two different tasks are moved",
+      "flakinessScore": 0.29,
+      "consecutiveFailures": 1,
+      "totalRuns": 8,
+      "statusHistory": "FPPPPPPF",
+      "firstSeenAt": "2026-08-17T12:35:55.551Z",
+      "lastPassedAt": "2026-08-17T13:49:52.152Z",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const moveUp = (page: Page, title: string): Promise<void> =>\n  row(page, title).getByRole('button', { name: 'Move up' }).click()\n\nfunction reorderResponses(page: Page): () => number {\n  let answered = 0\n  page.on('response', (response) => {\n    if (response.url().endsWith('/api/tasks/reorder')) answered += 1\n  })\n  return () => answered\n}\n\ntest('keeps both moves when two different tasks are moved', async ({ page, db }) => {\n  const answered = reorderResponses(page)\n\n  await moveUp(page, TASK)\n  await expect(titles(page).nth(3)).toHaveText(TASK)\n\n  await moveUp(page, OTHER)\n  await expect(titles(page).first()).toHaveText(OTHER)\n\n  await expect.poll(answered).toBe(2)\n  await expect.poll(() => stored(db)[0]?.title).toBe(OTHER)\n\n  await expect(titles(page).first()).toHaveText(OTHER)\n  await expect(titles(page).nth(3)).toHaveText(TASK)\n})\n"
+}
