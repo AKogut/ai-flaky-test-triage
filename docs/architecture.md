@@ -99,8 +99,58 @@ type FlakySignal = {
 }
 ```
 
-History is capped (last N runs per test, N configurable) so the file cannot grow without bound.
-Writes are atomic (write temp, rename) so an interrupted job cannot leave a truncated file.
+#### The history file
+
+`.flakemetry/history.json` is the only artifact here that is written by a machine, read by a later
+version of the same machine, and never looked at by anyone. It stores what the scoring reads and
+nothing else — errors, stacks and snippets belong to the run that produced them:
+
+```ts
+type History = {
+  schemaVersion: number
+  tests: Record<
+    string, // deriveTestId(file, title)
+    {
+      firstSeenAt: string
+      entries: {
+        runId: string
+        at: string // the run's start time
+        status: 'passed' | 'failed' | 'timedOut' | 'skipped'
+        flakyWithinRun: boolean
+      }[] // oldest first
+    }
+  >
+}
+```
+
+**The merge rule**, in full:
+
+1. Every result in the run becomes one entry against its `testId`.
+2. An entry already carrying this `runId` is **replaced**, not duplicated. GitHub keeps `run_id`
+   stable across "re-run all jobs", so appending would double a test's apparent stability every
+   time somebody retried a build.
+3. Tests in the history and not in the run are untouched. Absence has too many innocent causes —
+   sharding, a `--grep` filter, a suite that failed to start — and recording it as a status would
+   inject invented alternations into the signal.
+4. `firstSeenAt` only ever moves earlier. It is stored rather than read off the oldest retained
+   entry, because the cap evicts from the front: a test first seen in March would otherwise start
+   reporting itself as new.
+5. Entries are ordered by run start time, not by arrival, so a job for an older commit finishing
+   late cannot make its result the most recent one. `consecutiveFailures` reads the tail of that
+   order.
+6. The oldest entries beyond the cap are dropped. The cap defaults to 50 runs per test — several
+   times the scoring half-life, so the cap does not shape the score, and small enough that the file
+   is not what breaks the cache.
+
+`flakyWithinRun` is retained per entry because it cannot be recovered from `status`. A test that
+fails on attempt 1 and passes on attempt 2 is recorded green; store only the status and a test that
+does that on _every_ run reads back as `PPPPPP` — scored as the most stable test in the suite when
+it is the least.
+
+Writes are atomic (write temp, rename) so an interrupted job cannot leave a truncated file. A
+missing file is an empty history, not an error; a file that exists and cannot be understood **is**
+an error, because treating it as empty would hide the one symptom that says something is writing
+the file wrongly.
 
 ### 3. `analysis.json` → agent inputs
 
