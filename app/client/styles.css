@@ -89,8 +89,24 @@ button:hover {
   gap: 0.5rem;
 }
 
+/*
+ * `flex-wrap`, because a row can grow two more buttons.
+ *
+ * Opening the delete confirmation adds "Confirm delete" and "Cancel" to a row
+ * that already carries five controls. On one line the actions do not shrink —
+ * they are `flex-shrink: 0`, deliberately, so a button never becomes an ellipsis
+ * — so the text took all of the loss and collapsed to a box zero pixels wide.
+ * The title still *painted*, overflowing under the buttons, which is why nobody
+ * noticed it by looking.
+ *
+ * A Playwright spec did notice: an element with an empty bounding box is hidden,
+ * and `expect(title).toBeVisible()` failed while the screenshot showed the words
+ * on screen. Wrapping is the fix, and the basis on which `.task-text` is allowed
+ * to shrink to `12rem` and no further.
+ */
 .task {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.85rem;
   padding: 0.75rem 0.9rem;
@@ -114,6 +130,9 @@ button:hover {
 }
 
 .task-text {
+  /* Grow into the space, give it back down to 12rem, and stop. Below that the
+     row wraps instead — see `.task`. */
+  flex: 1 1 12rem;
   min-width: 0;
 }
 
