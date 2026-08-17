@@ -44,11 +44,28 @@ than either axis alone.
 ## Why do the tests deliberately fail sometimes?
 
 The flaky specs are input, not oversight. They exist so the pipeline has realistic failures to
-classify, and each one's header comment explains the mechanism and why the label is what it is.
+classify, and each one's header comment explains the mechanism and why the label is what it is —
+a reader can check the ground truth rather than take it on trust.
 
-The distinction that matters: their flakiness is **emergent** — it comes from a real race in the app,
-reproducible under a documented seed — not scripted with a random sleep in the test. Scripted
-flakiness makes the classification problem trivial and worthless.
+There are five, and only **one** of them is the application's fault:
+
+| Spec                               | Owner       | Why it fails                                                            |
+| ---------------------------------- | ----------- | ----------------------------------------------------------------------- |
+| `reorder-quick-succession.spec.ts` | `app_code`  | The client applies whichever reorder response arrives last              |
+| `find-by-name.spec.ts`             | `test_code` | A partial-title locator matches two rows in some list states            |
+| `visible-tasks.spec.ts`            | `test_code` | Another spec leaves a row behind — cause and symptom in different files |
+| `board-updates.spec.ts`            | `test_code` | An assertion given a fixed 120ms deadline instead of a condition        |
+| `complete.spec.ts` (fixed)         | `test_code` | Read a stored value straight after an optimistic paint                  |
+
+That spread is the point. A flat "flaky" label would put all five in one bucket while they need
+completely different responses, and the pair at the top — same symptom, opposite owner — is what
+makes the two-axis taxonomy earn its keep.
+
+The distinction that matters for all of them: their flakiness is **emergent**, not scripted. It
+comes from seeded latency in the server or from how the runner happens to schedule files, never
+from a sleep or a random number inside a test. A guard test holds every spec in the suite to that,
+including the deliberate ones. Scripted flakiness makes the classification problem trivial and
+worthless.
 
 ## Why aren't retries enabled in CI?
 
