@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › reordering twice in quick succession keeps the second order",
-      "flakinessScore": 0.63,
-      "consecutiveFailures": 0,
-      "totalRuns": 96,
+      "flakinessScore": 0.68,
+      "consecutiveFailures": 1,
+      "totalRuns": 97,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",
       "lastPassedAt": "2026-08-09T18:02:44.000Z",
-      "statusHistory": "PPFPPPFPPFP",
+      "statusHistory": "PPFPPPFPPFPF",
       "isNew": false
     }
   },

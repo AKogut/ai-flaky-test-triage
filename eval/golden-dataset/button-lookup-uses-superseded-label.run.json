@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/e2e/board.spec.ts›board › creates a task from the toolbar",
-      "flakinessScore": 0.11,
-      "consecutiveFailures": 3,
-      "totalRuns": 73,
+      "flakinessScore": 0.1,
+      "consecutiveFailures": 4,
+      "totalRuns": 74,
       "firstSeenAt": "2026-05-14T08:12:04.000Z",
       "lastPassedAt": "2026-08-07T09:41:12.000Z",
-      "statusHistory": "PPPPPPPPPFFF",
+      "statusHistory": "PPPPPPPPPFFFT",
       "isNew": false
     }
   },

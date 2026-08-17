@@ -6,7 +6,7 @@
       "testId": "tests/e2e/editor.spec.ts›editor › keeps every character typed before closing",
       "title": "editor › keeps every character typed before closing",
       "file": "tests/e2e/editor.spec.ts",
-      "status": "timedOut",
+      "status": "passed",
       "attempts": 2,
       "flakyWithinRun": true,
       "durationMs": 8890,
@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/e2e/editor.spec.ts›editor › keeps every character typed before closing",
-      "flakinessScore": 0.55,
-      "consecutiveFailures": 1,
-      "totalRuns": 88,
+      "flakinessScore": 0.61,
+      "consecutiveFailures": 0,
+      "totalRuns": 89,
       "firstSeenAt": "2026-04-02T07:31:19.000Z",
       "lastPassedAt": "2026-08-10T09:01:48.000Z",
-      "statusHistory": "PPFPPFPPPF",
+      "statusHistory": "PPFPPFPPPFP",
       "isNew": false
     }
   },

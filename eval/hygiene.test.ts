@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { Bucket, FixtureLabels } from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
 import { checkComposition, checkLeakage, runHygiene } from './hygiene.js'
-import { loadPayload } from './dataset.js'
+import { listFixtures, loadPayload } from './dataset.js'
 
 const real = loadPayload('create-task-returns-ok-instead-of-created').payload
 
@@ -150,6 +150,7 @@ describe('runHygiene against a directory', () => {
 
 describe('the committed dataset', () => {
   const report = runHygiene()
+  const names = listFixtures()
 
   it('has no leakage or pairing problems', () => {
     expect(report.errors).toEqual([])
@@ -169,23 +170,23 @@ describe('the committed dataset', () => {
   })
 
   /**
-   * Pinned, not tolerated. These eight are #177's list; a ninth would mean a new
-   * fixture was written with a history that ends somewhere production cannot put
-   * it, and this is where that gets noticed rather than in the next audit.
+   * Every fixture describes a run the reporters could have produced. This was a
+   * list of eight known-broken names until #177; it is an assertion now, which
+   * is the difference between a defect that is tracked and one that cannot
+   * recur.
    */
-  it('has exactly the eight histories that #177 is open about', () => {
-    expect(report.warnings.filter((w) => w.message.includes('#177')).map((w) => w.fixture)).toEqual(
-      [
-        'button-lookup-uses-superseded-label',
-        'control-shows-earlier-state-after-quick-toggle',
-        'debounced-save-skips-final-keystroke',
-        'delete-resurrected-by-in-flight-refetch',
-        'duplicate-key-when-two-clients-create-at-once',
-        'locator-still-uses-retired-test-id',
-        'proxy-answers-a-data-request-with-a-login-page',
-        'reorder-reconciliation-overwrites-later-drag',
-      ],
-    )
+  it('describes only runs the reporters could have produced', () => {
+    expect(report.errors.filter((e) => e.message.includes('history ends in'))).toEqual([])
+    expect(report.errors.filter((e) => e.message.includes('flakyWithinRun'))).toEqual([])
+  })
+
+  /** The four that carried `failed` beside "passed on a later attempt: yes". */
+  it('has four tests that passed on a retry, and none of them says it failed', () => {
+    const retried = names.filter((n) => loadPayload(n).payload.subject.result.flakyWithinRun)
+    expect(retried).toHaveLength(4)
+    for (const name of retried) {
+      expect(loadPayload(name).payload.subject.result.status, name).toBe('passed')
+    }
   })
 
   it('is still below the size where composition is enforced', () => {

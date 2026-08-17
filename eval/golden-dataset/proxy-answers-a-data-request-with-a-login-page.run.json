@@ -6,7 +6,7 @@
       "testId": "tests/unit/tasks.client.test.ts›client › parses the task list",
       "title": "client › parses the task list",
       "file": "tests/unit/tasks.client.test.ts",
-      "status": "failed",
+      "status": "passed",
       "attempts": 2,
       "flakyWithinRun": true,
       "durationMs": 642,
@@ -19,12 +19,12 @@
     },
     "signal": {
       "testId": "tests/unit/tasks.client.test.ts›client › parses the task list",
-      "flakinessScore": 0.43,
+      "flakinessScore": 0.38,
       "consecutiveFailures": 0,
-      "totalRuns": 131,
+      "totalRuns": 132,
       "firstSeenAt": "2026-02-11T09:03:47.000Z",
       "lastPassedAt": "2026-08-10T09:22:11.000Z",
-      "statusHistory": "PPPFPPPPPFP",
+      "statusHistory": "PPPFPPPPPFPP",
       "isNew": false
     }
   },
