@@ -355,35 +355,37 @@ describe('the baseline scored against the committed dataset', () => {
    * moved and whether the movement was intended.
    */
   it('records joint accuracy, the headline metric', () => {
-    expect(metrics.n).toBe(34)
+    expect(metrics.n).toBe(35)
     expect(metrics.joint.successes).toBe(12)
-    expect(metrics.joint.point).toBeCloseTo(0.3529, 4)
+    expect(metrics.joint.point).toBeCloseTo(0.3429, 4)
   })
 
   it('shows joint accuracy well below either axis', () => {
-    // 52.9% and 76.5% look like a classifier that half works. 35.3% is how often
+    // 54.3% and 77.1% look like a classifier that half works. 34.3% is how often
     // it produces an answer a developer could act on, and it is the only one of
     // the three that says so.
-    expect(metrics.owner.accuracy.successes).toBe(18)
-    expect(metrics.determinism.accuracy.successes).toBe(26)
+    expect(metrics.owner.accuracy.successes).toBe(19)
+    expect(metrics.determinism.accuracy.successes).toBe(27)
     expect(metrics.joint.point).toBeLessThan(metrics.owner.accuracy.point - 0.15)
   })
 
   it('reports an interval wide enough to forbid reading small movements', () => {
-    // ±15.3pp at n=34. Any comparison of two runs that differ by less than a
+    // ±15.0pp at n=35. Any comparison of two runs that differ by less than a
     // third of the dataset is noise, and the interval is what says so out loud.
-    expect(marginOfError(metrics.joint)).toBeGreaterThan(15)
-    expect(metrics.joint.interval.lower).toBeCloseTo(0.2149, 3)
-    expect(metrics.joint.interval.upper).toBeCloseTo(0.5209, 3)
+    expect(marginOfError(metrics.joint)).toBeGreaterThan(14)
+    expect(metrics.joint.interval.lower).toBeCloseTo(0.2083, 3)
+    expect(metrics.joint.interval.upper).toBeCloseTo(0.5085, 3)
   })
 
-  it('never finds a single test_code fixture, which accuracy alone hides', () => {
-    // The 7 stale-test fixtures all carry a real product diff, so the baseline
-    // calls them app_code — documented in docs/eval-methodology.md and left
-    // deliberately unfixed. The consequence is a class with F1 exactly 0.
+  it('finds one test_code fixture in nine, which accuracy alone hides', () => {
+    // The stale-test fixtures that carry a real product diff are all called
+    // app_code — documented in docs/eval-methodology.md and left deliberately
+    // unfixed. The only one it gets right is #53's captured fixture, which has
+    // no diff for that rule to fire on. A class with recall 1 in 8 is what the
+    // headline accuracy hides.
     const testCode = metrics.owner.classes.find((c) => c.label === 'test_code')
-    expect(testCode).toMatchObject({ support: 8, predictedCount: 5, truePositives: 0 })
-    expect(testCode?.f1).toBe(0)
+    expect(testCode).toMatchObject({ support: 9, predictedCount: 6, truePositives: 1 })
+    expect(testCode?.f1).toBeCloseTo(2 / 15, 5)
   })
 
   it('is beaten on owner accuracy by answering "app_code" every time', () => {

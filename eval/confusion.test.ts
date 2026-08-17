@@ -258,7 +258,7 @@ describe('the baseline against the committed dataset', () => {
     // Rows app_code / test_code / environment, columns the same.
     expect(confusionMatrix(judgements, 'owner').counts).toEqual([
       [17, 5, 0],
-      [8, 0, 0],
+      [8, 1, 0],
       [3, 0, 1],
     ])
   })
@@ -266,16 +266,21 @@ describe('the baseline against the committed dataset', () => {
   it('pins the determinism confusion matrix', () => {
     expect(confusionMatrix(judgements, 'determinism').counts).toEqual([
       [17, 4],
-      [4, 9],
+      [4, 10],
     ])
   })
 
-  it('shows the whole `test_code` row collapsing into `app_code`', () => {
-    // Eight fixtures, every one called app_code. This is the single most
-    // informative cell in the report and accuracy alone never shows it.
+  it('shows almost the whole `test_code` row collapsing into `app_code`', () => {
+    // Eight of nine called app_code. This is the single most informative cell in
+    // the report and accuracy alone never shows it.
+    //
+    // The one that escapes is the captured fixture from #53, which has no diff
+    // for the second rule to fire on. It is the exception that shows what the
+    // cell is really measuring: not that the baseline cannot recognise a test
+    // fault, but that a product diff overrides everything else it knows.
     const matrix = confusionMatrix(judgements, 'owner')
     const row = matrix.counts[matrix.labels.indexOf('test_code')]
-    expect(row).toEqual([8, 0, 0])
+    expect(row).toEqual([8, 1, 0])
   })
 
   it('scores 3 of 11 on the hard quadrant', () => {
@@ -286,9 +291,16 @@ describe('the baseline against the committed dataset', () => {
     expect(hard?.accuracy.point).toBeCloseTo(3 / 11, 10)
   })
 
-  it('has an empty quadrant, so the n/a path is exercised by real data', () => {
+  /**
+   * `test_code` + `intermittent` was the empty one until #53 captured a spec
+   * whose locator is ambiguous only under some list states. Every quadrant now
+   * has support, which is what the dataset is supposed to look like — and it
+   * means the n/a rendering path is no longer exercised by real data, so the
+   * test below covers it with fabricated data instead.
+   */
+  it('has support in every quadrant', () => {
     const empty = quadrantBreakdown(judgements).filter((r) => r.support === 0)
-    expect(empty.map((r) => `${r.owner}+${r.determinism}`)).toEqual(['test_code+intermittent'])
+    expect(empty.map((r) => `${r.owner}+${r.determinism}`)).toEqual([])
   })
 
   const byBucket = scoreBy(judgements, (j) => {
@@ -319,9 +331,13 @@ describe('the baseline against the committed dataset', () => {
     expect(bucket('straightforward')?.joint.point).toBe(1)
   })
 
-  it('is defeated by stale-test on owner alone, the axis that bucket attacks', () => {
-    expect(bucket('stale-test')?.owner.accuracy.point).toBe(0)
-    expect(bucket('stale-test')?.determinism.accuracy.point).toBe(1)
+  it('is defeated by stale-test on owner, the axis that bucket attacks', () => {
+    // 1 of 8, not 0 of 7: #53's captured fixture joined this bucket without a
+    // diff for the second rule to fire on, so the baseline reaches its locator
+    // rule and gets that one owner right. It loses it back on determinism, which
+    // is why this bucket no longer scores 100% there either.
+    expect(bucket('stale-test')?.owner.accuracy.point).toBeCloseTo(1 / 8, 10)
+    expect(bucket('stale-test')?.determinism.accuracy.point).toBeCloseTo(7 / 8, 10)
   })
 
   it('is defeated by misleading-history on determinism alone', () => {

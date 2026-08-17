@@ -1,0 +1,10 @@
+{
+  "name": "name-lookup-matches-two-rows-after-an-add",
+  "owner": "test_code",
+  "determinism": "intermittent",
+  "justification": "The tempting alternative is app_code, because the failure is intermittent and the product is what changed between a passing run and a failing one — the added row arrives sooner on some runs than on others. It is still the test that is wrong. The locator is a substring match, the board already holds another task whose title starts the same way, and once the new row is on screen the locator names two elements instead of one; the runner says so outright and lists both. Rule 2 fires: the test assumes a partial title identifies one row, which the data does not guarantee, so it is not a valid detector and cannot be evidence about the product. Waiting does not fix it and makes it certain — adding the correct toHaveCount wait before the assertion took it from roughly half of runs to eight failures out of eight. Intermittent because the history alternates: 5 failures in 19 runs, with passes inside the last five.",
+  "ruleApplied": "rule-2-unsafe-test-assumption",
+  "provenance": "captured",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

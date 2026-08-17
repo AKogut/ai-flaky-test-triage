@@ -56,7 +56,7 @@ describe('the split rule', () => {
   })
 
   it('lands near the target share over many names', () => {
-    // Not a claim about the 34 committed fixtures, which are far too few for
+    // Not a claim about the 35 committed fixtures, which are far too few for
     // this to hold — a claim about the rule itself being unbiased.
     const held = Array.from({ length: 20_000 }, (_, i) => sliceOf(`f${String(i)}`)).filter(
       (s) => s === 'holdout',
@@ -75,7 +75,7 @@ describe('adding a fixture never moves an existing one', () => {
    * permanent: a fixture that changes slice invalidates every held-out number
    * published before the change, with nothing going red.
    */
-  it('leaves all 34 committed fixtures where they were after 500 more arrive', () => {
+  it('leaves all 35 committed fixtures where they were after 500 more arrive', () => {
     const before = new Map(listFixtures().map((name) => [name, sliceOf(name)]))
 
     const grown = [...listFixtures(), ...Array.from({ length: 500 }, (_, i) => `new-${String(i)}`)]
@@ -163,11 +163,11 @@ describe('the committed dataset split', () => {
   )
   const held = composition.reduce((n, row) => n + row.holdout, 0)
 
-  it('holds out 11 of 34', () => {
-    // Pinned. 32% against a 20% target is ordinary binomial variance at n=34
-    // (sd ≈ 2.3 on an expected 6.6), not a defect in the rule. If this number
+  it('holds out 12 of 35', () => {
+    // Pinned. 34% against a 20% target is ordinary binomial variance at n=35
+    // (sd ≈ 2.4 on an expected 7), not a defect in the rule. If this number
     // moves without a fixture being added, the rule changed.
-    expect(held).toBe(11)
+    expect(held).toBe(12)
   })
 
   it('currently holds out at least one fixture from every bucket', () => {

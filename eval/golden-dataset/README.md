@@ -41,9 +41,14 @@ of the machine that ran the suite. That path reaches a prompt, then a public pul
 and it makes a fixture specific to whoever captured it. `normalisePlaywrightReport` strips it when
 given a `repositoryRoot`, and `npm run test:e2e` gives it one.
 
-**Test sources are captured without their comments.** A comment in a spec is the author's argument
-about the failure, and the author knew the answer. Keeping them would hand a classifier the label
-in prose that no word list can catch.
+**Test sources are captured without their comments, and the lines around an assertion carry none.**
+A comment in a spec is the author's argument about the failure, and the author knew the answer.
+Keeping them in `testSource` would hand a classifier the label in prose that no word list can catch
+— and the same applies to `error.snippet`, which quotes the few lines around the failure. That one
+cannot be stripped: in production the agent really does see whatever comments are there, and a
+fixture cleaned of them would be easier than the input the pipeline gets. So the fix is at the
+source. A deliberately flaky spec explains itself in its file header, which nothing captures, and
+keeps the lines beside its assertions plain.
 
 **A spec is named after the behaviour it covers, never after the defect it demonstrates.** The file
 path is part of what a classifier sees. A spec called `reorder-race.spec.ts` gives the answer away,

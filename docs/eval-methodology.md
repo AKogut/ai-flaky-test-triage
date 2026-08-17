@@ -58,30 +58,32 @@ the project demonstrates something rarer than a working classifier: a willingnes
 
 ### What it scores today
 
-Against the 33 committed fixtures, with 95% Wilson intervals:
+Against the 35 committed fixtures, with 95% Wilson intervals:
 
 | Metric                | Baseline              | Macro-F1 |
 | --------------------- | --------------------- | -------- |
-| **Joint** (both axes) | **36.4% [22.2–53.4]** | —        |
-| `owner`               | 54.5% [38.0–70.2]     | 0.36     |
-| `determinism`         | 78.8% [62.2–89.3]     | 0.77     |
+| **Joint** (both axes) | **34.3% [20.8–50.8]** | —        |
+| `owner`               | 54.3% [38.2–69.5]     | 0.40     |
+| `determinism`         | 77.1% [61.0–87.9]     | 0.76     |
 
 Three things in that table are worth reading carefully, because they are the reason the metrics are
 shaped this way.
 
-**Joint accuracy is 18pp below the `owner` axis and 42pp below `determinism`.** Reporting either
-axis alone would describe a classifier that half works; 36.4% is how often it produces an answer a
+**Joint accuracy is 20pp below the `owner` axis and 43pp below `determinism`.** Reporting either
+axis alone would describe a classifier that half works; 34.3% is how often it produces an answer a
 developer could act on without checking.
 
-**`test_code` has an F1 of exactly 0.** The baseline never once identifies a test-code failure —
-support 8, four predictions, none correct. Accuracy hides this completely; macro-F1 is what makes
-it visible, which is the argument for reporting both.
+**`test_code` has an F1 of 0.13.** The baseline identifies one test-code failure out of nine —
+support 9, six predictions, one correct — and that one is the captured fixture with no commit under
+test, where there is no product diff for the ownership rule to fire on. It was exactly 0 until that
+fixture arrived. Accuracy hides this completely; macro-F1 is what makes it visible, which is the
+argument for reporting both.
 
-**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 63.6%
-against 54.5%, because 21 of 33 fixtures are `app_code`. That is not a defect in the baseline — it
+**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 62.9%
+against 54.3%, because 22 of 35 fixtures are `app_code`. That is not a defect in the baseline — it
 is the adversarial dataset doing its job. The constant classifier's macro-F1 is 0.26 against the
-baseline's 0.36, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
-two intervals overlap heavily, so at n=33 neither result is evidence of a difference at all. That
+baseline's 0.40, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
+two intervals overlap heavily, so at n=35 neither result is evidence of a difference at all. That
 is the honest reading, and it is also the argument for growing the dataset to 60.
 
 Every number above is pinned in `eval/metrics.test.ts`. A change to the rules or to the dataset
@@ -118,16 +120,20 @@ measured against it. Scoring the baseline per bucket is that measurement:
 | Bucket                      |   n | Joint  | `owner` | `determinism` |
 | --------------------------- | --: | ------ | ------- | ------------- |
 | `straightforward`           |   8 | 100.0% | 100.0%  | 100.0%        |
-| `hard-quadrant`             |  10 | 30.0%  | 60.0%   | 70.0%         |
-| `stale-test`                |   7 | 0.0%   | 0.0%    | 100.0%        |
+| `hard-quadrant`             |  11 | 27.3%  | 54.5%   | 72.7%         |
+| `stale-test`                |   8 | 0.0%   | 12.5%   | 87.5%         |
 | `misleading-history`        |   4 | 0.0%   | 75.0%   | 0.0%          |
 | `environment-as-regression` |   4 | 25.0%  | 25.0%   | 100.0%        |
 
 Each adversarial bucket defeats the baseline **on the axis it was built to attack, and only that
 axis**:
 
-- `stale-test` targets diff-only reasoning about ownership. Owner drops to 0%; determinism stays
-  at 100%.
+- `stale-test` targets diff-only reasoning about ownership. Owner drops to 12.5%; determinism
+  stays at 87.5%. Both numbers used to be absolute — 0% and 100% — and the one fixture that moved
+  them is worth naming: the captured fixture from #53 has no commit under test, so there is no
+  product diff for the ownership rule to fire on, the baseline falls through to its locator rule
+  and gets the owner right. It loses the point back on the other axis. The bucket's story is
+  unchanged; the exception is what shows the story was about the diff all along.
 - `misleading-history` targets flakiness-score-only reasoning about stability. Determinism drops
   to 0%; owner stays at a respectable 75%.
 - `environment-as-regression` targets diff-only reasoning again, from the other direction, and
@@ -333,20 +339,20 @@ So the per-bucket balance is **best-effort and measured**, not guaranteed:
 | Bucket                      | Total | Dev | Held out |
 | --------------------------- | ----: | --: | -------: |
 | `environment-as-regression` |     4 |   3 |        1 |
-| `hard-quadrant`             |    10 |   6 |        4 |
+| `hard-quadrant`             |    11 |   7 |        4 |
 | `misleading-history`        |     4 |   3 |        1 |
-| `stale-test`                |     7 |   5 |        2 |
+| `stale-test`                |     8 |   5 |        3 |
 | `straightforward`           |     8 |   5 |        3 |
-| **Total**                   |    33 |  22 |   **11** |
+| **Total**                   |    35 |  23 |   **12** |
 
-11 of 33 is 33%, not 20%. That is ordinary binomial variance at this size — the expected count is
-6.6 with a standard deviation of 2.3 — and it narrows as the dataset grows towards 60. A bucket of
+12 of 35 is 34%, not 20%. That is ordinary binomial variance at this size — the expected count is
+7 with a standard deviation of 2.4 — and it narrows as the dataset grows towards 60. A bucket of
 four has a 41% chance of receiving no held-out fixture at all; none is currently empty, but the
 report states which are rather than letting a reader assume the split guarantees coverage.
 
 One methodological note, since this is a document about not fooling yourself. Two reasonable
 constructions exist for turning a hash into a uniform value — dividing by 2³², and the slightly
-biased `hash % 100` — and on these 33 fixtures they produce **different splits**, 11 held out
+biased `hash % 100` — and on these 35 fixtures they produce **different splits**, 12 held out
 against 6. Choosing between them after seeing that would be picking a test set by how convenient it
 looks. The unbiased one is used; the result is reported, not selected.
 

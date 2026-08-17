@@ -1,0 +1,33 @@
+{
+  "name": "name-lookup-matches-two-rows-after-an-add",
+  "scenario": "A lookup by partial name resolves to more than one row once a task with a similar title is added.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/find-by-name.spec.ts›finds a newly added task in the active list",
+      "title": "finds a newly added task in the active list",
+      "file": "tests/e2e/find-by-name.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "flakyWithinRun": false,
+      "durationMs": 367,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Review the')\nExpected: visible\nError: strict mode violation: getByText('Review the') resolved to 2 elements:\n    1) <p class=\"task-title\">Review the migration plan</p> aka getByText('Review the migration plan')\n    2) <p class=\"task-title\">Review the incident timeline</p> aka getByText('Review the incident timeline')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Review the')\u001b[22m\n",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Review the')\nExpected: visible\nError: strict mode violation: getByText('Review the') resolved to 2 elements:\n    1) <p class=\"task-title\">Review the migration plan</p> aka getByText('Review the migration plan')\n    2) <p class=\"task-title\">Review the incident timeline</p> aka getByText('Review the incident timeline')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Review the')\u001b[22m\n\n    at tests/e2e/find-by-name.spec.ts:102:40",
+        "snippet": "  100 |   await expect(page.getByText('Write the incident postmortem')).toBeVisible()\n  101 |\n> 102 |   await expect(page.getByText(PREFIX)).toBeVisible()\n      |                                        ^\n  103 | })\n  104 |\n  105 | /**"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/find-by-name.spec.ts›finds a newly added task in the active list",
+      "flakinessScore": 0.39,
+      "consecutiveFailures": 2,
+      "totalRuns": 19,
+      "firstSeenAt": "2026-08-17T12:47:45.754Z",
+      "lastPassedAt": "2026-08-17T12:50:33.222Z",
+      "statusHistory": "PPPFPPFPFPPPPPPPPFF",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const PREFIX = 'Review the'\nconst NEW_TASK = 'Review the incident timeline'\n\ntest.beforeEach(async ({ page }) => {\n  await open(page, '?filter=active')\n})\n\ntest('finds a newly added task in the active list', async ({ page }) => {\n  await expect(page.getByText(PREFIX)).toBeVisible()\n\n  await add(page, NEW_TASK)\n\n  await page.getByRole('button', { name: 'Completed' }).click()\n  await expect(page.getByText(NEW_TASK)).toHaveCount(0)\n  await expect(page.getByText('Review the release checklist')).toBeVisible()\n\n  await page.getByRole('button', { name: 'Active' }).click()\n  await expect(page.getByRole('button', { name: 'Active', pressed: true })).toBeVisible()\n  await expect(page.getByText('Write the incident postmortem')).toBeVisible()\n\n  await expect(page.getByText(PREFIX)).toBeVisible()\n})\n"
+}
