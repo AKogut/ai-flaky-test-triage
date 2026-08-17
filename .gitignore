@@ -44,3 +44,6 @@ yarn-error.log*
 .eslintcache
 /eval/report-all.md
 /eval/metrics-all.json
+
+# TaskFlow's development database. State, not source — the seed script rebuilds it.
+.taskflow/
