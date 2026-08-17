@@ -95,6 +95,33 @@ it executes, which is the only point at which reading it helps.
   filled in and the numbers moved in the direction the PR claims.
 - Reviewer notes state what you are unsure about.
 
+## Writing tests
+
+The end-to-end suite is the control group for the whole project. Every number in `eval/report.md`
+is measured against a dataset built from its runs, so a spec that is a little bit flaky does not
+merely fail sometimes — it teaches the classifier that everything is a little bit flaky, and it
+makes the deliberately flaky specs indistinguishable from the noise around them.
+
+Four rules, enforced by `tests/unit/e2e-standards.test.ts` rather than left to memory:
+
+- **Web-first assertions.** `expect(locator).toHaveCount(3)` retries until the condition holds.
+  `expect(await locator.count()).toBe(3)` samples once and races the application. The two look
+  almost identical in a diff.
+- **Never wait on the clock.** No `waitForTimeout`, no `setTimeout`. A sleep is a guess about how
+  fast a machine is, and CI is not that machine.
+- **Locators, not element handles.** `page.$` and `waitForSelector` return an element taken at one
+  moment; every assertion built on one races the next render.
+- **No dependence on another test.** Each test opens the page itself and starts from the seeded
+  database. `tests/e2e/fixtures.ts` makes that the default; opting out is one visible line and is
+  reserved for the spec that exists to demonstrate a cross-test leak.
+
+The deliberately flaky specs are held to the same four rules. Their flakiness has to come from the
+application, or from a selector choice the header comment explains and defends — never from a sleep
+somebody left in, which would make the ground-truth label a guess about the author's intent.
+
+Fault injection belongs at the network boundary (`page.route`), not in the application. A forced
+500 is deterministic; the request never reaches the server, so there is nothing to race.
+
 ## Working on prompts
 
 The highest-leverage and easiest-to-fool area of the project.
