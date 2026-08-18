@@ -102,10 +102,26 @@ catch.
 `analyze()` and the history file: EWMA flakiness scoring, streak tracking, atomic capped writes,
 and the CI cache strategy with `main`-only writes.
 
-**Status:** planned
+**Status:** done
 
 **Exit criterion:** history survives across CI runs on `main`, a cache miss degrades gracefully
 rather than crashing, and both behaviours have tests.
+
+**Met, and observed rather than argued.** ADR-0004 says GitHub's cache scoping across branches is
+subtle enough to need checking by observation, so all three clauses were read out of job logs:
+
+- A `main` run wrote `history-main-32115815984` with 1804 tests. The next `main` run restored it,
+  analysed against it, and saved 2 runs' worth — history surviving between two jobs that share
+  nothing else. ([run 32116732108](https://github.com/AKogut/ai-flaky-test-triage/actions/runs/32116732108))
+- A fresh branch restored `main`'s history through the `history-main-` fallback and did **not**
+  write. ([run 32116166714](https://github.com/AKogut/ai-flaky-test-triage/actions/runs/32116166714))
+- Before any history existed, a run missed the cache, said so, and produced a full analysis with
+  exit 0. ([run 32115147442](https://github.com/AKogut/ai-flaky-test-triage/actions/runs/32115147442))
+
+The observation earned its place: the first log showed the branch key was `history-183/merge-`,
+because `github.ref_name` is the merge ref on a pull request. Harmless while only `main` writes,
+and a silent trap the moment that is revisited. Fixed in the workflow, the ADR and a test that
+asserts one against the other.
 
 ## M7 — Root-cause & fix-suggestion agents
 
