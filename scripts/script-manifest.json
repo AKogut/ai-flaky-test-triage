@@ -55,7 +55,7 @@
       "description": "Test report + history \u2192 analysis.json",
       "milestone": "M6",
       "issue": 59,
-      "status": "pending"
+      "status": "shipped"
     },
     {
       "name": "agents:analyze",

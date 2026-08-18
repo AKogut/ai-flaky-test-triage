@@ -38,7 +38,7 @@
     "eval": "tsx eval/run-eval.ts",
     "eval:ablation": "node scripts/pending.mjs eval:ablation",
     "eval:lint": "tsx eval/hygiene.ts",
-    "flakemetry:analyze": "node scripts/pending.mjs flakemetry:analyze",
+    "flakemetry:analyze": "tsx scripts/analyze.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "help": "node scripts/help.mjs",

@@ -64,10 +64,20 @@ describe('wilsonInterval against published values', () => {
 })
 
 describe('wilsonInterval against an independent derivation', () => {
+  /**
+   * Deduplicated, because the generator repeats itself at small `n`: for `n = 1`
+   * the six expressions collapse to `k = 0` four times and `k = 1` twice. Six
+   * identical cases are six identical assertions, and — since `deriveTestId` is
+   * file plus full title — six tests sharing one identity, which would have made
+   * them share one row of flakiness history the moment the suite was analysed.
+   */
   const cases: [number, number][] = []
+  const seen = new Set<string>()
   for (const n of [1, 2, 3, 5, 10, 33, 60, 100, 997]) {
     for (const k of [0, 1, Math.floor(n / 3), Math.floor(n / 2), n - 1, n]) {
-      if (k >= 0 && k <= n) cases.push([k, n])
+      if (k < 0 || k > n || seen.has(`${String(k)}/${String(n)}`)) continue
+      seen.add(`${String(k)}/${String(n)}`)
+      cases.push([k, n])
     }
   }
 
