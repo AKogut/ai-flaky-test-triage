@@ -265,8 +265,30 @@ describe('assembling', () => {
     const bundle = assembleContext(input({ historyAvailable: false }))
     expect(bundle.facts).toContainEqual({
       label: 'history available',
-      value: 'no — the run had no history to read',
+      value:
+        'no — the run had no history to read, so determinism rests on this run’s attempts alone',
     })
+  })
+
+  /**
+   * Naming the fallback, not only the absence. `determinism` is normally decided
+   * across runs; with none, the evidence is the attempts inside this one. Saying
+   * "no history" and stopping there invites absence to be read as stability,
+   * which turns every uncached run into a page of confident `deterministic`.
+   */
+  it('names what determinism rests on when there is no history', () => {
+    const bundle = assembleContext(input({ historyAvailable: false }))
+    const stated = bundle.facts.find((f) => f.label === 'history available')?.value ?? ''
+    expect(stated).toContain('determinism')
+    expect(stated).toContain('attempts')
+  })
+
+  it('says nothing of the sort when there was history', () => {
+    const stated =
+      assembleContext(input({ historyAvailable: true })).facts.find(
+        (f) => f.label === 'history available',
+      )?.value ?? ''
+    expect(stated).toBe('yes')
   })
 
   it('says "none" rather than printing an empty history', () => {

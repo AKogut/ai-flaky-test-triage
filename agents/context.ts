@@ -250,10 +250,21 @@ export function assembleContext(
     facts.push(
       {
         label: 'history available',
-        // Stated even when false, and especially then: without it a cache miss
-        // and a genuinely new test are the same input, and they are not the same
-        // situation.
-        value: input.historyAvailable ? 'yes' : 'no — the run had no history to read',
+        /**
+         * Stated even when false, and especially then: without it a cache miss
+         * and a genuinely new test are the same input, and they are not the same
+         * situation.
+         *
+         * The false branch also names what is left. `determinism` is normally
+         * decided across runs; with no history there is only this run, so the
+         * evidence is the attempts inside it — a retry that passed, or the
+         * absence of one. Saying "no history" without saying that invites the
+         * model to read absence as stability, which is the reading that turns
+         * every uncached run into a page of confident `deterministic`.
+         */
+        value: input.historyAvailable
+          ? 'yes'
+          : 'no — the run had no history to read, so determinism rests on this run’s attempts alone',
       },
       {
         label: 'status history, oldest first',

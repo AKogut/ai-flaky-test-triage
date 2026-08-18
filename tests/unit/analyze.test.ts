@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { emptyHistory, type AnalysedTest, type Analysis, type History } from '@sentra/contracts'
+import {
+  HistoryUnreadableError,
+  emptyHistory,
+  type AnalysedTest,
+  type Analysis,
+  type History,
+} from '@sentra/contracts'
 import { mergeRun } from '@sentra/flakemetry'
 import {
   duplicateIds,
@@ -460,20 +466,119 @@ describe('when it cannot do its job', () => {
   })
 
   /**
-   * Reported rather than swallowed. A history that cannot be read is either a
-   * cache-shaped problem or a bug, and #61 is where that distinction turns into
-   * a policy — this only has to not hide it.
+   * A permission error or a full disk is not a cache-shaped problem, and
+   * swallowing it would hide a real fault behind a warning nobody reads.
    */
-  it('fails on a history it cannot read, with the library’s own message', () => {
+  it('fails on a history error that is not about the file’s contents', () => {
     const { value, errors } = quiet(() =>
       run([], {
         loadHistory: () => {
-          throw new Error('h.json cannot be read as run history: the file is empty')
+          throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' })
         },
       }),
     )
     expect(value.code).toBe(1)
-    expect(errors).toContain('cannot be read as run history')
+    expect(errors).toContain('permission denied')
+  })
+})
+
+describe('a history that cannot be used', () => {
+  const unreadable = (reason: 'unparsable' | 'invalid' | 'version') => () => {
+    throw new HistoryUnreadableError('.flakemetry/history.json', reason, 'why')
+  }
+
+  /**
+   * Cache eviction is an expected operating condition, and so is the corrupt
+   * file a killed job used to leave behind. Failing here turns a cache problem
+   * into a red pipeline on a run with perfectly good reports to describe.
+   */
+  it('does not stop the run', () => {
+    const result = run([], { loadHistory: unreadable('unparsable') })
+    expect(result.code).toBe(0)
+    expect(analysisFrom(result).tests.length).toBeGreaterThan(0)
+  })
+
+  it('says so, in the log and in the document', () => {
+    const result = run([], { loadHistory: unreadable('invalid') })
+    expect(result.output).toContain('could not be read (invalid)')
+    expect(analysisFrom(result).historySource).toBe('unreadable')
+  })
+
+  /**
+   * The other direction is the worse one: reading a broken file as "no history
+   * yet" and producing a confident, thin analysis that says nothing went wrong.
+   */
+  it('is never confused with there being no history', () => {
+    expect(analysisFrom(run([], { loadHistory: unreadable('version') })).historySource).toBe(
+      'unreadable',
+    )
+    expect(analysisFrom(run([])).historySource).toBe('missing')
+  })
+
+  it('names the fallback rather than only the failure', () => {
+    const { output } = run([], { loadHistory: unreadable('unparsable') })
+    expect(output).toContain('every test reads as new')
+    expect(output).toContain('within-run retry evidence')
+  })
+
+  it('shows it in the summary line too, where it will actually be read', () => {
+    expect(run([], { loadHistory: unreadable('unparsable') }).output).toContain(
+      'history unreadable',
+    )
+  })
+
+  /** The next run on main repairs the cache rather than tripping over it again. */
+  it('is replaced when the run is allowed to write history', () => {
+    const result = run(['--write-history'], { loadHistory: unreadable('unparsable') })
+    expect(result.histories).toHaveLength(1)
+    expect(Object.keys(result.histories[0]?.history.tests ?? {}).length).toBeGreaterThan(0)
+    expect(result.output).toContain('replaced by this run')
+  })
+
+  it('says nothing about replacing it on a job that may not write', () => {
+    expect(run([], { loadHistory: unreadable('unparsable') }).output).not.toContain('replaced')
+  })
+})
+
+describe('running with no history at all', () => {
+  const result = run([])
+
+  it('produces a full analysis rather than a reduced one', () => {
+    expect(result.code).toBe(0)
+    expect(analysisFrom(result).tests.length).toBeGreaterThan(0)
+  })
+
+  /** A cache miss is Tuesday: seven idle days, or a first run on a new branch. */
+  it('marks every test as new, and the document as having read nothing', () => {
+    const analysis = analysisFrom(result)
+    expect(analysis).toMatchObject({
+      historyAvailable: false,
+      historyDepth: 0,
+      historySource: 'missing',
+    })
+    expect(analysis.tests.every((t) => t.signal.isNew)).toBe(true)
+  })
+
+  /**
+   * The evidence that survives a cache miss. A test that failed and passed
+   * inside one run alternated where the pass/fail sequence cannot show it, which
+   * is the whole of `determinism` when there is no sequence to read.
+   */
+  it('keeps the within-run retry evidence, which is all determinism has left', () => {
+    const analysis = analysisFrom(result)
+    const retried = analysis.tests.filter((t) => t.result.flakyWithinRun)
+    for (const test of retried) {
+      expect(test.signal.flakinessScore, test.result.testId).toBeGreaterThan(0)
+    }
+    // A one-run history scores zero without it, so the assertion above is only
+    // meaningful if the flag is what lifted them.
+    for (const test of analysis.tests.filter((t) => !t.result.flakyWithinRun)) {
+      expect(test.signal.flakinessScore, test.result.testId).toBe(0)
+    }
+  })
+
+  it('does not pretend the history was read', () => {
+    expect(result.output).toContain('no history')
   })
 })
 

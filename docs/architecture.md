@@ -205,6 +205,18 @@ pull-request job contribute its own branch's failures to the history that judges
 case it exists for. A non-zero exit would stop the pipeline exactly where it should be producing its
 most useful output, and CI already knows the suite went red from the suite.
 
+**A history it cannot use does not stop it.** Cache eviction is an expected operating condition, and
+so is the truncated file a killed job used to leave behind: the command continues with an empty
+history, records `historySource: "unreadable"` on the document, and says in the log that every test
+now reads as new and `determinism` rests on within-run retries alone. Only a problem with the file's
+contents degrades — a permission error or a full disk still fails, because swallowing those would
+hide a real fault behind a warning. A run allowed to write history replaces the unusable file.
+
+`historyAvailable` says the signal is thin; `historySource` says whose problem that is. A cache that
+missed is Tuesday. A cache that was there and unreadable means something is writing the file wrongly
+— and the two produce identical output otherwise, right down to a pipeline that looks like it is
+working.
+
 When CI supplies no `GITHUB_RUN_ID`, the run's identity is a hash of the reports rather than
 anything drawn from the clock or the process. `mergeRun` keys idempotency on `runId`, so a local id
 that moved between invocations would append a second entry for every test and double the history —

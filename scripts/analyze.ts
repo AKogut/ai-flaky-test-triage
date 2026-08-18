@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import {
+  HistoryUnreadableError,
+  emptyHistory,
   normalisePlaywrightReport,
   normaliseVitestReport,
   parseTestRun,
@@ -217,7 +219,9 @@ export function summarise(analysis: Analysis): string {
     `${String(selectForTriage(analysis).length)} to triage`,
     analysis.historyAvailable
       ? `${String(analysis.historyDepth)} runs of history`
-      : 'no history — every test reads as new',
+      : analysis.historySource === 'unreadable'
+        ? 'history unreadable — every test reads as new'
+        : 'no history — every test reads as new',
   ].join(', ')
 }
 
@@ -325,11 +329,40 @@ export function main(argv: string[], deps: AnalyzeDeps = {}): number {
   }
 
   let history: History
+  let historySource: 'read' | 'missing' | 'unreadable'
   try {
     history = loadHistory(options.history)
+    historySource = historyDepth(history) > 0 ? 'read' : 'missing'
   } catch (error) {
-    console.error(`\n  ${(error as Error).message}\n`)
-    return 1
+    /**
+     * A history that cannot be used is not a reason to stop.
+     *
+     * Cache eviction is an expected operating condition, and so is the corrupt
+     * file a killed job used to leave behind. Failing here would turn a cache
+     * problem into a red pipeline on a run that has perfectly good reports to
+     * describe — and the *worse* outcome is the one this avoids in the other
+     * direction: reading a broken file as "no history yet" and producing a
+     * confident, thin analysis that says nothing went wrong.
+     *
+     * Only `HistoryUnreadableError` degrades. A permission error or a full disk
+     * is not a cache-shaped problem, and swallowing it would hide a real fault
+     * behind a warning nobody reads. That distinction is what `reason` on the
+     * error is for.
+     */
+    if (!(error instanceof HistoryUnreadableError)) {
+      console.error(`\n  ${(error as Error).message}\n`)
+      return 1
+    }
+    history = emptyHistory()
+    historySource = 'unreadable'
+    log('')
+    log(`  warning: ${options.history} could not be read (${error.reason}).`)
+    log('           Continuing without history: every test reads as new, and')
+    log('           determinism falls back to within-run retry evidence alone.')
+    if (options.writeHistory) {
+      log(`           It will be replaced by this run's history.`)
+    }
+    log('')
   }
 
   const scoring = {
@@ -345,7 +378,11 @@ export function main(argv: string[], deps: AnalyzeDeps = {}): number {
   const first = analyses[0]
   if (first === undefined) return 1
 
-  const analysis: Analysis = { ...first, tests: analyses.flatMap((a) => a.tests) }
+  const analysis: Analysis = {
+    ...first,
+    historySource,
+    tests: analyses.flatMap((a) => a.tests),
+  }
 
   write(options.out, `${JSON.stringify(analysis, null, 2)}\n`)
   log(`  wrote ${options.out}`)
