@@ -315,6 +315,29 @@ The pipeline never fails the build because of its own problems. It degrades:
 | Malformed test report  | Zod error, pipeline step fails loudly — this one _should_ be noisy         |
 | Zero failures          | Skip the agent stage entirely, post nothing                                |
 
+### What the pipeline costs, in wall-clock
+
+Measured on run
+[32126433354](https://github.com/AKogut/ai-flaky-test-triage/actions/runs/32126433354), a full
+green pass on `main`:
+
+| Job                   | Duration  |
+| --------------------- | --------- |
+| Repository hygiene    | 18 s      |
+| Static analysis       | 48 s      |
+| Unit & contract tests | 37 s      |
+| E2E tests             | 65 s      |
+| Evaluation gate       | 18 s      |
+| Flakiness analysis    | 20 s      |
+| Agent triage          | 25 s      |
+| **Wall clock**        | **138 s** |
+
+The two analysis stages add 45 seconds of machine time and nothing to the critical path — they run
+after the suites, and nothing waits on them. That is the number to watch: the moment triage is on
+the path to a merge, somebody will want it switched off.
+
+Recorded here rather than left to be re-derived, so a regression is a diff rather than a memory.
+
 ## What is deliberately not here
 
 - **No agent loop.** Classification is a single decision with a fixed input. An agentic loop

@@ -199,6 +199,44 @@ describe('the job that runs it', () => {
   })
 })
 
+describe('the analysis stages cannot fail the build', () => {
+  /**
+   * The property #71 exists to protect. A red X caused by the triage tool rather
+   * than by the tests would train everyone to ignore the check, which is the one
+   * outcome that makes the whole project useless.
+   *
+   * `continue-on-error` covers the job's own status. This covers the other half:
+   * nothing else may *depend* on them, because a required job that needs a
+   * failing one is blocked whatever that one's continue-on-error says.
+   */
+  it('no job waits on the analysis stages', () => {
+    const dependents = Object.entries(jobs).filter(([name, job]) => {
+      const needs = [job.needs ?? []].flat()
+      return name !== 'analyze' && (needs.includes('flakemetry') || needs.includes('analyze'))
+    })
+    expect(dependents.map(([name]) => name)).toEqual([])
+  })
+
+  it('both carry continue-on-error', () => {
+    for (const name of ['flakemetry', 'analyze']) {
+      expect(
+        (jobs[name] as { 'continue-on-error'?: boolean } | undefined)?.['continue-on-error'],
+        name,
+      ).toBe(true)
+    }
+  })
+
+  /**
+   * The agent job may wait on the flakemetry one — it consumes its artifact —
+   * but only under `always()`, or a flakemetry crash would silently skip triage
+   * rather than degrade it.
+   */
+  it('the agent job still runs when the stage before it failed', () => {
+    expect(jobs.analyze?.if).toContain('always()')
+    expect([jobs.analyze?.needs ?? []].flat()).toContain('flakemetry')
+  })
+})
+
 describe('what the job says out loud', () => {
   const reporting = steps('flakemetry').find((s) => s.name?.includes('cache returned'))?.run ?? ''
 
