@@ -128,10 +128,25 @@ asserts one against the other.
 The two downstream agents, the orchestrator, budget enforcement, concurrency limiting, partial
 failure isolation, and the report writer.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** `npm run agents:analyze` turns a fixture `analysis.json` into a `report.md`
 whose structure is asserted by an integration test running fully in replay mode.
+
+**All nine issues are closed and the criterion is not met, so the milestone is not done.** The
+command exists and does its job: on this repository's own CI it reads `analysis.json`, writes
+`report.md`, and posts it as a pull-request comment — the first one the pipeline has ever produced.
+An integration test drives it end to end over five scenarios in 216 ms with no network, no key and
+no cost.
+
+What is missing is the two words "replay mode". Replay serves recorded cassettes; recording them
+needs live model calls; and nothing here has an `ANTHROPIC_API_KEY`. The integration test uses a
+scripted transport instead, which buys everything replay would — determinism, zero cost, a run that
+cannot touch the network — except real model responses.
+
+Three issues carry the same shortfall and no other: #64 and #65 are complete but for their
+cassettes, and #70 for replay. All three become one command each the moment a key exists, which is
+also what #38 needs. Nothing has been spent.
 
 ## M8 — End-to-end CI & PR comment
 
