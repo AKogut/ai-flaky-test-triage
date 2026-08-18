@@ -2,7 +2,7 @@
   "name": "sentra",
   "version": "0.1.0",
   "private": true,
-  "description": "An AI triage layer for CI test failures \u2014 packaged as a pipeline step, not a service.",
+  "description": "An AI triage layer for CI test failures — packaged as a pipeline step, not a service.",
   "license": "MIT",
   "author": "Andrii Kohut",
   "repository": {
@@ -81,7 +81,8 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "8.66.0",
     "vite": "^8.2.1",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "yaml": "2.9.0"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

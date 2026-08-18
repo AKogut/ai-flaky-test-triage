@@ -36,6 +36,7 @@ jobs:
       has-unit: ${{ steps.detect.outputs.has-unit }}
       has-e2e: ${{ steps.detect.outputs.has-e2e }}
       has-eval: ${{ steps.detect.outputs.has-eval }}
+      has-flakemetry: ${{ steps.detect.outputs.has-flakemetry }}
       has-agents: ${{ steps.detect.outputs.has-agents }}
     steps:
       - uses: actions/checkout@v7
@@ -55,6 +56,7 @@ jobs:
           flag has-unit   vitest.config.ts
           flag has-e2e    playwright.config.ts
           flag has-eval   eval/run-eval.ts
+          flag has-flakemetry scripts/analyze.ts
           flag has-agents agents/run.ts
 
       - name: Validate workflow and issue-template YAML
@@ -232,6 +234,18 @@ jobs:
           path: coverage/
           retention-days: 7
 
+      # The unit run is a data source, not only a gate: unit failures classify
+      # differently from browser failures, and a history built only from
+      # Playwright output would teach the classifier that every failure has a
+      # locator in it. `if: always()` because the runs worth analysing are the
+      # red ones.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-results
+          path: results-unit.json
+          retention-days: 14
+
   # ---------------------------------------------------------------------------
   # M5 — end-to-end. Deliberately does NOT retry: retries would erase the
   # intermittency signal the whole pipeline depends on.
@@ -359,11 +373,105 @@ jobs:
           retention-days: 30
 
   # ---------------------------------------------------------------------------
-  # M6/M7/M8 — flakiness analysis and agent triage. Never fails the build.
+  # M6 — the statistical half. Runs on every branch, writes history only on main.
+  # Never fails the build: it describes a run, and the runs worth describing are
+  # the ones where something went wrong.
+  # ---------------------------------------------------------------------------
+  flakemetry:
+    name: Flakiness analysis
+    needs: [hygiene, unit, e2e]
+    if: always() && needs.hygiene.outputs.has-flakemetry == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      # Both reports, and neither is required: a job where one suite was skipped
+      # still has the other's failures worth recording.
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: test-results
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: unit-results
+
+      # ADR-0004: keyed cache with fallback to branch history, then to main's.
+      # The exact key can never hit — it carries this run's id, and no earlier
+      # run wrote it — so every restore is a restore-key match. That is the
+      # point: it makes the lookup a prefix search, newest first.
+      - name: Restore run history
+        id: history
+        uses: actions/cache/restore@v4
+        with:
+          path: .flakemetry/history.json
+          key: history-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            history-${{ github.ref_name }}-
+            history-main-
+
+      # Cache scoping across branches is subtle enough that ADR-0004 asks for it
+      # to be verified by observation. This is the observation: which key
+      # answered, and how much history came back with it.
+      - name: Report what the cache returned
+        run: |
+          matched='${{ steps.history.outputs.cache-matched-key }}'
+          if [ -z "$matched" ]; then
+            echo "::notice::history cache MISS — no key matched. Every test will read as new."
+          else
+            echo "::notice::history cache HIT via restore key: $matched"
+          fi
+          if [ -f .flakemetry/history.json ]; then
+            bytes=$(wc -c < .flakemetry/history.json | tr -d ' ')
+            tests=$(node -e "try{console.log(Object.keys(JSON.parse(require('fs').readFileSync('.flakemetry/history.json','utf8')).tests).length)}catch{console.log('unreadable')}")
+            echo "::notice::history file: ${bytes} bytes, ${tests} tests"
+            # GitHub evicts at a 10 GB repository cap; a single entry this large
+            # means the retained window needs shrinking long before that.
+            if [ "$bytes" -gt 26214400 ]; then
+              echo "::warning::history is ${bytes} bytes — approaching a size where the cache stops persisting. Lower the per-test cap."
+            fi
+          else
+            echo "::notice::no history file restored"
+          fi
+
+      # `--write-history` only on main. ADR-0004 eliminates the lost-update race
+      # by having exactly one writer rather than by mitigating contention, and a
+      # pull-request job that wrote would feed its own branch's failures into the
+      # history that judges the next one.
+      - name: Analyse the run
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            npm run flakemetry:analyze -- --write-history
+          else
+            npm run flakemetry:analyze
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: analysis
+          path: analysis.json
+          retention-days: 30
+
+      - name: Persist run history (main only — ADR-0004)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .flakemetry/history.json
+          key: history-main-${{ github.run_id }}
+
+  # ---------------------------------------------------------------------------
+  # M7/M8 — agent triage. Never fails the build.
   # ---------------------------------------------------------------------------
   analyze:
-    name: Flakiness analysis & triage
-    needs: [hygiene, e2e]
+    name: Agent triage
+    needs: [hygiene, flakemetry]
     if: always() && needs.hygiene.outputs.has-agents == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -382,21 +490,12 @@ jobs:
       - run: npm ci
 
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: test-results
-
-      # ADR-0004: keyed cache with fallback to main. Only the main-branch run writes.
-      - name: Restore run history
-        uses: actions/cache/restore@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: .flakemetry/history.json
-          key: history-${{ github.ref_name }}-${{ github.run_id }}
-          restore-keys: |
-            history-${{ github.ref_name }}-
-            history-main-
-
-      - name: flakemetry analysis
-        run: npm run flakemetry:analyze
+          name: analysis
 
       - name: Agent triage
         env:
@@ -432,10 +531,3 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
-
-      - name: Persist run history (main only — ADR-0004)
-        if: github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
-        with:
-          path: .flakemetry/history.json
-          key: history-main-${{ github.run_id }}
