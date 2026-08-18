@@ -44,7 +44,7 @@ export interface TriagedTest {
    * distinct from an API error: one means the run was too big for its
    * allowance, the other means something broke.
    */
-  unclassified?: { reason: 'budget' | 'error' | 'not-dispatched'; detail: string }
+  unclassified?: { reason: 'budget' | 'error' | 'not-dispatched' | 'not-run'; detail: string }
 }
 
 export interface PipelineResult {

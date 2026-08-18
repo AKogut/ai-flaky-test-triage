@@ -115,8 +115,15 @@ describe('escaping what a model produced', () => {
 })
 
 describe('the document', () => {
-  it('opens with the marker the comment upsert looks for', () => {
-    expect(renderReport(input())).toMatch(/^<!-- sentra:report -->/)
+  /**
+   * Written here, and only here. The workflow's upsert step used to prepend its
+   * own copy, which put the marker in the comment twice — visible in the first
+   * report this pipeline ever posted publicly.
+   */
+  it('opens with the marker the comment upsert looks for, exactly once', () => {
+    const report = renderReport(input())
+    expect(report).toMatch(/^<!-- sentra:report -->/)
+    expect(report.split('<!-- sentra:report -->')).toHaveLength(2)
   })
 
   it('counts the quadrants it found', () => {

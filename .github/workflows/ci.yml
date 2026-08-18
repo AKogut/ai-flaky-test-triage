@@ -527,8 +527,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            // The marker is written by agents/report.ts, which owns the document.
+            // Prepending a second one here put it in the comment twice — visible
+            // in the first report this pipeline ever posted.
             const MARKER = '<!-- sentra:report -->';
-            const body = MARKER + '\n' + fs.readFileSync('report.md', 'utf8');
+            const body = fs.readFileSync('report.md', 'utf8');
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const existing = (await github.paginate(

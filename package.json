@@ -2,7 +2,7 @@
   "name": "sentra",
   "version": "0.1.0",
   "private": true,
-  "description": "An AI triage layer for CI test failures — packaged as a pipeline step, not a service.",
+  "description": "An AI triage layer for CI test failures \u2014 packaged as a pipeline step, not a service.",
   "license": "MIT",
   "author": "Andrii Kohut",
   "repository": {
@@ -23,7 +23,7 @@
     "eval"
   ],
   "scripts": {
-    "agents:analyze": "node scripts/pending.mjs agents:analyze",
+    "agents:analyze": "tsx agents/run.ts",
     "analyze": "node scripts/pending.mjs analyze",
     "build": "npm run build --workspace @sentra/taskflow-client",
     "capture": "tsx scripts/capture.ts",

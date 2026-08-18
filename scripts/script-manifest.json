@@ -62,7 +62,7 @@
       "description": "analysis.json \u2192 report.md",
       "milestone": "M7",
       "issue": 66,
-      "status": "pending"
+      "status": "shipped"
     },
     {
       "name": "analyze",
