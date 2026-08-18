@@ -98,6 +98,22 @@ export const AnalysisSchema = z
     /** How many runs of history the scoring could draw on. */
     historyDepth: z.int().min(0),
 
+    /**
+     * Why there was history, or why there was not.
+     *
+     * `historyAvailable` says the signal is thin; this says whose problem that
+     * is. A cache that missed is Tuesday — seven idle days, or a first run on a
+     * new branch. A cache that was *there and unreadable* means something is
+     * writing the file wrongly, and the two produce identical output otherwise:
+     * every test new, `determinism` resting on within-run retries, and a
+     * pipeline that looks like it is working.
+     *
+     * Optional because documents written before it existed are still valid, and
+     * because only the caller that opened the file knows the answer — `analyse`
+     * is handed a history and cannot tell an empty one from an absent one.
+     */
+    historySource: z.enum(['read', 'missing', 'unreadable']).optional(),
+
     /** Every test in the run, not only the failures — the agents filter. */
     tests: z.array(AnalysedTestSchema),
   })

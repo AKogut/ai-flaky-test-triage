@@ -41,7 +41,9 @@ that the bug is a secret.
   timeline. If the evidence is not in the report, the diff, or the source, it does not exist.
 - **It cannot see history it was not given.** History lives in a CI cache. A cache miss (first run
   on a branch, eviction, expiry) means every test looks new, and the `determinism` axis degrades
-  to within-run retry evidence only.
+  to within-run retry evidence only. The context bundle says so in those words rather than leaving
+  the absence to be inferred — "no history" alone invites absence to be read as stability, which
+  turns every uncached run into a page of confident `deterministic`.
 - **It cannot detect flakiness on a single run.** Flakiness is a property of a distribution.
   One run with one failure carries almost no intermittency signal.
 - **It does not generalise beyond this repository.** Prompts, heuristics, and the dataset are
@@ -91,6 +93,12 @@ into a prompt.
   `main` job writes history; PR jobs read. Documented in ADR-0004.
 - **Cache eviction.** GitHub evicts caches after 7 days of no access and at a 10 GB repo cap.
   History is not durable storage.
+- **A history the pipeline cannot use is a warning, not a failure.** `flakemetry:analyze` continues
+  with an empty history and records `historySource: "unreadable"` in `analysis.json`, so the run
+  still produces output and the degradation is legible rather than inferred from a thin signal. Only
+  a problem with the file's _contents_ degrades; a permission error or a full disk still fails,
+  because swallowing those would hide a real fault behind a warning nobody reads. A run permitted to
+  write history replaces the unusable file, so the next one starts clean.
 - **Comment upsert relies on a marker.** If a user deletes the bot comment, the next run posts a
   fresh one. Harmless, occasionally confusing.
 - **Non-determinism in the eval gate.** The classifier's own eval is mildly flaky, which is why
