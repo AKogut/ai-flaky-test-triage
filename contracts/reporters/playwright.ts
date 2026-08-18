@@ -45,6 +45,14 @@ const PlaywrightResultSchema = z.looseObject({
   status: z.enum(['passed', 'failed', 'timedOut', 'skipped', 'interrupted']),
   duration: z.number(),
   retry: z.number(),
+  /**
+   * Optional because a reporter that drops them should degrade rather than fail
+   * the run — they buy one failure shape, not the whole pipeline. Playwright has
+   * emitted both for years; declaring them required would turn a reporter
+   * regression into a hard stop on evidence the classifier can do without.
+   */
+  workerIndex: z.number().int().min(0).optional(),
+  startTime: z.string().optional(),
   error: PlaywrightErrorSchema.optional(),
 })
 
@@ -186,6 +194,11 @@ function toResult(
     file,
     status,
     attempts: Math.max(attempts.length, 1),
+    // From the last attempt: the one whose outcome `status` reports. A retry can
+    // land on a different worker, and attributing this test to the worker it
+    // *started* on would put it in the wrong sequence.
+    ...(last?.workerIndex === undefined ? {} : { workerIndex: last.workerIndex }),
+    ...(last?.startTime === undefined ? {} : { startedAt: last.startTime }),
     flakyWithinRun: test.status === 'flaky' || passedAfterFailing,
     durationMs: attempts.reduce((total, r) => total + r.duration, 0),
     annotations: test.annotations.map((a) =>

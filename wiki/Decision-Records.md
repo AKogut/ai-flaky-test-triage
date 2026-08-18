@@ -71,6 +71,20 @@ what makes it a fair evaluation control.
 
 ---
 
+### [ADR-0008](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0008-run-level-context-is-the-worker-sequence.md) — Run-level context is the worker sequence
+
+Every field the classifier saw described the failing test alone, which makes a cross-file state leak
+impossible to get right: the failing test's evidence is complete, consistent, and points at the
+wrong file. The bundle now carries the tests that shared a worker before it, in order.
+
+**The rejected option is the interesting one.** "What else failed in this run" is cheaper, needs no
+contract change, and would not have helped — the culprit in a state leak has usually _passed_, which
+is why it left something behind rather than dying.
+
+Whether it improves accuracy is a measurement, not a claim, and it needs live model calls.
+
+---
+
 ## When an ADR is required
 
 - Changing the agent architecture — call count, loop structure, tool surface

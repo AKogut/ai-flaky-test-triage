@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  TestResultSchema,
   normalisePlaywrightReport,
   normaliseVitestReport,
   relativise,
@@ -170,16 +171,51 @@ describe('absolute paths from the runner', () => {
 })
 
 describe('the two reporters agree on shape', () => {
+  /**
+   * Which fields the schema marks optional, asked of the schema rather than
+   * listed here. A hand-maintained list is a list that goes stale the first time
+   * somebody adds a field, and going stale here means the asymmetry check below
+   * quietly stops checking anything.
+   */
+  const optionalFields = Object.entries(TestResultSchema.shape)
+    .filter(([, schema]) => schema.safeParse(undefined).success)
+    .map(([name]) => name)
+
   it('produces results with identical key sets, ignoring optional fields', () => {
-    // Nothing downstream branches on `source`, so a field present from one
-    // reporter and absent from the other would be a silent asymmetry.
+    // Nothing downstream branches on `source`, so a *required* field present
+    // from one reporter and absent from the other would be a silent asymmetry.
     const required = (run: TestRun): string[] =>
       Object.keys(run.results[0] ?? {})
-        .filter((k) => k !== 'error')
+        .filter((k) => !optionalFields.includes(k))
         .sort()
 
     const [playwright, vitest] = runs.map(([, run]) => required(run))
     expect(playwright).toEqual(vitest)
+  })
+
+  /**
+   * The asymmetries that are deliberate, named so a new one cannot join them
+   * unnoticed.
+   *
+   * `workerIndex` and `startedAt` are Playwright's alone: it runs specs across
+   * worker processes and says which, and that sequence is the only evidence a
+   * cross-file state leak leaves anywhere (#168). Vitest reports neither, so a
+   * unit failure simply has no run context — stated as absent rather than
+   * guessed at.
+   */
+  it('is asymmetric only where a reporter genuinely knows more', () => {
+    // Every key either reporter ever emits, not the first result's. `error` is
+    // present on some results and absent on others, so sampling one would report
+    // an asymmetry that is really just which test happened to fail first.
+    const emitted = (run: TestRun): string[] => [
+      ...new Set(run.results.flatMap((result) => Object.keys(result))),
+    ]
+    const [playwright, vitest] = runs.map(([, run]) => emitted(run))
+    const onlyPlaywright = (playwright ?? []).filter((k) => !(vitest ?? []).includes(k)).sort()
+    const onlyVitest = (vitest ?? []).filter((k) => !(playwright ?? []).includes(k)).sort()
+
+    expect(onlyPlaywright).toEqual(['startedAt', 'workerIndex'])
+    expect(onlyVitest).toEqual([])
   })
 
   it('derives ids the same way from the same file and title', () => {

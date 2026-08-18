@@ -62,6 +62,7 @@ export const FIELD_CAPS = {
   errorStack: 4_000,
   errorSnippet: 1_500,
   testSource: 6_000,
+  runContext: 1_500,
   sourceUnderTest: 8_000,
   diffSummary: 2_000,
   diffHunks: 12_000,
