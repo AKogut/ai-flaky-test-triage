@@ -70,7 +70,9 @@ describe('the restore keys', () => {
    * for in the first place.
    */
   it('uses a key no earlier run can have written', () => {
-    expect(restore[0]?.step.with?.key).toBe('history-${{ github.ref_name }}-${{ github.run_id }}')
+    expect(restore[0]?.step.with?.key).toBe(
+      'history-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}',
+    )
   })
 
   it('falls back to this branch, then to main, in that order', () => {
@@ -79,14 +81,26 @@ describe('the restore keys', () => {
       .map((line) => line.trim())
       .filter((line) => line !== '')
 
-    expect(keys).toEqual(['history-${{ github.ref_name }}-', 'history-main-'])
+    expect(keys).toEqual(['history-${{ github.head_ref || github.ref_name }}-', 'history-main-'])
   })
 
   /** The ADR is the specification; drift between the two is the thing to catch. */
   it('matches the keys the ADR specifies', () => {
-    expect(adr).toContain('history-${{ github.ref_name }}-${{ github.run_id }}')
-    expect(adr).toContain('history-${{ github.ref_name }}-')
+    expect(adr).toContain('history-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}')
+    expect(adr).toContain('history-${{ github.head_ref || github.ref_name }}-')
     expect(adr).toContain('history-main-')
+  })
+
+  /**
+   * `github.ref_name` is the branch on a push and the *merge ref* on a pull
+   * request — `183/merge`. Keying on it made the branch-scoped key a different
+   * string on every pull request, matching nothing. Harmless while only main
+   * writes; a trap the moment that is revisited.
+   */
+  it('keys on the branch, not on the merge ref a pull request runs from', () => {
+    const key = restore[0]?.step.with?.key ?? ''
+    expect(key).toContain('github.head_ref')
+    expect(adr).toContain('merge ref')
   })
 })
 

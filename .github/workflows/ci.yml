@@ -406,14 +406,22 @@ jobs:
       # The exact key can never hit — it carries this run's id, and no earlier
       # run wrote it — so every restore is a restore-key match. That is the
       # point: it makes the lookup a prefix search, newest first.
+      #
+      # `head_ref || ref_name`, not `ref_name` alone. On a pull_request event
+      # `github.ref_name` is the *merge ref* — `183/merge` — so the branch-scoped
+      # key was a different string on every pull request and matched nothing.
+      # Harmless today, because ADR-0004 lets only main write and so no branch
+      # cache exists to match; a trap the moment that policy is revisited, which
+      # the ADR lists as a thing that could happen. Found by reading the job log
+      # the first time this job ever ran, which is what the ADR asked for.
       - name: Restore run history
         id: history
         uses: actions/cache/restore@v4
         with:
           path: .flakemetry/history.json
-          key: history-${{ github.ref_name }}-${{ github.run_id }}
+          key: history-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-            history-${{ github.ref_name }}-
+            history-${{ github.head_ref || github.ref_name }}-
             history-main-
 
       # Cache scoping across branches is subtle enough that ADR-0004 asks for it

@@ -23,8 +23,17 @@ degrades exactly the signal the system depends on.
 
 History lives in `.flakemetry/history.json`, persisted with `actions/cache`:
 
-- Cache key: `history-${{ github.ref_name }}-${{ github.run_id }}`
-- Restore keys, in order: `history-${{ github.ref_name }}-`, then `history-main-`
+- Cache key: `history-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}`
+- Restore keys, in order: `history-${{ github.head_ref || github.ref_name }}-`, then `history-main-`
+
+**`head_ref || ref_name`, not `ref_name` alone.** This ADR originally said `github.ref_name`, which
+is the branch on a `push` event and the _merge ref_ — `183/merge` — on a `pull_request`. The
+branch-scoped key was therefore a different string on every pull request and could match nothing.
+It is harmless while this ADR's main-only rule holds, because no branch cache exists to match and
+the lookup falls through to `history-main-` as intended; it becomes a silent trap the moment that
+policy is revisited, which the last section of this document contemplates. Corrected in #60, found
+by reading the job log the first time the job ever ran — which is the manual verification this ADR
+asked for, doing the job it was asked to do.
 
 **Only jobs running on `main` write the cache.** Pull-request jobs restore history read-only.
 Writes are atomic (temp file + rename) and merge-based rather than overwrite, so a partial or
