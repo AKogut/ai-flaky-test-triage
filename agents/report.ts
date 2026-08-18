@@ -151,6 +151,7 @@ function gapLines(gaps: readonly TriagedTest[]): string[] {
     budget: 'the run reached its token budget',
     error: 'the classifier call failed',
     'not-dispatched': 'never reached, because the budget ran out first',
+    'not-run': 'the classifier never ran — see the notice above',
   }
   return [
     `> **${String(gaps.length)} unclassified.** ` +
