@@ -12,7 +12,7 @@ import { runContextFor } from './context.js'
 import { TokenBudget } from './model-client.js'
 import { hasWork } from './orchestrate.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
-import { renderReport } from './report.js'
+import { DEGRADATIONS, renderReport } from './report.js'
 import { AnthropicTransport, type Transport } from './transport.js'
 
 /**
@@ -155,13 +155,12 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
   const countCassettes = deps.cassetteCount ?? ((): number => listCassettes().length)
   const credentials = credentialState(env, countCassettes())
 
+  // Every notice comes from one table, so the report and the command cannot
+  // describe the same degradation in two different sets of words.
   const notices: string[] = []
-  if (analysis.historySource === 'unreadable') {
-    notices.push('The run history could not be read, so every test reads as new.')
-  } else if (!analysis.historyAvailable) {
-    notices.push('The run had no history, so every test reads as new.')
-  }
-  if (credentials.notice !== undefined) notices.push(credentials.notice)
+  if (analysis.historySource === 'unreadable') notices.push(DEGRADATIONS.unreadableHistory)
+  else if (!analysis.historyAvailable) notices.push(DEGRADATIONS.noHistory)
+  if (!credentials.canRun) notices.push(credentials.notice ?? DEGRADATIONS.noKey)
 
   const triagePrompt = loadPrompt(CURRENT_PROMPT.triage)
 

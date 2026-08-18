@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { TriagedTest } from './pipeline.js'
 import {
   COMMENT_LIMIT,
+  DEGRADATIONS,
   TRUNCATION_NOTICE,
   escapeAgentText,
   fit,
@@ -208,6 +209,69 @@ describe('the footer', () => {
     expect(report).toContain('has not been scored yet')
     expect(report).toContain('unmeasured system')
   })
+})
+
+describe('the notices block', () => {
+  /**
+   * Silent degradation is the specific behaviour that turns a useful tool into a
+   * misleading one: the output looks the same, it is just quietly worse.
+   */
+  it('is absent entirely when the run was clean', () => {
+    expect(renderReport(input())).not.toContain('⚠️')
+  })
+
+  it('counts the unclassified, and says what that costs the counts above', () => {
+    const report = renderReport(
+      input({
+        triaged: [
+          row(),
+          row({ classification: undefined, unclassified: { reason: 'error', detail: 'boom' } }),
+        ],
+      }),
+    )
+    expect(report).toContain('1 test(s) went unclassified')
+    expect(report).toContain('not all of it')
+  })
+
+  it('names the budget when that is why rows are missing', () => {
+    const report = renderReport(
+      input({
+        triaged: [
+          row(),
+          row({ classification: undefined, unclassified: { reason: 'budget', detail: 'gone' } }),
+        ],
+      }),
+    )
+    expect(report).toContain('reached its token budget')
+  })
+
+  /** Passed in by the caller, which is the only thing that knows about credentials. */
+  it.each([
+    ['noKey', DEGRADATIONS.noKey, 'no credentials'],
+    ['noHistory', DEGRADATIONS.noHistory, 'reads as new'],
+    ['unreadableHistory', DEGRADATIONS.unreadableHistory, 'writing that file wrongly'],
+  ])('renders the %s notice', (_name, notice, phrase) => {
+    expect(renderReport(input({ notices: [notice] }))).toContain(phrase)
+  })
+
+  /**
+   * The truncation notice can only be known after the document is rendered, so
+   * it is added on a second pass rather than guessed at from a length.
+   */
+  it('adds itself when the report had to be cut', () => {
+    const many = Array.from({ length: 400 }, () => row())
+    const report = renderReport(input({ triaged: many }))
+    expect(report).toContain('truncated to fit GitHub')
+    expect(report.length).toBeLessThanOrEqual(COMMENT_LIMIT)
+  })
+
+  /** Every notice says what it means, not only what happened. */
+  it.each(Object.entries(DEGRADATIONS).filter(([, v]) => typeof v === 'string'))(
+    '%s explains the consequence',
+    (_name, notice) => {
+      expect(String(notice).length).toBeGreaterThan(80)
+    },
+  )
 })
 
 describe('fitting under GitHub’s comment limit', () => {
