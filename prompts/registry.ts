@@ -54,6 +54,7 @@ export type Agent = 'triage' | 'root-cause' | 'fix-suggestion'
  */
 export const CURRENT_PROMPT: { triage: string } & Partial<Record<Agent, string>> = {
   triage: 'triage.v1',
+  'root-cause': 'root-cause.v1',
 }
 
 export class PromptError extends Error {
