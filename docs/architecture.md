@@ -119,6 +119,19 @@ Three consequences, and they are the reason it is defined this way rather than a
   real definition existed, so recency weighting was the only thing that moved when they were
   rescored.
 
+One half-life of quiet leaves **0.37, not 0.5** — a test that alternated on all of its last ten runs
+and then passed ten times scores 0.37, and after forty quiet runs, 0.03. The weights halve, but the
+quiet runs are transitions too: they enter the denominator without entering the numerator, so the
+score falls faster than the weighting alone. Worth stating because "half-life 10" invites the other
+reading.
+
+The curve that makes the two axes worth having is a regression, not a flaky test. Ten passes then
+twelve failures scores `0 … 0, 0.13, 0.12, 0.10, … 0.04`: it **spikes** when the test breaks and
+then decays as it keeps failing, because a test that keeps failing has stopped alternating. Read on
+the run it broke, that looks flaky. Read across twenty-two runs, it is plainly a regression — and
+`consecutiveFailures` climbs to 12 while the score falls, which is the pair of numbers that says
+so.
+
 Skipped runs are dropped before scoring — a skip produced no evidence, and reading it as "did not
 fail" invents an alternation on both sides of it, so a quarantined test would score as the flakiest
 in the suite. A run that was flaky _within itself_ counts as a transition even in first position: it
