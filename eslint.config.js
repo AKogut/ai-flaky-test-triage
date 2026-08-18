@@ -15,7 +15,22 @@ const EXEC_MODULES = ['child_process', 'node:child_process']
 
 const restrict = (modules, message) => modules.map((name) => ({ name, message }))
 
-/** Repeated by every block that configures `no-restricted-imports` under `agents/`. */
+/**
+ * Repeated by every block that configures `no-restricted-imports` under `agents/`.
+ *
+ * Flat config resolves a rule to its *last* matching entry rather than merging
+ * entries, so every block that touches `no-restricted-imports` over `agents/**`
+ * has to carry all of the patterns that apply there. Omitting one silently turns
+ * that guardrail off for the files the block matches — which has happened once
+ * already, and is why `tests/unit/lint-guardrails.test.ts` feeds the config a
+ * violation of each rule rather than trusting the shape of this file.
+ */
+const GIT_PATTERN = {
+  group: ['simple-git', 'simple-git/*'],
+  message:
+    'Git access goes through agents/git.ts, which exposes reads and nothing else. Importing the client directly hands an agent push, tag and commit — see docs/limitations-and-guardrails.md.',
+}
+
 const SDK_PATTERN = {
   group: ['@anthropic-ai/sdk', '@anthropic-ai/sdk/*'],
   message:
@@ -98,7 +113,48 @@ export default tseslint.config(
     // the production code beside it.
     ignores: ['agents/transport.ts', 'agents/transport.test.ts'],
     rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        { patterns: [SDK_PATTERN, GIT_PATTERN] },
+      ],
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // Guardrail: exactly one module may reach the git client.
+  //
+  // `agents/git.ts` hands out four reads and holds the client in a closure, so
+  // there is no field to reach through. That only means anything while it is the
+  // sole importer — one `import { simpleGit }` elsewhere and an agent has push,
+  // tag and commit, with nothing to notice.
+  //
+  // Its own test is exempt for the same reason the transport's is: the thing it
+  // checks is that a real client, driven against a real repository, exposes what
+  // this file says it does.
+  // ---------------------------------------------------------------------------
+  {
+    files: ['agents/git.ts', 'agents/git.test.ts'],
+    rules: {
       '@typescript-eslint/no-restricted-imports': ['error', { patterns: [SDK_PATTERN] }],
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // The mirror image, and the reason this is its own block.
+  //
+  // The transport is exempt from the SDK restriction by being in the `ignores`
+  // of the block that carries it — which exempts it from that block *entirely*,
+  // including every other pattern the block holds. So the moment the git
+  // restriction was added there, the one module allowed to build an SDK client
+  // silently became allowed to build a git client too.
+  //
+  // Caught by `tests/unit/lint-guardrails.test.ts`, which is the whole reason
+  // that file exists: `npm run lint` was green either way.
+  // ---------------------------------------------------------------------------
+  {
+    files: ['agents/transport.ts', 'agents/transport.test.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', { patterns: [GIT_PATTERN] }],
     },
   },
 
@@ -151,7 +207,7 @@ export default tseslint.config(
               'Agents cannot spawn processes. Git access goes through the read-only facade — see docs/limitations-and-guardrails.md.',
             ),
           ],
-          patterns: [SDK_PATTERN],
+          patterns: [SDK_PATTERN, GIT_PATTERN],
         },
       ],
     },

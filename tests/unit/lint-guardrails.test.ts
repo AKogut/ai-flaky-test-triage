@@ -101,6 +101,58 @@ describe('agents cannot touch the filesystem', () => {
   })
 })
 
+describe('only the git facade may reach the git client', () => {
+  /**
+   * `agents/git.ts` hands out four reads and holds the client in a closure, so
+   * there is no field to reach through. That only means anything while it is the
+   * sole importer: one `import { simpleGit }` elsewhere and an agent has push,
+   * tag and commit, with nothing anywhere to notice.
+   */
+  it.each([...PURE_MODULES, 'agents/cassettes.ts', 'agents/transport.ts'])(
+    '%s cannot import simple-git',
+    async (file) => {
+      const found = await violations(
+        `import { simpleGit } from 'simple-git'\nexport const g = simpleGit()\n`,
+        file,
+      )
+      expect(found).toHaveLength(1)
+      expect(found[0]).toContain('agents/git.ts')
+    },
+  )
+
+  it('exempts the facade, which is the one module allowed to', async () => {
+    const found = await violations(
+      `import { simpleGit } from 'simple-git'\nexport const g = simpleGit()\n`,
+      'agents/git.ts',
+    )
+    expect(found).toEqual([])
+  })
+
+  /**
+   * The facade is still not allowed to build a model client. Flat config resolves
+   * this rule to its last matching entry, so the block exempting `agents/git.ts`
+   * from the git restriction has to repeat the SDK one — and this is the
+   * assertion that notices when it does not.
+   */
+  it('does not accidentally exempt the facade from everything else', async () => {
+    const found = await violations(
+      `import Anthropic from '@anthropic-ai/sdk'\nexport const client = new Anthropic()\n`,
+      'agents/git.ts',
+    )
+    expect(found).toHaveLength(1)
+    expect(found[0]).toContain('Model calls go through agents/transport.ts')
+  })
+
+  /** The same trap in the other direction: the pure modules carry all three now. */
+  it.each(PURE_MODULES)('%s is covered by all three restrictions at once', async (file) => {
+    const found = await violations(
+      `import Anthropic from '@anthropic-ai/sdk'\nimport { readFileSync } from 'node:fs'\nimport { simpleGit } from 'simple-git'\nexport const x = new Anthropic(readFileSync('a', 'utf8')) as unknown as typeof simpleGit\n`,
+      file,
+    )
+    expect(found).toHaveLength(3)
+  })
+})
+
 describe('only the transport may construct an SDK client', () => {
   it.each([...PURE_MODULES, 'agents/cassettes.ts', 'agents/model-client.ts'])(
     '%s cannot import the SDK',
