@@ -48,9 +48,16 @@ export const HISTORY_FILE = '.flakemetry/history.json'
  * merge, and it is bounded on both sides for a reason. It has to be several
  * times the scoring half-life, or the cap — not the decay — is what ends up
  * shaping the score. And it has to stay small enough that the file is not the
- * thing that breaks the cache: five hundred tests at fifty entries is about two
- * megabytes of JSON, which is inside the budget with room to spare and parses in
- * milliseconds.
+ * thing that breaks the cache.
+ *
+ * The size is measured rather than estimated, because the estimate was wrong by
+ * a factor of two. This repository's own unit suite — 1758 tests — reaches
+ * **13.6 MB** at fifty entries each, about 155 bytes per entry once the `testId`
+ * keys are counted. That is comfortably inside GitHub's budget and parses in
+ * milliseconds, but it is not the two megabytes this comment claimed before
+ * anybody ran the numbers. A suite an order of magnitude larger would want a
+ * lower cap, and the CI job warns past 25 MB so that arrives as a message rather
+ * than as a cache that silently stops persisting.
  *
  * Configurable per call, because a suite that runs on every push accumulates a
  * month of runs in a week.
