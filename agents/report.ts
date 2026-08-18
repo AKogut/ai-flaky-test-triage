@@ -56,6 +56,40 @@ const cell = (text: string, max = 120): string => {
   return flat.length <= max ? flat : `${flat.slice(0, max - 1)}…`
 }
 
+/**
+ * Every way this pipeline can produce partial output, and what each one costs
+ * the reader.
+ *
+ * Silent degradation is the specific behaviour that turns a useful tool into a
+ * misleading one: the output looks the same, it is just quietly worse. So each
+ * notice says not only what happened but what it means for the reliability of
+ * what follows — "no history" alone invites absence to be read as stability,
+ * which is exactly the misreading that costs the most.
+ *
+ * The block is absent entirely when the run was clean. A permanent banner is a
+ * banner people learn to skip, and then the one that mattered goes with it.
+ */
+export const DEGRADATIONS = {
+  noKey:
+    'The classifier did not run: no credentials were available to this job. Every failure below ' +
+    'is listed with the pipeline’s own signals and no verdict — nothing here has been classified.',
+  noHistory:
+    'The run had no history to read, so every test reads as new. `determinism` rests on this ' +
+    'run’s attempts alone, which is much weaker evidence than a sequence of runs.',
+  unreadableHistory:
+    'The run history existed and could not be read, so every test reads as new. That is a ' +
+    'stronger signal than a cache miss: something is writing that file wrongly.',
+  budget:
+    'The run reached its token budget. Tests it never reached are listed as unclassified rather ' +
+    'than omitted — a missing row would read as "nothing was wrong with this test".',
+  unclassified: (n: number): string =>
+    `${String(n)} test(s) went unclassified. Their rows say why. Read the counts above as covering ` +
+    'the rest of the run, not all of it.',
+  truncated:
+    'This report was truncated to fit GitHub’s comment limit. The full document is attached to ' +
+    'the workflow run as an artifact.',
+} as const
+
 export interface ReportInput {
   triaged: readonly TriagedTest[]
   commitSha: string
@@ -96,6 +130,35 @@ export function quadrantCounts(triaged: readonly TriagedTest[]): Record<string, 
 
 export function renderReport(input: ReportInput): string {
   const limit = input.limit ?? COMMENT_LIMIT
+
+  // Rendered once without the truncation notice to find out whether it is
+  // needed, then once more with it. Cheap, and the alternative is guessing at
+  // the length of a document that has not been written yet.
+  const first = assemble(input, [...(input.notices ?? []), ...derivedNotices(input)], limit)
+  if (!first.truncated) return first.text
+  return assemble(
+    input,
+    [...(input.notices ?? []), ...derivedNotices(input), DEGRADATIONS.truncated],
+    limit,
+  ).text
+}
+
+/** Degradations the report can see for itself, rather than being told about. */
+function derivedNotices(input: ReportInput): string[] {
+  const gaps = input.triaged.filter((r) => r.unclassified !== undefined).length
+  const notices: string[] = []
+  if (gaps > 0 && gaps < input.triaged.length) notices.push(DEGRADATIONS.unclassified(gaps))
+  if (input.triaged.some((r) => r.unclassified?.reason === 'budget')) {
+    notices.push(DEGRADATIONS.budget)
+  }
+  return notices
+}
+
+function assemble(
+  input: ReportInput,
+  notices: readonly string[],
+  limit: number,
+): { text: string; truncated: boolean } {
   const classified = input.triaged.filter((r) => r.classification !== undefined)
   const gaps = input.triaged.filter((r) => r.unclassified !== undefined)
 
@@ -107,7 +170,7 @@ export function renderReport(input: ReportInput): string {
     '',
     ...quadrantLines(input.triaged),
     ...gapLines(gaps),
-    ...(input.notices ?? []).map((n) => `> ⚠️ ${escapeAgentText(n)}`),
+    ...notices.map((n) => `> ⚠️ ${escapeAgentText(n)}`),
     '',
   ]
 
@@ -129,8 +192,9 @@ export function renderReport(input: ReportInput): string {
 
   const body = [...header, ...table, ...detailed, ...collapsed].join('\n')
   const footer = renderFooter(input)
+  const text = fit(body, footer, limit)
 
-  return fit(body, footer, limit)
+  return { text, truncated: text.includes(TRUNCATION_NOTICE) }
 }
 
 function quadrantLines(triaged: readonly TriagedTest[]): string[] {
