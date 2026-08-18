@@ -12,8 +12,9 @@
     }
   },
   "dependencies": {
-    "@sentra/contracts": "*",
     "@anthropic-ai/sdk": "*",
+    "@sentra/contracts": "*",
+    "simple-git": "3.36.0",
     "zod": "*"
   }
 }
