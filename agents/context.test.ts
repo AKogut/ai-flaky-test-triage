@@ -1,12 +1,18 @@
 import { readFileSync } from 'node:fs'
-import { FixturePayloadSchema, type ClassificationInput } from '@sentra/contracts'
+import {
+  FixturePayloadSchema,
+  type AnalysedTest,
+  type ClassificationInput,
+} from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
 import {
   CONTEXT_FIELDS,
   assembleContext,
   changedPaths,
   diffSignal,
+  RUN_CONTEXT_NEIGHBOURS,
   renderContext,
+  runContextFor,
   samePath,
   siblingImplementation,
   stackPaths,
@@ -372,6 +378,181 @@ describe('ablation', () => {
     // No signals section at all rather than an empty heading, which would read
     // as "we measured nothing" instead of "we sent nothing".
     expect(renderContext(bundle)).not.toContain('MEASURED SIGNALS')
+  })
+})
+
+describe('what else ran in this worker', () => {
+  const neighbour = (testId: string, over: Partial<AnalysedTest['result']> = {}): AnalysedTest => ({
+    result: {
+      testId,
+      title: testId,
+      file: `tests/e2e/${testId}.spec.ts`,
+      status: 'passed' as const,
+      attempts: 1,
+      flakyWithinRun: false,
+      durationMs: 1,
+      annotations: [],
+      ...over,
+    },
+    signal: {
+      testId,
+      flakinessScore: 0,
+      consecutiveFailures: 0,
+      totalRuns: 1,
+      firstSeenAt: '2026-08-01T00:00:00.000Z',
+      lastPassedAt: null,
+      statusHistory: 'P',
+      isNew: true,
+    },
+  })
+
+  const at = (n: number): string => `2026-08-01T00:0${String(n)}:00.000Z`
+
+  /** A leak: the polluter ran first, in the same process, and passed. */
+  const run: AnalysedTest[] = [
+    neighbour('seeds-the-board', { workerIndex: 0, startedAt: at(1) }),
+    neighbour('leaves-a-row-behind', { workerIndex: 0, startedAt: at(2) }),
+    neighbour('elsewhere-entirely', { workerIndex: 1, startedAt: at(3) }),
+    neighbour('counts-the-rows', { workerIndex: 0, startedAt: at(4), status: 'failed' }),
+  ]
+
+  it('lists what shared the process, oldest first', () => {
+    const context = runContextFor(run, 'counts-the-rows')
+    expect(context?.before.map((n) => n.testId)).toEqual(['seeds-the-board', 'leaves-a-row-behind'])
+  })
+
+  /**
+   * The culprit in a state leak has usually **passed** — that is why it left
+   * something behind rather than dying. A field listing what else *failed* would
+   * have sounded useful and missed the case it was built for.
+   */
+  it('keeps the tests that passed, because those are the ones that leak', () => {
+    expect(runContextFor(run, 'counts-the-rows')?.before.every((n) => n.status === 'passed')).toBe(
+      true,
+    )
+  })
+
+  it('excludes another worker, which shares no process and so no state', () => {
+    expect(runContextFor(run, 'counts-the-rows')?.before.map((n) => n.testId)).not.toContain(
+      'elsewhere-entirely',
+    )
+  })
+
+  it('excludes what ran after, which cannot have caused anything', () => {
+    expect(runContextFor(run, 'leaves-a-row-behind')?.before.map((n) => n.testId)).toEqual([
+      'seeds-the-board',
+    ])
+  })
+
+  /**
+   * The order the results happen to sit in is not the order they ran. Playwright
+   * writes the report grouped by file, and a worker interleaves files — so
+   * trusting array position would produce a plausible-looking sequence that is
+   * wrong, which invites the wrong answer more strongly than no field at all.
+   */
+  it('orders by when tests ran, not by where they sit in the report', () => {
+    const shuffled = [
+      neighbour('third', { workerIndex: 0, startedAt: at(3) }),
+      neighbour('subject', { workerIndex: 0, startedAt: at(9), status: 'failed' }),
+      neighbour('first', { workerIndex: 0, startedAt: at(1) }),
+      neighbour('second', { workerIndex: 0, startedAt: at(2) }),
+    ]
+    expect(runContextFor(shuffled, 'subject')?.before.map((n) => n.testId)).toEqual([
+      'first',
+      'second',
+      'third',
+    ])
+  })
+
+  it('is null when the reporter did not say which worker ran what', () => {
+    expect(runContextFor([neighbour('alone')], 'alone')).toBeNull()
+  })
+
+  it('is null for a test the run does not contain', () => {
+    expect(runContextFor(run, 'never-ran')).toBeNull()
+  })
+
+  it('is an empty sequence, not null, for the first test in a worker', () => {
+    const context = runContextFor(run, 'seeds-the-board')
+    expect(context).not.toBeNull()
+    expect(context?.before).toEqual([])
+  })
+
+  /** A truncated sequence is not a sequence; the count says so out loud. */
+  it('keeps the most recent neighbours and counts what it dropped', () => {
+    const many = Array.from({ length: 25 }, (_, i) =>
+      neighbour(`t${String(i).padStart(2, '0')}`, {
+        workerIndex: 0,
+        startedAt: `2026-08-01T01:${String(i).padStart(2, '0')}:00.000Z`,
+      }),
+    )
+    many.push(
+      neighbour('subject', {
+        workerIndex: 0,
+        startedAt: '2026-08-01T02:00:00.000Z',
+        status: 'failed',
+      }),
+    )
+    const context = runContextFor(many, 'subject')
+    expect(context?.before).toHaveLength(RUN_CONTEXT_NEIGHBOURS)
+    expect(context?.before[0]?.testId).toBe('t15')
+    expect(context?.omitted).toBe(25 - RUN_CONTEXT_NEIGHBOURS)
+  })
+
+  /**
+   * #74 asks whether each context field earns its tokens. That question needs a
+   * number, and a number written down once drifts — so it is measured here, on a
+   * full complement of neighbours, and fails if it moves.
+   *
+   * 587 characters for ten neighbours — roughly 150 tokens — against a
+   * 1500-character cap and a 40,000-character evidence budget. Cheap, which is
+   * the argument for trying it at all; whether it is *worth* it is a question
+   * for the ablation, not for this file.
+   */
+  it('costs what the ablation will be told it costs', () => {
+    const full = Array.from({ length: RUN_CONTEXT_NEIGHBOURS }, (_, i) =>
+      neighbour(`neighbour-${String(i)}`, {
+        workerIndex: 0,
+        startedAt: `2026-08-01T00:${String(i).padStart(2, '0')}:00.000Z`,
+      }),
+    )
+    full.push(
+      neighbour('subject', {
+        workerIndex: 0,
+        startedAt: '2026-08-01T00:20:00.000Z',
+        status: 'failed',
+      }),
+    )
+
+    const base = fixture('board-shows-a-row-nothing-in-the-file-created')
+    const without = renderContext(assembleContext(base)).length
+    const withField = renderContext(
+      assembleContext({ ...base, runContext: runContextFor(full, 'subject') ?? undefined }),
+    ).length
+
+    expect(withField - without).toBe(587)
+  })
+
+  it('reaches the bundle as fenced, untrusted data', () => {
+    const bundle = assembleContext({
+      ...input(),
+      runContext: runContextFor(run, 'counts-the-rows') ?? undefined,
+    })
+    const rendered = renderContext(bundle)
+    expect(rendered).toContain('leaves-a-row-behind')
+    expect(rendered).toContain('BEGIN UNTRUSTED DATA')
+  })
+
+  /**
+   * An empty list reads as "nothing else ran", which is a claim, and a false
+   * one. The bundle's existing machinery states an absent field in words.
+   */
+  it('says nothing rather than rendering an empty sequence', () => {
+    const bundle = assembleContext({
+      ...input(),
+      runContext: runContextFor(run, 'seeds-the-board') ?? undefined,
+    })
+    expect(renderContext(bundle)).toContain('Not available for this failure')
   })
 })
 

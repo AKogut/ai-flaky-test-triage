@@ -134,6 +134,49 @@ export type Analysis = z.infer<typeof AnalysisSchema>
  * out of it, so the fields the eval harness keeps for itself cannot reach a
  * prompt built from this type. Structural rather than remembered.
  */
+/**
+ * One test that shared a worker with the failing one.
+ *
+ * Four fields, not a whole `TestResult`. The question this answers is "what else
+ * touched the same process before this ran", and an error message from a
+ * different test is noise for that — it would also multiply the field's token
+ * cost by an order of magnitude to say nothing extra.
+ */
+export const RunNeighbourSchema = z
+  .object({
+    testId: z.string().min(1),
+    title: z.string().min(1),
+    file: z.string().min(1),
+    status: z.enum(['passed', 'failed', 'timedOut', 'skipped']),
+  })
+  .strict()
+export type RunNeighbour = z.infer<typeof RunNeighbourSchema>
+
+/**
+ * What else happened in this run, for the one failure shape that needs it.
+ *
+ * A spec leaves a row behind; a different spec fails because of it. The failing
+ * test's own evidence — assertion, stack, snippet, diff — is complete and points
+ * entirely at a file that is not the problem, so no amount of it can reach the
+ * cause. Only the sequence can.
+ *
+ * Note what this is *not*: a list of what else failed. The culprit in a state
+ * leak has usually **passed**, which is why it left something behind rather than
+ * dying. A "what else went wrong in this run" field would have sounded useful
+ * and missed the case it was built for.
+ */
+export const RunContextSchema = z
+  .object({
+    /** The worker this test ran in, when the reporter said which. */
+    workerIndex: z.int().min(0).optional(),
+    /** Tests that ran in the same worker before this one, oldest first. */
+    before: z.array(RunNeighbourSchema),
+    /** Dropped by the cap. Stated rather than silent: a truncated sequence is not a sequence. */
+    omitted: z.int().min(0),
+  })
+  .strict()
+export type RunContext = z.infer<typeof RunContextSchema>
+
 export const ClassificationInputSchema = z
   .object({
     /** The failing test plus its flakiness signal. */
@@ -144,6 +187,15 @@ export const ClassificationInputSchema = z
     testSource: z.string().max(20_000).optional(),
     /** False when the run had no history to draw on — a cache miss, usually. */
     historyAvailable: z.boolean(),
+    /**
+     * What else ran in the same worker before this test.
+     *
+     * Optional because a reporter that does not say which worker ran what cannot
+     * produce it, and because every fixture written before #168 predates it. Its
+     * absence has to be stated to the classifier rather than left blank, the same
+     * as an absent history — see `agents/context.ts`.
+     */
+    runContext: RunContextSchema.optional(),
   })
   .strict()
 export type ClassificationInput = z.infer<typeof ClassificationInputSchema>

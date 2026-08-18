@@ -79,7 +79,7 @@ diff --git a/app/client/src/TaskCard.tsx b/app/client/src/TaskCard.tsx
 
 [END UNTRUSTED DATA: diffHunks]
 
-Not available for this failure: testSource, sourceUnderTest."
+Not available for this failure: testSource, runContext, sourceUnderTest."
 `;
 
 exports[`the rendered bundle > matches the recorded rendering for a hard-quadrant fixture 1`] = `
@@ -157,5 +157,5 @@ it('two overlapping writes both survive', async () => {
 
 [END UNTRUSTED DATA: testSource]
 
-Not available for this failure: sourceUnderTest, diffSummary, diffHunks."
+Not available for this failure: runContext, sourceUnderTest, diffSummary, diffHunks."
 `;

@@ -1,4 +1,4 @@
-import type { AnalysedTest, ClassificationInput } from '@sentra/contracts'
+import type { AnalysedTest, ClassificationInput, RunContext } from '@sentra/contracts'
 import { assembleEvidence, type Evidence, type FieldCaps, type UntrustedInput } from './sanitise.js'
 
 /**
@@ -53,6 +53,7 @@ export const CONTEXT_FIELDS = [
   'flakinessSignal',
   'statusHistory',
   'testSource',
+  'runContext',
   'diffSummary',
   'diffHunks',
   'derivedDiffSignal',
@@ -70,6 +71,92 @@ export interface ContextOptions {
 
 const included = (field: ContextField, options: ContextOptions): boolean =>
   options.include?.[field] !== false
+
+// ---------------------------------------------------------------------------
+// Run-level context
+// ---------------------------------------------------------------------------
+
+/**
+ * Neighbours retained, and why there is a limit at all.
+ *
+ * A leak is left by something that ran shortly before, so the most recent
+ * neighbours carry nearly all of the signal and a full worker's sequence is
+ * mostly tokens. Ten is enough to hold a `beforeEach` chain plus the specs
+ * around it; past that the field starts competing with the diff for room in the
+ * prompt, and #74 is where "does this earn its place" gets an answer with
+ * numbers rather than a guess.
+ */
+export const RUN_CONTEXT_NEIGHBOURS = 10
+
+/**
+ * What else ran in this test's worker before it.
+ *
+ * Pure, and derived from `analysis.json`, which already holds every test in the
+ * run — the material existed all along; nothing assembled it.
+ *
+ * Ordered by `startedAt` where the reporter gave one. Falling back to the order
+ * the results happen to appear in would be worse than useless here: the whole
+ * value of the field is the *sequence*, and a plausible-looking wrong sequence
+ * is a stronger invitation to the wrong answer than no field at all.
+ */
+export function runContextFor(
+  tests: readonly AnalysedTest[],
+  testId: string,
+  limit: number = RUN_CONTEXT_NEIGHBOURS,
+): RunContext | null {
+  const subject = tests.find((t) => t.result.testId === testId)
+  const worker = subject?.result.workerIndex
+  if (subject === undefined || worker === undefined || subject.result.startedAt === undefined) {
+    return null
+  }
+
+  const started = subject.result.startedAt
+  const sameWorker = tests
+    .filter(
+      (t) =>
+        t.result.workerIndex === worker &&
+        t.result.testId !== testId &&
+        t.result.startedAt !== undefined &&
+        t.result.startedAt < started,
+    )
+    .sort((a, b) => (a.result.startedAt ?? '').localeCompare(b.result.startedAt ?? ''))
+
+  const kept = sameWorker.slice(-limit)
+  return {
+    workerIndex: worker,
+    before: kept.map((t) => ({
+      testId: t.result.testId,
+      title: t.result.title,
+      file: t.result.file,
+      status: t.result.status,
+    })),
+    omitted: sameWorker.length - kept.length,
+  }
+}
+
+/**
+ * The sequence as one untrusted block.
+ *
+ * Titles and paths came out of the repository, so they go through `sanitise.ts`
+ * and are fenced as data like every other string a contributor controls — a
+ * neighbour called `` ` ``-fenced-anything must not be able to forge structure.
+ *
+ * An empty sequence renders as an empty string, which the assembler already
+ * treats as an absent field and states in words. That is the wanted behaviour —
+ * a rendered empty list would read as "nothing else ran", which is a claim, and
+ * a false one — and it needs no special case here, so there is not one: a branch
+ * that cannot change the output is a branch that will one day be read as
+ * meaningful.
+ */
+function renderRunContext(context: RunContext | undefined): string | undefined {
+  if (context === undefined) return undefined
+  const lines = context.before.map((n) => `${n.status.padEnd(8)} ${n.file} › ${n.title}`)
+  return context.omitted > 0
+    ? [`[... ${String(context.omitted)} earlier tests in this worker not listed]`, ...lines].join(
+        '\n',
+      )
+    : lines.join('\n')
+}
 
 // ---------------------------------------------------------------------------
 // Derived signals
@@ -225,6 +312,7 @@ export function assembleContext(
     errorStack: has('errorStack') ? result.error?.stack : undefined,
     errorSnippet: has('errorSnippet') ? result.error?.snippet : undefined,
     testSource: has('testSource') ? input.testSource : undefined,
+    runContext: has('runContext') ? renderRunContext(input.runContext) : undefined,
     diffSummary: has('diffSummary') ? summariseDiff(diff) : undefined,
     diffHunks: has('diffHunks') ? diff : undefined,
   }

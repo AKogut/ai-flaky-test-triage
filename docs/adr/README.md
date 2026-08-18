@@ -15,6 +15,7 @@ and links back to it.
 | [0005](0005-replay-cassettes-for-credential-free-demo.md) | Replay cassettes for a credential-free demo        | Accepted |
 | [0006](0006-single-shot-agents-no-loop.md)                | Single-shot agents, no agentic loop                | Accepted |
 | [0007](0007-no-github-app-no-pull-request-target.md)      | No GitHub App, no `pull_request_target`            | Accepted |
+| [0008](0008-run-level-context-is-the-worker-sequence.md)  | Run-level context is the worker sequence           | Accepted |
 
 ## When an ADR is required
 

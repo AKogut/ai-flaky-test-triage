@@ -56,6 +56,23 @@ export const TestResultSchema = z
     /** True when an earlier attempt failed and a later one passed. */
     flakyWithinRun: z.boolean(),
     durationMs: z.number().min(0),
+
+    /**
+     * Which worker process ran this test, and when it started.
+     *
+     * Both optional, because only Playwright reports them — and both are here
+     * for one failure shape: a spec that leaves state behind and a *different*
+     * spec that fails because of it. The failing test's own evidence is complete
+     * and entirely misleading, so the only way to reach the cause is to know
+     * what else ran in the same process, in what order.
+     *
+     * The pipeline discarded these until #168. Worth noting what they are not
+     * for: the culprit in a state leak has usually **passed**, so "what else
+     * failed in this run" would not contain it.
+     */
+    workerIndex: z.int().min(0).optional(),
+    startedAt: z.iso.datetime().optional(),
+
     error: TestErrorSchema.optional(),
     annotations: z.array(z.string()).default([]),
   })
