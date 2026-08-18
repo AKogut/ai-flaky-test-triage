@@ -185,6 +185,31 @@ missing file is an empty history, not an error; a file that exists and cannot be
 an error, because treating it as empty would hide the one symptom that says something is writing
 the file wrongly.
 
+#### The command
+
+```
+npm run flakemetry:analyze [-- --report <path>… --history <path> --out <path> --write-history]
+```
+
+Defaults to reading both `results.json` and `results-unit.json` when they exist — a default that is
+absent is a suite that did not run in this job, while a path somebody typed and got wrong is a
+mistake worth stopping for. The two are analysed separately against the same history and their
+results concatenated rather than merged into a single `TestRun` first, because a merged run would
+need one value for `source` and there is no honest one.
+
+**History is written only with `--write-history`.** ADR-0004 confines writes to `main`, and
+read-only is the direction for a flag to be forgotten in: a default that persisted would have every
+pull-request job contribute its own branch's failures to the history that judges the next one.
+
+**It exits 0 when tests failed.** The command describes a run, and a run full of failures is the
+case it exists for. A non-zero exit would stop the pipeline exactly where it should be producing its
+most useful output, and CI already knows the suite went red from the suite.
+
+When CI supplies no `GITHUB_RUN_ID`, the run's identity is a hash of the reports rather than
+anything drawn from the clock or the process. `mergeRun` keys idempotency on `runId`, so a local id
+that moved between invocations would append a second entry for every test and double the history —
+the exact double-counting the id exists to prevent.
+
 ### 3. `analysis.json` → agent inputs
 
 For each failing or newly-flaky test the orchestrator assembles a **context bundle**:

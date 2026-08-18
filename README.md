@@ -183,7 +183,7 @@ cat eval/report.md
 | `npm run test:coverage`      | M2        | Vitest with coverage, enforcing the floor in vitest.config.ts                     |
 | `npm run test:e2e`           | M5        | Playwright — TaskFlow UI flows, one server per worker; emits results.json         |
 | `npm test`                   | M5        | Unit and E2E together                                                             |
-| `npm run flakemetry:analyze` | M6 🚧     | Test report + history → analysis.json                                             |
+| `npm run flakemetry:analyze` | M6        | Test report + history → analysis.json                                             |
 | `npm run agents:analyze`     | M7 🚧     | analysis.json → report.md                                                         |
 | `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                                                 |
 | `npm run capture`            | M5        | Turn a real Playwright report into golden-dataset payloads                        |
