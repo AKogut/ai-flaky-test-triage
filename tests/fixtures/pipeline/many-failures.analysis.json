@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "runId": "ci-1",
+  "commitSha": "abc1234def",
+  "branch": "main",
+  "analysedAt": "2026-08-18T00:00:00.000Z",
+  "historyAvailable": true,
+  "historyDepth": 40,
+  "historySource": "read",
+  "tests": [
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 1",
+        "title": "board \u203a case 1",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 121,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:01:00.000Z",
+        "error": {
+          "message": "expected 1 to equal 2",
+          "stack": "    at tests/e2e/board.spec.ts:1:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 1",
+        "flakinessScore": 0.1,
+        "consecutiveFailures": 1,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 2",
+        "title": "board \u203a case 2",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 122,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:02:00.000Z",
+        "error": {
+          "message": "expected 2 to equal 3",
+          "stack": "    at tests/e2e/board.spec.ts:2:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 2",
+        "flakinessScore": 0.2,
+        "consecutiveFailures": 2,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 3",
+        "title": "board \u203a case 3",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "passed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 123,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:03:00.000Z"
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 3",
+        "flakinessScore": 0.30000000000000004,
+        "consecutiveFailures": 3,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 4",
+        "title": "board \u203a case 4",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 124,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:04:00.000Z",
+        "error": {
+          "message": "expected 4 to equal 5",
+          "stack": "    at tests/e2e/board.spec.ts:4:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 4",
+        "flakinessScore": 0.4,
+        "consecutiveFailures": 0,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 5",
+        "title": "board \u203a case 5",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 2,
+        "flakyWithinRun": true,
+        "durationMs": 125,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:05:00.000Z",
+        "error": {
+          "message": "expected 5 to equal 6",
+          "stack": "    at tests/e2e/board.spec.ts:5:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 5",
+        "flakinessScore": 0.5,
+        "consecutiveFailures": 1,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 6",
+        "title": "board \u203a case 6",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "passed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 126,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:06:00.000Z"
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 6",
+        "flakinessScore": 0.6000000000000001,
+        "consecutiveFailures": 2,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 7",
+        "title": "board \u203a case 7",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 127,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:07:00.000Z",
+        "error": {
+          "message": "expected 7 to equal 8",
+          "stack": "    at tests/e2e/board.spec.ts:7:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 7",
+        "flakinessScore": 0.7000000000000001,
+        "consecutiveFailures": 3,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 8",
+        "title": "board \u203a case 8",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 128,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:08:00.000Z",
+        "error": {
+          "message": "expected 8 to equal 9",
+          "stack": "    at tests/e2e/board.spec.ts:8:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 8",
+        "flakinessScore": 0.8,
+        "consecutiveFailures": 0,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 9",
+        "title": "board \u203a case 9",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "passed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 129,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:09:00.000Z"
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 9",
+        "flakinessScore": 0.9,
+        "consecutiveFailures": 1,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 10",
+        "title": "board \u203a case 10",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 2,
+        "flakyWithinRun": true,
+        "durationMs": 130,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:10:00.000Z",
+        "error": {
+          "message": "expected 10 to equal 11",
+          "stack": "    at tests/e2e/board.spec.ts:10:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 10",
+        "flakinessScore": 0.0,
+        "consecutiveFailures": 2,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 11",
+        "title": "board \u203a case 11",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "failed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 131,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:11:00.000Z",
+        "error": {
+          "message": "expected 11 to equal 12",
+          "stack": "    at tests/e2e/board.spec.ts:11:4"
+        }
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 11",
+        "flakinessScore": 0.10000000000000009,
+        "consecutiveFailures": 3,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    },
+    {
+      "result": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 12",
+        "title": "board \u203a case 12",
+        "file": "tests/e2e/board.spec.ts",
+        "status": "passed",
+        "attempts": 1,
+        "flakyWithinRun": false,
+        "durationMs": 132,
+        "annotations": [],
+        "workerIndex": 0,
+        "startedAt": "2026-08-18T00:12:00.000Z"
+      },
+      "signal": {
+        "testId": "tests/e2e/board.spec.ts\u203aboard \u203a case 12",
+        "flakinessScore": 0.20000000000000018,
+        "consecutiveFailures": 0,
+        "totalRuns": 40,
+        "firstSeenAt": "2026-04-02T07:31:19.000Z",
+        "lastPassedAt": "2026-08-17T00:00:00.000Z",
+        "statusHistory": "PPPFPF",
+        "isNew": false
+      }
+    }
+  ]
+}
