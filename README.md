@@ -11,7 +11,7 @@
 <!-- status:start -->
 
 > **Project status: M3 — Triage agent & replay mode.**
-> 4 of 11 milestones complete.
+> 5 of 11 milestones complete.
 > Current exit criterion: the triage agent beats the baseline on joint accuracy by a margin that survives its confidence interval — or the finding that it does not is documented in the README. Either way, `npm run demo` runs the classifier end to end with no API key.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
