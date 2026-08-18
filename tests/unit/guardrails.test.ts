@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
@@ -234,5 +234,30 @@ describe('“The pipeline cannot fail the build on its own errors”', () => {
 
   it('is a claim the documentation makes', () => {
     expect(guarantees).toContain('The pipeline cannot fail the build on its own errors')
+  })
+})
+
+describe('“`pull_request_target` is not used”', () => {
+  /**
+   * ADR-0007's central refusal, as a check rather than a promise. It is the
+   * popular workaround for fork pull requests not getting secrets, and it runs
+   * untrusted code with a write-scoped token and the secrets in the
+   * environment — so its absence is worth more than a paragraph saying it is
+   * absent.
+   *
+   * Scanned across every workflow, because the one that reintroduces it will be
+   * a new file rather than an edit to this one.
+   */
+  it('appears in no workflow', () => {
+    const dir = join(root, '.github/workflows')
+    const files = readdirSync(dir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))
+    expect(files.length).toBeGreaterThan(0)
+    for (const file of files) {
+      expect(readFileSync(join(dir, file), 'utf8'), file).not.toContain('pull_request_target')
+    }
+  })
+
+  it('is a claim the documentation makes', () => {
+    expect(guarantees).toContain('pull_request_target')
   })
 })

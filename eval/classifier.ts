@@ -10,7 +10,7 @@ import {
 } from '@sentra/agents'
 import type { Classification, ClassificationInput } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
-import { classifyWithBaseline } from './baseline.js'
+import { classifyWithBaseline } from '@sentra/agents'
 
 /**
  * Choosing which classifier the harness runs.

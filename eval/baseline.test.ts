@@ -1,6 +1,6 @@
 import { ClassificationSchema, type FixturePayload } from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
-import { classifyWithBaseline } from './baseline.js'
+import { classifyWithBaseline } from '@sentra/agents'
 import { loadAllPayloads, loadLabels } from './dataset.js'
 
 const payload = (overrides: {

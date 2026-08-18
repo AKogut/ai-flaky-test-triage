@@ -1,6 +1,6 @@
 import type { Determinism, Owner } from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
-import { classifyWithBaseline } from './baseline.js'
+import { classifyWithBaseline } from '@sentra/agents'
 import { loadAllPayloads, loadLabels } from './dataset.js'
 import {
   formatProportion,
