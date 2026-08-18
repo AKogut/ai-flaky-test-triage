@@ -12,7 +12,7 @@ import { parse } from 'yaml'
  * properties are checked here, and the behaviour was watched on real pull
  * requests: #192 created one, #196 edited that same comment in place.
  *
- * The failure this guards against is not a crash. It is a fresh comment per
+ * The failure this guards against is not a crash, and never was. It is a fresh comment per
  * push, which turns an active pull request into a wall of stale analysis and
  * guarantees the feature is muted within a week.
  */
