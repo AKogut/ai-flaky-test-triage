@@ -8,6 +8,7 @@ import {
 } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
 import { CassetteTransport, listCassettes, resolveMode } from './cassettes.js'
+import { classifyWithBaseline } from './baseline.js'
 import { runContextFor } from './context.js'
 import { TokenBudget } from './model-client.js'
 import { hasWork } from './orchestrate.js'
@@ -99,9 +100,7 @@ export function credentialState(
       ? { canRun: true }
       : {
           canRun: false,
-          notice:
-            'The classifier did not run: replay mode is in force and no cassettes are recorded. ' +
-            'The failures below are listed with the pipeline’s own signals and no verdicts.',
+          notice: 'The model did not run: replay mode is in force and no cassettes are recorded.',
         }
   }
 
@@ -112,8 +111,9 @@ export function credentialState(
     : {
         canRun: false,
         notice:
-          'The classifier did not run: no ANTHROPIC_API_KEY is configured for this job. ' +
-          'The failures below are listed with the pipeline’s own signals and no verdicts.',
+          'The model did not run: no ANTHROPIC_API_KEY is configured for this job. That is ' +
+          'expected on a pull request from a fork — GitHub does not expose secrets to them, and ' +
+          'ADR-0007 degrades rather than reaching for pull_request_target.',
       }
 }
 
@@ -160,14 +160,25 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
   const notices: string[] = []
   if (analysis.historySource === 'unreadable') notices.push(DEGRADATIONS.unreadableHistory)
   else if (!analysis.historyAvailable) notices.push(DEGRADATIONS.noHistory)
-  if (!credentials.canRun) notices.push(credentials.notice ?? DEGRADATIONS.noKey)
+  if (!credentials.canRun) {
+    notices.push(credentials.notice ?? DEGRADATIONS.noKey)
+    notices.push(DEGRADATIONS.baselineOnly)
+  }
 
   const triagePrompt = loadPrompt(CURRENT_PROMPT.triage)
 
   return await renderAndWrite()
 
   async function renderAndWrite(): Promise<number> {
-    // Without credentials there is nothing to await, and a report is still owed.
+    /**
+     * Without credentials the baseline heuristic classifies instead.
+     *
+     * ADR-0007 chose degrading over escalating, and this is where that stops
+     * being a slogan. A fork pull request gets rows with real verdicts on them
+     * rather than a page of "unclassified" — the same control the evaluation
+     * measures the model against, which is also what keeps that control honest:
+     * a baseline nobody would read is not a fair comparison.
+     */
     if (!credentials.canRun) {
       write(
         options.out,
@@ -176,18 +187,12 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
             .filter((t) => hasWork({ ...analysis, tests: [t] }))
             .map((test) => ({
               test,
-              unclassified: {
-                // Its own reason, not `error`. No call was made, and a header
-                // that says "the classifier call failed" about a call that never
-                // happened sends a reader looking for an outage.
-                reason: 'not-run' as const,
-                detail: 'no classifier was available for this run',
-              },
+              classification: classifyWithBaseline(inputFor(test)),
             })),
           commitSha: analysis.commitSha,
           branch: analysis.branch,
           runId: analysis.runId,
-          model: 'none — the classifier did not run',
+          model: 'none — the baseline heuristic, no model call',
           promptVersions: { triage: triagePrompt.version },
           usage: [],
           notices,

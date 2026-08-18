@@ -85,6 +85,10 @@ export const DEGRADATIONS = {
   unclassified: (n: number): string =>
     `${String(n)} test(s) went unclassified. Their rows say why. Read the counts above as covering ` +
     'the rest of the run, not all of it.',
+  baselineOnly:
+    'These verdicts come from the baseline heuristic — a set of rules over the error text, the ' +
+    'diff and the flakiness signal. It is the control the model is measured against, not the ' +
+    'model. Expect it to be right about the obvious cases and wrong about the interesting ones.',
   truncated:
     'This report was truncated to fit GitHub’s comment limit. The full document is attached to ' +
     'the workflow run as an artifact.',

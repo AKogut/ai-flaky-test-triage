@@ -1,7 +1,7 @@
 import type { Determinism, FixtureLabels, Owner } from '@sentra/contracts'
 import { format } from 'prettier'
 import { describe, expect, it } from 'vitest'
-import { classifyWithBaseline } from './baseline.js'
+import { classifyWithBaseline } from '@sentra/agents'
 import {
   confusionMatrix,
   partitionByGroundTruthConfidence,

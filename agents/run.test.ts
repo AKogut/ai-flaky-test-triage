@@ -165,19 +165,37 @@ describe('a run with nothing to triage', () => {
   })
 })
 
-describe('a run with no classifier', () => {
+describe('a run with no model', () => {
   it('still writes a report, and still exits 0', async () => {
     const result = await run([], { env: {} })
     expect(result.code).toBe(0)
     expect(Object.keys(result.written)).toEqual(['report.md'])
   })
 
-  /** Its own reason: a header saying "the call failed" about a call that never happened misleads. */
-  it('says the classifier never ran, not that it failed', async () => {
+  /**
+   * ADR-0007 chose degrading over escalating, and this is where that stops being
+   * a slogan: a fork pull request gets rows with real verdicts on them rather
+   * than a page of "unclassified".
+   */
+  it('classifies with the baseline heuristic instead of giving up', async () => {
     const report = (await run([], { env: { SENTRA_LIVE: '1' } })).written['report.md'] ?? ''
-    expect(report).toContain('the classifier never ran')
+    expect(report).toContain('baseline heuristic')
     expect(report).toContain('no ANTHROPIC_API_KEY')
-    expect(report).not.toContain('the classifier call failed')
+    expect(report).not.toContain('unclassified')
+  })
+
+  /** Named for what a fork PR reader needs to know, not for the missing variable. */
+  it('says why the model was skipped, in terms of forks', async () => {
+    const report = (await run([], { env: { SENTRA_LIVE: '1' } })).written['report.md'] ?? ''
+    expect(report).toContain('from a fork')
+    expect(report).toContain('pull_request_target')
+  })
+
+  /** The control has to be readable, or it is not a fair comparison either. */
+  it('produces verdicts a reader could act on, not a stub', async () => {
+    const report = (await run([], { env: { SENTRA_LIVE: '1' } })).written['report.md'] ?? ''
+    expect(report).toMatch(/app_code|test_code|environment/)
+    expect(report).toContain('no rule matched')
   })
 })
 

@@ -10,7 +10,6 @@
  */
 
 export * from './dataset.js'
-export * from './baseline.js'
 export * from './metrics.js'
 export * from './confusion.js'
 export * from './classifier.js'
