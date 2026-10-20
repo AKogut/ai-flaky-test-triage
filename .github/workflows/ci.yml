@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -187,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -206,7 +206,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -227,7 +227,7 @@ jobs:
       - name: The credential-free demo still runs
         run: npm run demo
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: unit-coverage
@@ -239,7 +239,7 @@ jobs:
       # Playwright output would teach the classifier that every failure has a
       # locator in it. `if: always()` because the runs worth analysing are the
       # red ones.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: unit-results
@@ -258,7 +258,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -275,7 +275,7 @@ jobs:
       # message and a guess, which is the position this project exists to
       # improve on. Kept whatever the outcome: a red run is the one worth
       # keeping.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
@@ -303,7 +303,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -363,7 +363,7 @@ jobs:
           SENTRA_EVAL_SCOPE_CHANGED: ${{ steps.scope.outputs.changed }}
         run: npm run eval -- --gate
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: eval-report
@@ -385,7 +385,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -393,11 +393,11 @@ jobs:
 
       # Both reports, and neither is required: a job where one suite was skipped
       # still has the other's failures worth recording.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: test-results
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: unit-results
@@ -416,7 +416,7 @@ jobs:
       # the first time this job ever ran, which is what the ADR asked for.
       - name: Restore run history
         id: history
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .flakemetry/history.json
           key: history-${{ github.head_ref || github.ref_name }}-${{ github.run_id }}
@@ -460,7 +460,7 @@ jobs:
             npm run flakemetry:analyze
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: analysis
@@ -469,7 +469,7 @@ jobs:
 
       - name: Persist run history (main only — ADR-0004)
         if: github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .flakemetry/history.json
           key: history-main-${{ github.run_id }}
@@ -491,17 +491,17 @@ jobs:
         with:
           fetch-depth: 0 # agents need real diff history
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: test-results
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: analysis
 
@@ -511,7 +511,7 @@ jobs:
         run: npm run agents:analyze
 
       - name: Upload report and spans
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: triage-report
@@ -523,7 +523,7 @@ jobs:
 
       - name: Upsert PR comment
         if: github.event_name == 'pull_request' && hashFiles('report.md') != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
