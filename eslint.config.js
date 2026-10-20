@@ -49,6 +49,9 @@ export default tseslint.config(
       // the *contents* of a test file in an imaginary repository, read as text
       // and passed into a prompt — linting them would be linting the input.
       'demo/sources/**',
+      // The inputs the reporter fixtures are generated from. They fail on
+      // purpose and are never run by this repository's own suites.
+      'tests/fixtures/reporters/source/**',
       'playwright-report/**',
       'test-results/**',
       '**/*.d.ts',

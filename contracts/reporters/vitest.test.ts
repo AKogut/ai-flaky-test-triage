@@ -7,7 +7,7 @@ import { TestRunSchema } from '../test-run.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const report: unknown = JSON.parse(
-  readFileSync(join(root, 'tests/fixtures/reporters/vitest-4.1.10.json'), 'utf8'),
+  readFileSync(join(root, 'tests/fixtures/reporters/vitest-5.0.5.json'), 'utf8'),
 )
 
 const meta = { runId: 'run-1', commitSha: 'abc1234', branch: 'main', repositoryRoot: '/repo' }

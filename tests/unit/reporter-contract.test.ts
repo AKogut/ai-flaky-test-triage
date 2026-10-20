@@ -59,10 +59,10 @@ describe('pinned reporter versions', () => {
 })
 
 const runs: [label: string, run: TestRun][] = [
-  ['playwright', normalisePlaywrightReport(read('playwright-1.62.1.json'), meta)],
+  ['playwright', normalisePlaywrightReport(read('playwright-1.64.1.json'), meta)],
   [
     'vitest',
-    normaliseVitestReport(read('vitest-4.1.10.json'), { ...meta, repositoryRoot: '/repo' }),
+    normaliseVitestReport(read('vitest-5.0.5.json'), { ...meta, repositoryRoot: '/repo' }),
   ],
 ]
 
@@ -134,7 +134,7 @@ describe.each(runs)('%s normalisation', (_label, run) => {
  * captured fixture specific to whoever captured it.
  */
 describe('absolute paths from the runner', () => {
-  const raw = read('playwright-1.62.1.json')
+  const raw = read('playwright-1.64.1.json')
   const stacks = (run: TestRun): string =>
     run.results
       .map((result) => `${result.error?.stack ?? ''}${result.error?.snippet ?? ''}`)
