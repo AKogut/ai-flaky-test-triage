@@ -17,7 +17,7 @@ import { TestRunSchema } from '../test-run.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const report: unknown = JSON.parse(
-  readFileSync(join(root, 'tests/fixtures/reporters/playwright-1.62.1.json'), 'utf8'),
+  readFileSync(join(root, 'tests/fixtures/reporters/playwright-1.64.1.json'), 'utf8'),
 )
 
 const meta = { runId: 'run-1', commitSha: 'abc1234', branch: 'main' }
