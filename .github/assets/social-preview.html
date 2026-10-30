@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- Source of social-preview.png (1280×640). Same template as the other portfolio repositories. -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1280px;
+        height: 640px;
+        overflow: hidden;
+      }
+      body {
+        background: linear-gradient(135deg, #0d1117 0%, #10151c 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        position: relative;
+        color: #e6edf3;
+      }
+      .topbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, #58a6ff 0%, #4cc38a 100%);
+      }
+      .wrap {
+        display: flex;
+        gap: 24px;
+        padding: 84px 80px 0;
+      }
+      .accent {
+        width: 5px;
+        border-radius: 3px;
+        background: linear-gradient(180deg, #58a6ff, #4cc38a);
+        align-self: stretch;
+        margin-bottom: 8px;
+      }
+      .eyebrow {
+        color: #58a6ff;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 4px;
+      }
+      h1 {
+        font-size: 60px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-top: 14px;
+      }
+      h1 .t1 {
+        color: #f0f6fc;
+        display: block;
+      }
+      h1 .t2 {
+        display: block;
+        background: linear-gradient(90deg, #58a6ff, #4cc38a);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .sub {
+        color: #c9d1d9;
+        font-size: 25px;
+        line-height: 1.36;
+        margin-top: 26px;
+      }
+      .chips {
+        display: flex;
+        gap: 16px;
+        margin-top: 40px;
+      }
+      .chip {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 24px;
+        padding: 11px 22px;
+        font-size: 22px;
+        font-weight: 600;
+        color: #e6edf3;
+        white-space: nowrap;
+      }
+      .tech {
+        color: #8b949e;
+        font-size: 23px;
+        font-weight: 500;
+        margin-top: 40px;
+      }
+      .url {
+        color: #6e7681;
+        font-size: 21px;
+        font-weight: 500;
+        margin-top: 22px;
+      }
+      .motif {
+        position: absolute;
+        top: 70px;
+        right: 56px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar"></div>
+    <svg class="motif" width="210" height="210" viewBox="0 0 240 240">
+      <g stroke="#58a6ff" stroke-width="1.5" opacity="0.3">
+        <line x1="30" y1="50" x2="120" y2="120" />
+        <line x1="30" y1="96" x2="120" y2="120" />
+        <line x1="30" y1="144" x2="120" y2="120" />
+        <line x1="30" y1="190" x2="120" y2="120" />
+        <line x1="120" y1="120" x2="210" y2="60" />
+        <line x1="120" y1="120" x2="210" y2="120" />
+        <line x1="120" y1="120" x2="210" y2="180" />
+      </g>
+      <circle cx="30" cy="50" r="7" fill="#8b949e" />
+      <circle cx="30" cy="96" r="7" fill="#8b949e" />
+      <circle cx="30" cy="144" r="7" fill="#8b949e" />
+      <circle cx="30" cy="190" r="7" fill="#8b949e" />
+      <rect
+        x="104"
+        y="104"
+        width="32"
+        height="32"
+        rx="6"
+        transform="rotate(45 120 120)"
+        fill="#0d1117"
+        stroke="#58a6ff"
+        stroke-width="2"
+      />
+      <circle cx="120" cy="120" r="8" fill="#58a6ff" />
+      <circle cx="210" cy="60" r="11" fill="#f85149" />
+      <circle cx="210" cy="120" r="11" fill="#e3b341" />
+      <circle cx="210" cy="180" r="11" fill="#4cc38a" />
+    </svg>
+    <div class="wrap">
+      <div class="accent"></div>
+      <div class="col">
+        <div class="eyebrow">AI · CI FAILURE TRIAGE</div>
+        <h1><span class="t1">Sentra</span><span class="t2">AI Triage for CI Failures</span></h1>
+        <div class="sub">
+          Classifies every failure, hypothesises the root cause and<br />posts one actionable PR
+          comment — a pipeline step, not a service.
+        </div>
+        <div class="chips">
+          <div class="chip">golden dataset</div>
+          <div class="chip">non-LLM baseline</div>
+          <div class="chip">evaluation gate</div>
+          <div class="chip">one PR comment</div>
+        </div>
+        <div class="tech">
+          TypeScript · Claude API · Vitest · Playwright · OpenTelemetry · GitHub Actions
+        </div>
+        <div class="url">github.com/AKogut/ai-flaky-test-triage</div>
+      </div>
+    </div>
+  </body>
+</html>
