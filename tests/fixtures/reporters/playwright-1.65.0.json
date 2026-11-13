@@ -71,8 +71,8 @@
     "tags": [],
     "updateSnapshots": "default",
     "updateSourceMethod": "patch",
-    "version": "1.64.1",
-    "workers": 14,
+    "version": "1.65.0",
+    "workers": 5,
     "webServer": null
   },
   "suites": [
@@ -98,7 +98,7 @@
                   "workerIndex": 3,
                   "parallelIndex": 0,
                   "status": "failed",
-                  "duration": 2,
+                  "duration": 4,
                   "error": {
                     "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
                     "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at /repo/specs/sample.spec.ts:21:13",
@@ -122,7 +122,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-20T13:35:21.608Z",
+                  "startTime": "2026-11-13T20:26:39.012Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -141,12 +141,12 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2,
+                  "duration": 3,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 1,
-                  "startTime": "2026-10-20T13:35:21.912Z",
+                  "startTime": "2026-11-13T20:26:39.377Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -185,12 +185,12 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "skipped",
-                  "duration": 2,
+                  "duration": 1,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-20T13:35:21.931Z",
+                  "startTime": "2026-11-13T20:26:39.402Z",
                   "annotations": [
                     {
                       "type": "skip",
@@ -229,7 +229,7 @@
                   "workerIndex": 4,
                   "parallelIndex": 0,
                   "status": "timedOut",
-                  "duration": 153,
+                  "duration": 152,
                   "error": {
                     "message": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m",
                     "stack": "\u001b[31mTest timeout of 150ms exceeded.\u001b[39m"
@@ -242,7 +242,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-20T13:35:21.938Z",
+                  "startTime": "2026-11-13T20:26:39.410Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -269,7 +269,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 1,
-                  "startTime": "2026-10-20T13:35:22.399Z",
+                  "startTime": "2026-11-13T20:26:39.928Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -296,7 +296,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 2,
-                  "startTime": "2026-10-20T13:35:22.860Z",
+                  "startTime": "2026-11-13T20:26:40.451Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -339,12 +339,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2,
+                      "duration": 3,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-10-20T13:35:20.686Z",
+                      "startTime": "2026-11-13T20:26:37.892Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -381,7 +381,7 @@
                           "workerIndex": 0,
                           "parallelIndex": 0,
                           "status": "failed",
-                          "duration": 2,
+                          "duration": 3,
                           "error": {
                             "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m",
                             "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n    at /repo/specs/sample.spec.ts:13:26",
@@ -405,7 +405,7 @@
                           "stdout": [],
                           "stderr": [],
                           "retry": 0,
-                          "startTime": "2026-10-20T13:35:20.703Z",
+                          "startTime": "2026-11-13T20:26:37.917Z",
                           "annotations": [],
                           "attachments": [
                             {
@@ -424,7 +424,7 @@
                           "workerIndex": 1,
                           "parallelIndex": 0,
                           "status": "failed",
-                          "duration": 4,
+                          "duration": 5,
                           "error": {
                             "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m",
                             "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n    at /repo/specs/sample.spec.ts:13:26",
@@ -448,7 +448,7 @@
                           "stdout": [],
                           "stderr": [],
                           "retry": 1,
-                          "startTime": "2026-10-20T13:35:20.998Z",
+                          "startTime": "2026-11-13T20:26:38.274Z",
                           "annotations": [],
                           "attachments": [
                             {
@@ -467,7 +467,7 @@
                           "workerIndex": 2,
                           "parallelIndex": 0,
                           "status": "failed",
-                          "duration": 4,
+                          "duration": 5,
                           "error": {
                             "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m",
                             "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[32m-   \"a\",\u001b[39m\n\u001b[2m    \"b\",\u001b[22m\n\u001b[31m+   \"a\",\u001b[39m\n\u001b[2m  ]\u001b[22m\n    at /repo/specs/sample.spec.ts:13:26",
@@ -491,7 +491,7 @@
                           "stdout": [],
                           "stderr": [],
                           "retry": 2,
-                          "startTime": "2026-10-20T13:35:21.302Z",
+                          "startTime": "2026-11-13T20:26:38.646Z",
                           "annotations": [],
                           "attachments": [
                             {
@@ -524,8 +524,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-10-20T13:35:20.403Z",
-    "duration": 2634.433,
+    "startTime": "2026-11-13T20:26:37.543Z",
+    "duration": 3091.8979999999997,
     "expected": 1,
     "skipped": 1,
     "unexpected": 2,

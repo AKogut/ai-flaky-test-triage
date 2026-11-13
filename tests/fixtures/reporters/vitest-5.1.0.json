@@ -24,7 +24,7 @@
     "updated": 0,
     "didUpdate": false
   },
-  "startTime": 1792503323807,
+  "startTime": 1794601556596,
   "success": false,
   "testResults": [
     {
@@ -34,7 +34,7 @@
           "fullName": "task api creates a task",
           "status": "passed",
           "title": "creates a task",
-          "duration": 0.8740000000000023,
+          "duration": 1.067707999999996,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -45,9 +45,9 @@
           "fullName": "task api reorder rejects an out-of-range position",
           "status": "failed",
           "title": "rejects an out-of-range position",
-          "duration": 2.706832999999996,
+          "duration": 3.2584169999999943,
           "failureMessages": [
-            "AssertionError: expected { position: 9 } to deeply equal { position: 1 }\n    at /repo/specs/tasks.test.ts:10:31\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:1632:35\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:2801:26\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3338:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3333:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3318:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3276:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3904:64"
+            "AssertionError: expected { position: 9 } to deeply equal { position: 1 }\n    at /repo/specs/tasks.test.ts:10:31\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:1632:35\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:2801:26\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3338:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3333:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3318:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3276:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3922:64"
           ],
           "meta": {},
           "tags": [],
@@ -68,17 +68,17 @@
           "fullName": "task api throws on a missing task",
           "status": "failed",
           "title": "throws on a missing task",
-          "duration": 0.3773750000000007,
+          "duration": 0.49945799999998997,
           "failureMessages": [
-            "TypeError: Cannot read properties of undefined (reading 'id')\n    at /repo/specs/tasks.test.ts:19:11\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:1632:35\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:2801:26\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3338:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3333:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3318:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3276:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:3904:64"
+            "TypeError: Cannot read properties of undefined (reading 'id')\n    at /repo/specs/tasks.test.ts:19:11\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:1632:35\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:2801:26\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3338:20\n    at new Promise (<anonymous>)\n    at runWithCancel (file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3333:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3318:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3276:10)\n    at file:///repo/node_modules/vitest/dist/chunks/run.CjdgFZiW.js:3922:64"
           ],
           "meta": {},
           "tags": [],
           "benchmarks": []
         }
       ],
-      "startTime": 1792503323884,
-      "endTime": 1792503323888.3774,
+      "startTime": 1794601556685,
+      "endTime": 1794601556689.4995,
       "status": "failed",
       "message": "",
       "name": "/repo/specs/tasks.test.ts"
