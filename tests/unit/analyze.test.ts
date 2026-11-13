@@ -31,10 +31,10 @@ import {
 
 const root = new URL('../..', import.meta.url).pathname
 const playwrightReport = readFileSync(
-  join(root, 'tests/fixtures/reporters/playwright-1.64.1.json'),
+  join(root, 'tests/fixtures/reporters/playwright-1.65.0.json'),
   'utf8',
 )
-const vitestReport = readFileSync(join(root, 'tests/fixtures/reporters/vitest-5.0.5.json'), 'utf8')
+const vitestReport = readFileSync(join(root, 'tests/fixtures/reporters/vitest-5.1.0.json'), 'utf8')
 
 interface Run {
   code: number
