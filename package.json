@@ -76,10 +76,10 @@
     "husky": "9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "16.4.0",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "tsx": "4.23.15",
     "typescript": "^5.7.2",
-    "typescript-eslint": "8.72.1",
+    "typescript-eslint": "8.72.2",
     "vite": "^8.3.6",
     "vitest": "5.1.0",
     "yaml": "2.9.1"
