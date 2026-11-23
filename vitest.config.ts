@@ -60,9 +60,10 @@ export default defineConfig({
        * nobody measures is code nobody notices breaking.
        *
        * The line is product surface in, repository maintenance out.
-       * `changelog.ts` and `status-banner.ts` each have a `--check` mode that CI
-       * runs against the committed files, which is a stronger claim about them
-       * than a percentage. A script added later is measured by default, which is
+       * `status-banner.ts` has a `--check` mode that CI runs against the
+       * committed README, and `changelog.ts` one that is run at every release
+       * and milestone close (docs/branching-strategy.md) — each a stronger claim
+       * about its output than a percentage. A script added later is measured by default, which is
        * the safe direction for this list to rot in.
        *
        * `demo/` holds bundled fixture data — the contents of test files in an
