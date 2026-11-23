@@ -22,6 +22,35 @@
 
 ---
 
+## The 60-second tour
+
+- **What it does.** One step at the end of a CI run. It reads what the run already produced — the
+  test report, the run history, the pull request's diff — and posts **one PR comment** that
+  classifies every failure on two axes: who owns the fix (`app_code` / `test_code` /
+  `environment`) and how it behaves on rerun (`deterministic` / `intermittent`).
+- **Why it is hard.** The dangerous failures look like flakes. A race in the product and a race in
+  the test fail the same way and need opposite responses. This repository ships both on purpose,
+  and the classifier has to tell them apart from a trace.
+- **How it stays honest.** Every classifier is scored on a hand-labelled golden dataset
+  (39 fixtures, 12 held out), against a non-LLM baseline, with confidence intervals, and gated in
+  CI. Today only the baseline has been scored: the model's row is empty until
+  [#38](https://github.com/AKogut/ai-flaky-test-triage/issues/38) runs, and the comment says so.
+- **What it will not do.** Agents cannot edit code or push; their only output is the report. Untrusted text — test
+  titles, stacks, diffs from fork PRs — is fenced, length-capped and scanned in linear time; output
+  is schema-validated; a token budget bounds every run. CodeQL and OpenSSF Scorecard watch the
+  repository itself.
+- **Try it.** `git clone`, `npm ci`, `npm run demo` — no API key, no network:
+
+<img src="docs/assets/demo.gif" width="760" alt="A terminal running npm run demo: the command prints a banner naming the input, demo/analysis.json, and the classifier that ran — the model-free baseline, because no cassettes are recorded yet — then reports that it classified 4 of 8 tests and wrote report.md.">
+
+<sub>The text is the real output of `npm run demo`; only the pacing is the GIF's.</sub>
+
+- **Read next:** [what it posts today](#what-it-posts-today) ·
+  [`eval/report.md`](eval/report.md) · [architecture](docs/architecture.md) ·
+  [decision records](docs/adr/README.md)
+
+---
+
 ## The problem
 
 Flaky-test detectors tell you _which_ tests are unstable. They do not tell you _what to do
