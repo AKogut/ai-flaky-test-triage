@@ -87,3 +87,10 @@ updates:
       interval: monthly
     commit-message:
       prefix: 'ci(deps)'
+    groups:
+      # Every step of github/codeql-action in a workflow has to run the same
+      # release: `init` writes a configuration that `analyze` refuses to load
+      # from another version. Bumped one step at a time, each pull request fails
+      # on its own — #264 and #266 did exactly that.
+      codeql-action:
+        patterns: ['github/codeql-action*']
