@@ -1,6 +1,6 @@
 {
   "name": "@sentra/contracts",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Zod schemas and inferred types for every artifact the pipeline reads or writes. The narrow waist: nothing downstream of a boundary knows which tool produced the data.",
   "license": "MIT",
