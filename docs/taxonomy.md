@@ -122,7 +122,9 @@ beyond the label.
 
 ## Known hard cases
 
-Each of these is represented in the golden dataset on purpose.
+All but one are represented in the golden dataset on purpose. The exception is the dependency
+bump: no fixture's diff touches a manifest or a lockfile yet. The state-leak fixture leaks a row
+rather than a modal — the same shape, with the cause in a different file from the failure.
 
 | Case                                                                                      | Correct label                | Why it is hard                                                               |
 | ----------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |

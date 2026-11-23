@@ -36,18 +36,21 @@ rather than a public issue. Expect an initial response within 7 days.
 - **`pull_request_target` is not used.** It would run untrusted code with secrets and a
   write-scoped token. See [ADR-0007](docs/adr/0007-no-github-app-no-pull-request-target.md).
 - **Fork PRs degrade rather than escalate.** No secrets means baseline-heuristic output, stated in
-  the comment.
+  the report. A fork's `GITHUB_TOKEN` is read-only, so the report is uploaded as a workflow
+  artifact rather than posted as a comment.
 - **Least-privilege token.** `pull-requests: write`, `contents: read`. No `actions: write`, no
   `packages`, no org scope.
 - **Agents have no tools.** Structured output only. The write capabilities they are promised not
   to have are capabilities they were never given.
 - **Untrusted text is data, not instruction.** Test titles, error messages, source, and diff hunks
   are delimited, length-capped, and introduced as data; output is schema-constrained and escaped
-  before rendering.
+  before rendering. None of it reaches a span: `otel-spans.json` carries ids, counts, tokens and
+  cost only.
 
 ## Data egress
 
 One genuine egress path: source snippets and diff hunks from the checkout are sent to the
 Anthropic API during the agent stage. A best-effort secret-pattern scrub runs over that content
-first, but it is not a guarantee. Anyone enabling the agent job on a private fork should
-understand this before adding an API key.
+first, but it is not a guarantee. No API key is configured on this repository, so nothing has been
+sent yet. Anyone enabling the agent job on a private fork should understand this before adding an
+API key.

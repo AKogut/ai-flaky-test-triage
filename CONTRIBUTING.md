@@ -26,6 +26,7 @@ What runs today:
 
 ```bash
 npm run test:coverage   # the full suite, with the coverage floor enforced
+npm run demo            # full pipeline, no API key — writes report.md
 npm run eval            # score the baseline against the golden dataset
 npm run eval:lint       # dataset composition and label-leakage check
 npm run lint && npm run typecheck
@@ -34,7 +35,6 @@ npm run lint && npm run typecheck
 And the ones that need a browser or a running application:
 
 ```bash
-npm run demo            # full pipeline, no API key — writes report.md
 npm run dev             # start TaskFlow locally — API + client, Ctrl-C stops both
 npm run test:e2e        # Playwright, one TaskFlow per worker — needs `npx playwright install chromium`
 npm test                # unit and e2e together
@@ -78,9 +78,11 @@ You can still open a pull request from a fork, and it is welcome. Two things to 
    every time. That is deliberately stricter than GitHub's default, which only asks for the first
    one and then lets subsequent runs through — including runs of a workflow file the same pull
    request changed.
-2. **No secrets, by design.** Fork pull requests get no `ANTHROPIC_API_KEY`, so the agent stage is
-   skipped and the pipeline runs the baseline heuristic instead. The comment says so rather than
-   pretending. The reasoning, including why `pull_request_target` is not used, is in
+2. **No secrets, by design.** Fork pull requests get no `ANTHROPIC_API_KEY` and a read-only
+   `GITHUB_TOKEN`, so the pipeline runs the baseline heuristic, writes a report that says so rather
+   than pretending, and uploads it as the run's `triage-report` artifact. It cannot post that
+   report as a comment, so look for it on the workflow run. Not yet tried from a real fork. The
+   reasoning, including why `pull_request_target` is not used, is in
    [ADR-0007](docs/adr/0007-no-github-app-no-pull-request-target.md).
 
 Neither is a judgement about the contribution. Approving a workflow run means reading a diff before
@@ -126,8 +128,9 @@ Fault injection belongs at the network boundary (`page.route`), not in the appli
 
 The highest-leverage and easiest-to-fool area of the project.
 
-- Prompts are versioned files (`prompts/triage.v3.md`). Do not edit a version in place once its
-  numbers are recorded in `eval/report.md` — add a new version.
+- Prompts are versioned files — `prompts/triage.v1.md` is the only triage version so far. Do not
+  edit a version in place once its numbers are recorded in `eval/report.md`; add the next one,
+  `triage.v2.md`, instead.
 - Iterate against the **development slice** of the dataset. The held-out slice is consulted once,
   at the end, and reported separately. Tuning against held-out data silently destroys the only
   honest number in the project.
@@ -153,11 +156,13 @@ The highest-leverage and easiest-to-fool area of the project.
 npm run eval                     # development slice, baseline → eval/report.md
 npm run eval -- --gate           # verify the committed report and apply the thresholds
 npm run eval -- --slice=holdout  # the held-out slice — see the budget below
-npm run eval:ablation            # 🚧 M9 · #74
+npm run eval:ablation            # 🚧 M9 · #78
 ```
 
-`--classifier=agent` parses today and then declines: the agent lands in M3 (#35). The command
-itself works, only that value does not, which is why it carries no marker above — a 🚧 on a line
+`--classifier=agent` scores the triage agent itself, through the same seam as the baseline. What
+it lacks is input: it needs an `ANTHROPIC_API_KEY` or recorded cassettes, and there are neither
+yet, so on a clean clone it stops at the first cassette miss rather than reaching the network. #38
+records them. The lines above carry no marker for it because the code is built — a 🚧 on a line
 beginning `npm run eval` would read as the whole command being unbuilt.
 
 The default is the **development slice**, not the whole dataset. That is the discipline: anything
