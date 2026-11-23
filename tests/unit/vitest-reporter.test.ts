@@ -147,12 +147,21 @@ describe('the report it wrote', () => {
 
   /**
    * A budget, not a measurement. #49 asks for under ten seconds; the suite takes
-   * about a quarter of one, so this fires on a change that makes the feedback
-   * loop forty times worse and on nothing else. Read against the reported
-   * duration rather than the wall clock, so a slow runner's process startup is
-   * not counted as the suite being slow.
+   * about a quarter of one on a CI runner, so there this fires on a change that
+   * makes the feedback loop forty times worse and on nothing else. Read against
+   * the reported duration rather than the wall clock, so a slow runner's
+   * process startup is not counted as the suite being slow.
+   *
+   * Enforced only where `CI` is set, which is the environment the budget was
+   * set for. On a shared laptop the same nested run measured 10–19 s at load
+   * 60–130 with nothing in the suite changed — the machine, not the loop — and
+   * a budget that fails on the machine stops meaning anything about the code.
+   * Locally the test is reported as skipped rather than quietly passing.
    */
-  it('finishes well inside the budget the milestone set', () => {
-    expect(run().durationMs).toBeLessThan(10_000)
-  })
+  it.runIf(process.env.CI !== undefined && process.env.CI !== '')(
+    'finishes well inside the budget the milestone set',
+    () => {
+      expect(run().durationMs).toBeLessThan(10_000)
+    },
+  )
 })
