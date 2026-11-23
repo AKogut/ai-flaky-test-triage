@@ -4,6 +4,7 @@ import {
   type AnalysedTest,
   type ClassificationInput,
 } from '@sentra/contracts'
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
   CONTEXT_FIELDS,
@@ -116,7 +117,76 @@ describe('reading paths out of a stack trace', () => {
   it('is empty for an empty stack', () => {
     expect(stackPaths('')).toEqual([])
   })
+
+  /**
+   * The one place a frame is not a whole run of path characters: straight after
+   * another frame's line number. The reference read `b.ts` here, so the scan has
+   * to. A lookbehind for a token boundary, the obvious linear rewrite, drops it.
+   */
+  it('reads a frame that starts where the last line number ends', () => {
+    expect(stackPaths('a.ts:1b.ts:2')).toEqual(['a.ts', 'b.ts'])
+    expect(stackPaths('at a.ts:12/b.ts:3')).toEqual(['a.ts', 'b.ts'])
+  })
 })
+
+/**
+ * `stackPaths` as it was before it stopped being one expression, kept as the
+ * reference the scan is checked against. Do not tidy it: it is the spec.
+ */
+function stackPathsBefore(stack: string): string[] {
+  const normalise = (path: string): string =>
+    path.replaceAll('\\', '/').replace(/^\.\//, '').replace(/^\/+/, '')
+  return [...stack.matchAll(/([\w./-]+\.[cm]?[jt]sx?):\d+/g)]
+    .map((match) => normalise(match[1] ?? ''))
+    .filter((path, index, all) => path !== '' && all.indexOf(path) === index)
+    .sort()
+}
+
+/**
+ * Stack-shaped text, heavy in the characters that decide a frame: path
+ * characters, `-`, `/`, `.`, extensions, `:` and digits. At most 60 pieces of
+ * at most 6 characters, so the quadratic reference stays fast.
+ */
+const stackText = fc.string({
+  unit: fc.constantFrom(
+    ...['-', '/', '.', '_', 'a', 'B', '0', '7', ':', ' ', '\n', '(', ')', '\\', 'é', '@'],
+    ...['c', 'm', 'j', 't', 's', 'x', '.ts', '.tsx', '.mjs', '.cjs', '.jsx', '.d.ts'],
+    ...[':1', ':12', ':3:4', 'at ', './', '../', 'a-b', '--', '//'],
+  ),
+  maxLength: 60,
+})
+
+describe('the scan that replaced the frame expression', () => {
+  it('finds exactly the paths the expression found', () => {
+    fc.assert(
+      fc.property(stackText, (stack) => {
+        expect(stackPaths(stack)).toEqual(stackPathsBefore(stack))
+      }),
+      { numRuns: 5_000 },
+    )
+  })
+
+  /**
+   * The expression took 5.2 seconds on the hyphens, measured once on a laptop,
+   * and the scan 0.2 milliseconds. The bound is loose on purpose, so a busy
+   * machine does not trip it; the expression missed it 25 times over.
+   */
+  it.each([
+    ['100,000 hyphens', '-'.repeat(100_000)],
+    ['100,000 slashes', '/'.repeat(100_000)],
+    ['100,000 dots', '.'.repeat(100_000)],
+    ['a 100,000-character path with no line number', `${'a-'.repeat(50_000)}.ts:`],
+  ])('reads %s in linear time', (_label, stack) => {
+    expect(elapsed(() => stackPaths(stack))).toBeLessThan(200)
+  })
+})
+
+/** Wall time of one call, in milliseconds. */
+function elapsed(run: () => unknown): number {
+  const start = performance.now()
+  run()
+  return performance.now() - start
+}
 
 describe('reading paths out of a diff', () => {
   it('takes both sides, so a rename shows as two paths', () => {

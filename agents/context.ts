@@ -172,6 +172,15 @@ export function changedPaths(diff: string): string[] {
     .sort()
 }
 
+/** A run of the characters a path is made of. */
+const PATH_CHARACTERS = /[\w./-]+/g
+
+/** A source extension with at least one character before it. */
+const SOURCE_PATH = /.\.[cm]?[jt]sx?$/
+
+/** `:12`. Sticky, so it is tried only where a run ends. */
+const LINE_NUMBER = /:\d+/y
+
 /**
  * Repository paths a stack trace names.
  *
@@ -179,12 +188,34 @@ export function changedPaths(diff: string): string[] {
  * differently — and strict about what counts as a path: a source extension and a
  * line number. Without the line number, `expected 3 to equal 4 in board.ts` from
  * an assertion message would read as a frame.
+ *
+ * Read one run of path characters at a time, each run once. This was a single
+ * expression, `/([\w./-]+\.[cm]?[jt]sx?):\d+/g`, which from every position in a
+ * run with no frame at its end read to the end of the run before giving up. That
+ * is quadratic, on text the pull request's own code printed: 100,000 hyphens took
+ * 5.2 seconds.
+ *
+ * The scan finds what the expression found. A frame cannot cross a character
+ * outside the class, and if one could start anywhere in a run it could also
+ * start where the run does, which is where the search got to first. So a frame
+ * is a whole run that ends in a source extension, with something before it, and
+ * is followed by `:` and a digit. One exception, kept: after a frame, the search
+ * went on from the end of its line number, so the next run starts there.
+ * `a.ts:1b.ts:2` names `b.ts`, not `1b.ts`.
  */
 export function stackPaths(stack: string): string[] {
-  return [...stack.matchAll(/([\w./-]+\.[cm]?[jt]sx?):\d+/g)]
-    .map((match) => normalise(match[1] ?? ''))
-    .filter((path, index, all) => path !== '' && all.indexOf(path) === index)
-    .sort()
+  const paths: string[] = []
+  let resumeAt = 0
+  for (const run of stack.matchAll(PATH_CHARACTERS)) {
+    const end = run.index + run[0].length
+    const path = stack.slice(Math.max(run.index, resumeAt), end)
+    LINE_NUMBER.lastIndex = end
+    if (SOURCE_PATH.test(path) && LINE_NUMBER.test(stack)) {
+      paths.push(normalise(path))
+      resumeAt = LINE_NUMBER.lastIndex
+    }
+  }
+  return paths.filter((path, index, all) => path !== '' && all.indexOf(path) === index).sort()
 }
 
 /** Forward slashes, no `./`, no leading slash — matching `normaliseFilePath` in contracts. */
