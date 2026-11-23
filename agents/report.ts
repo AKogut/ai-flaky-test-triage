@@ -74,7 +74,7 @@ export const DEGRADATIONS = {
     'The classifier did not run: no credentials were available to this job. Every failure below ' +
     'is listed with the pipeline’s own signals and no verdict — nothing here has been classified.',
   noHistory:
-    'The run had no history to read, so every test reads as new. `determinism` rests on this ' +
+    'The run had no history to read, so every test reads as new. The determinism axis rests on this ' +
     'run’s attempts alone, which is much weaker evidence than a sequence of runs.',
   unreadableHistory:
     'The run history existed and could not be read, so every test reads as new. That is a ' +
