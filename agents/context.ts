@@ -1,4 +1,5 @@
 import type { AnalysedTest, ClassificationInput, RunContext } from '@sentra/contracts'
+import { isTestPath } from './baseline.js'
 import { assembleEvidence, type Evidence, type FieldCaps, type UntrustedInput } from './sanitise.js'
 
 /**
@@ -162,9 +163,6 @@ function renderRunContext(context: RunContext | undefined): string | undefined {
 // Derived signals
 // ---------------------------------------------------------------------------
 
-/** A path that is a test rather than product source. Shared shape with the baseline's rule. */
-const TEST_PATH = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec)\.[cm]?[jt]sx?$/
-
 /** Paths a unified diff changes, from its `diff --git` headers. */
 export function changedPaths(diff: string): string[] {
   return [...diff.matchAll(/^diff --git a\/(\S+) b\/(\S+)$/gm)]
@@ -244,10 +242,10 @@ export interface DiffSignal {
 export function diffSignal(subject: AnalysedTest, diff: string): DiffSignal {
   const testFile = subject.result.file
   const paths = changedPaths(diff)
-  const product = paths.filter((path) => !TEST_PATH.test(path))
+  const product = paths.filter((path) => !isTestPath(path))
 
   const covered = [
-    ...stackPaths(subject.result.error?.stack ?? '').filter((path) => !TEST_PATH.test(path)),
+    ...stackPaths(subject.result.error?.stack ?? '').filter((path) => !isTestPath(path)),
     siblingImplementation(testFile) ?? '',
   ].filter((path) => path !== '')
 
