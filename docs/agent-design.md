@@ -27,13 +27,12 @@ the transport. Between them:
   merely unused, and a test proves it by wrapping one that fails on any call. A silent fallthrough
   would turn a free deterministic run into a surprise bill and an intermittent test, and would take
   months to notice.
-- **Telemetry.** Every call reports a `CallTelemetry` record — model, prompt version, attempts,
-  schema violations, transient failures, token counts, duration — to a callback the caller
-  supplies, and the eval harness turns those into the cost figures in `eval/report.md`.
-  `agents/pricing.ts` prices each call for the report footer. OpenTelemetry spans go to
-  `otel-spans.json` through a file exporter — one root span per run and one per model call,
-  carrying ids, counts, tokens and cost and no untrusted text — and CI uploads the file in the
-  `triage-report` artifact (#76). What remains of cost accounting is #77.
+- **Telemetry.** Every successful call reports a `CallTelemetry` record — model, prompt version,
+  attempts, schema violations, transient failures, token counts, duration — to a callback the
+  caller supplies, and the eval harness turns those into the cost figures in `eval/report.md`.
+  `agents/pricing.ts` prices each call for the report footer. Every call, however it ends, also
+  reports a `CallRecord` to an `onCall` observer, and that is what the OpenTelemetry spans are
+  built from — see [Spans](#spans). What remains of cost accounting is #77.
 - **Budget.** A per-run token ceiling, checked **before** dispatch against a real
   `count_tokens` call rather than a character estimate, and re-checked before each schema retry
   because a corrected prompt is longer. A budget that only reports what was spent is an invoice.
@@ -75,6 +74,44 @@ reasonable default for the PR-comment path, where an answer from a second model 
 It is the wrong default here: a silent substitution part-way through an evaluation would make the
 headline a blend of two models while the report still names one. A refusal surfaces as a typed
 error and is recorded.
+
+### Spans
+
+`npm run agents:analyze` writes `otel-spans.json` beside `report.md`: one `sentra.run` span per
+run and, under it, one `chat <model>` span of kind `CLIENT` per model call. Attribute names follow
+the OpenTelemetry GenAI semantic conventions where those have one (`gen_ai.*`, `error.type`), and
+`sentra.*` where they do not. The schema, every attribute and a few `jq` starting points are in the
+JSDoc at the top of `agents/spans.ts`; this page does not repeat them.
+
+Spans are built from `CallRecord`, not `CallTelemetry`. `CallTelemetry` is success-only because
+`eval/report.md` would count a failed call as an answer. A span needs the opposite: the calls worth
+reading are the ones that were refused, ran out of budget or never matched the schema. So
+`callModel` reports a second record on every exit, with an outcome of `ok`, `refused`,
+`schema-invalid`, `budget` or `error`. An observer that throws is ignored — instrumentation that
+can turn a classification into a failed row changes what it measures.
+
+- **A file, not a collector.** Per [ADR-0001](adr/0001-single-repo-no-persistent-services.md),
+  nothing stays running. The `TracerProvider` belongs to the run and is not registered globally,
+  and `agents/spans.ts` is the only module that imports the OpenTelemetry SDK.
+- **Exporting never fails the run.** Spans open only once there is work and close in a `finally`.
+  The file is written once, at the end, through a temp file and a rename, so a killed run leaves
+  the previous file or none. A failed write is logged and the exit code is unchanged. A run that
+  crashes before its report still gets a root span, status `ERROR`, message `incomplete`.
+- **The degraded path writes one too.** With no key the root span says
+  `sentra.run.classifier: baseline`, so a fork's `triage-report` artifact carries the file. A run
+  with nothing to triage writes nothing at all, spans included.
+- **No untrusted text.** Spans carry identifiers, counts, enums and numbers — never a test title,
+  error message, diff, prompt or model output. Run id, commit and branch must look like identifiers
+  and also pass `redactSecrets`, or they are recorded as `[withheld]`. A failure is recorded by
+  class in `error.type`, never through `recordException`: that would copy the message, and a
+  schema violation's message names the test.
+
+**Span cost and report cost differ on purpose.** A span counts the tokens a failed call spent,
+including on answers the schema rejected; the report footer's usage line counts successful calls
+only. Reconciling the two is part of #77.
+
+The OpenTelemetry SDK is held on the 2.x line: 3.x requires Node 22.15 or later, newer than the
+floor `engines.node` declares, so `.github/dependabot.yml` ignores its majors.
 
 ## 1. Triage agent
 

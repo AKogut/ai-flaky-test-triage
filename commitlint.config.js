@@ -3,10 +3,11 @@
  * the release notes are generated from `main`'s history, and `main`'s history is
  * made entirely of squashed pull-request titles.
  *
- * Types and scopes are kept in step with docs/branching-strategy.md and with the
- * `PR title convention` job in .github/workflows/ci.yml. All three must agree —
- * a commit that passes the hook and fails the CI check would be worse than either
- * gate on its own.
+ * Types and scopes are kept in step with docs/branching-strategy.md. The
+ * `PR title convention` job in .github/workflows/ci.yml runs commitlint with this
+ * file rather than a copy of its lists, so the local hook and the CI check cannot
+ * disagree — a commit that passes one and fails the other would be worse than
+ * either gate on its own.
  *
  * @type {import('@commitlint/types').UserConfig}
  */
@@ -49,7 +50,7 @@ export default {
     ],
     'scope-empty': [1, 'never'],
 
-    // Matches the `.{1,72}` in the CI PR-title regex.
+    // Holds for the PR title too: the CI job runs this config, not a regex of its own.
     'subject-max-length': [2, 'always', 72],
     'subject-case': [2, 'never', ['start-case', 'pascal-case', 'upper-case']],
     'subject-full-stop': [2, 'never', '.'],

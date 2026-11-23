@@ -358,7 +358,11 @@ jobs:
       - name: Run golden-dataset evaluation
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # No key (fork PR) → replay mode against committed cassettes.
+          # Without --classifier the gate scores the baseline, which calls no
+          # model, so neither the key nor SENTRA_REPLAY is read today. Both
+          # matter once it scores the agent: with no key (fork PR) that run
+          # replays from agents/replay/cassettes/, where nothing is recorded
+          # yet (#38), so it would stop at the first cassette miss.
           SENTRA_REPLAY: ${{ secrets.ANTHROPIC_API_KEY == '' && '1' || '' }}
           SENTRA_EVAL_SCOPE_CHANGED: ${{ steps.scope.outputs.changed }}
         run: npm run eval -- --gate
