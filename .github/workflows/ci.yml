@@ -266,6 +266,11 @@ jobs:
     if: needs.hygiene.outputs.has-e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      # `success` or `failure`. This is the suite's result, not the job's: a run
+      # that is red only with the deliberate failures is `failure` here and a
+      # green job.
+      outcome: ${{ steps.e2e.outputs.outcome }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -275,10 +280,32 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run build
+
+      # Red on most runs, by design. Some specs fail some of the time on purpose,
+      # and their failures are what the analysis jobs below exist to classify. So
+      # a red suite does not fail this step. It records the exit status and leaves
+      # the verdict to the summary step, which has the report and can tell a
+      # deliberate failure from a real one.
+      #
+      # This step used to be `continue-on-error: true`. The job stayed green, but
+      # the step still failed, so every run carried a red "Process completed with
+      # exit code 1" annotation for something that was not an error. It also
+      # forgave too much: a crashed runner, a report nobody wrote and a broken
+      # control spec all looked the same as the suite working. There is no
+      # `continue-on-error` now. This step can only fail if the shell itself
+      # fails, and then the job should be red.
       - name: Run Playwright
         id: e2e
-        continue-on-error: true
-        run: npm run test:e2e
+        run: |
+          status=0
+          npm run test:e2e || status=$?
+          echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 0 ]; then
+            echo "outcome=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=failure" >> "$GITHUB_OUTPUT"
+          fi
+
       # `test-results/` holds the trace and the screenshot for each failure, and
       # a trace is the evidence the triage agent reads — network timing, the DOM
       # at the moment it failed, the console. Without it a failure in CI is a
@@ -294,8 +321,23 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
-      - name: Record whether the suite was red
-        run: echo "e2e_outcome=${{ steps.e2e.outcome }}" >> "$GITHUB_OUTPUT"
+
+      # The verdict, made in one place: scripts/e2e-summary.ts. It writes the job
+      # summary (the counts, and each failing test with its file) and one
+      # `::notice` when every failure is in a spec that fails on purpose. It fails
+      # the job with an `::error` when the report is missing or unreadable, a spec
+      # outside that set failed, Playwright reported an error outside any test, a
+      # spec never ran, or no test ran at all.
+      #
+      # `!cancelled()` so a failed upload does not also lose the verdict. Not
+      # `always()`: if the Playwright step never ran, there is nothing to judge,
+      # and whatever stopped it has already turned the job red. The exit status
+      # comes in through `env`, not through an expression in the script.
+      - name: Summarise the run
+        if: ${{ !cancelled() && steps.e2e.outcome == 'success' }}
+        env:
+          E2E_EXIT_CODE: ${{ steps.e2e.outputs.exit-code }}
+        run: npx tsx scripts/e2e-summary.ts
 
   # ---------------------------------------------------------------------------
   # M2/M3 — the eval gate. Blocks merge on classifier regression.
