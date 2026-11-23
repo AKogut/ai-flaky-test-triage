@@ -78,12 +78,12 @@ into a prompt.
 | Concern                               | Position                                                                                                                                                                                                                                                                   |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Secrets in fork PRs                   | GitHub does not expose secrets to fork-triggered workflows. That is correct and is not worked around. `pull_request_target` is **not** used — it would run untrusted code with a write-scoped token.                                                                       |
-| Degraded mode on forks                | With no API key the pipeline runs the baseline heuristic only and the comment says so explicitly.                                                                                                                                                                          |
+| Degraded mode on forks                | With no API key the pipeline runs the baseline heuristic only and the report says so explicitly. A fork's token is read-only, so that report is uploaded as the `triage-report` artifact rather than posted as a comment. Not yet tried with a real fork.                  |
 | Prompt injection                      | Untrusted text is delimited, capped, and introduced as data by `agents/sanitise.ts`; harness markers are escaped out of content so nothing can close its own block. Output is schema-constrained, so the model can emit enum values and bounded strings, not instructions. |
 | Hidden text in evidence               | Bidirectional overrides and zero-width characters are removed, not escaped. Their only use here is to make a line render as something other than what it says — to the reviewer of the input first, then to the reader of the report that quotes it.                       |
 | Injection impact ceiling              | Nothing executes agent output. The worst outcome is a wrong label and a misleading comment.                                                                                                                                                                                |
 | Markdown/HTML injection in the report | Agent output is escaped before rendering, so injected content cannot forge report structure or embed hidden markers.                                                                                                                                                       |
-| Data leaving the repository           | Source snippets and diff hunks are sent to the Anthropic API. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it.                                                                |
+| Data leaving the repository           | Once a key is configured, source snippets and diff hunks are sent to the Anthropic API; none is, so nothing has been sent. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it.   |
 | Secret leakage into prompts           | A secret-pattern scrub runs over every untrusted field before it enters a prompt, and before the length cap is applied so a credential cannot be sliced past its own pattern. One pattern list, shared with the cassette writer. Best-effort, not a guarantee.             |
 | Token scope                           | Least privilege: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope.                                                                                                                                                               |
 
@@ -104,15 +104,18 @@ into a prompt.
 - **Non-determinism in the eval gate.** The classifier's own eval is mildly flaky, which is why
   the gate uses a confidence lower bound and N-sample averaging. Acknowledged irony.
 - **Rate limits.** A run with many failures serialises behind API rate limits. Concurrency is
-  capped at 4 and the budget aborts long tails.
+  capped at 4, and the budget stops dispatch on a long tail, listing what it never reached.
 
 ## Ethical and practical caveats
 
 - **The output is advisory.** It is a prioritisation aid for a human reviewer, not a verdict.
-  Every comment carries the classifier's measured accuracy inline so nobody mistakes it for one.
+  Every comment carries the measured accuracy of the classifier that produced it — the
+  baseline's, today — so nobody mistakes it for one.
 - **Automation bias is a real risk.** A confident wrong classification is worse than no
   classification, because it redirects attention. This is why `alternativeHypothesis` is mandatory
-  below the confidence threshold and why `risks` is a required field on fix suggestions.
+  on a root cause stated below 0.7 confidence and why `risks` is a required field on fix
+  suggestions.
 - **It is not a substitute for fixing flaky tests.** A system that makes flakiness comfortable to
-  live with can entrench it. The report deliberately surfaces long-lived flaky tests as
-  accumulating debt rather than routine noise.
+  live with can entrench it. Nothing guards against that yet: the report has no notion of how long
+  a test has been flaky, so months of it read like a fresh flake. Surfacing long-lived flaky tests
+  as accumulating debt rather than routine noise is planned, not built.

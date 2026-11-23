@@ -21,24 +21,27 @@ the transport. Between them:
 - **Replay/record.** A decorator around the transport, so replay has no opinion about the SDK and
   the SDK adapter has none about replay. `SENTRA_REPLAY=1` serves from
   `agents/replay/cassettes/`; `SENTRA_RECORD=1` writes there; with no credentials replay is the
-  default, which is what makes the demo credential-free and the integration tests free and
-  deterministic. **A replay miss throws** — in replay the inner transport is unreachable, not
+  default. Nothing is recorded yet (#38), so today the demo falls back to the baseline and says so,
+  and the integration tests drive the agents through scripted transports instead. **A replay miss
+  throws** — in replay the inner transport is unreachable, not
   merely unused, and a test proves it by wrapping one that fails on any call. A silent fallthrough
   would turn a free deterministic run into a surprise bill and an intermittent test, and would take
   months to notice.
 - **Telemetry.** Every call reports a `CallTelemetry` record — model, prompt version, attempts,
   schema violations, transient failures, token counts, duration — to a callback the caller
-  supplies, and the eval harness turns those into the cost figures in `eval/report.md`. The
-  OpenTelemetry span carrying the same fields, exported to `otel-spans.json`, is **M9 (#76)**, and
-  the per-call cost accounting is **#77**. The record above is the seam both will be built on
-  rather than a stand-in for either.
+  supplies, and the eval harness turns those into the cost figures in `eval/report.md`.
+  `agents/pricing.ts` prices each call for the report footer. OpenTelemetry spans go to
+  `otel-spans.json` through a file exporter — one root span per run and one per model call,
+  carrying ids, counts, tokens and cost and no untrusted text — and CI uploads the file in the
+  `triage-report` artifact (#76). What remains of cost accounting is #77.
 - **Budget.** A per-run token ceiling, checked **before** dispatch against a real
   `count_tokens` call rather than a character estimate, and re-checked before each schema retry
   because a corrected prompt is longer. A budget that only reports what was spent is an invoice.
   One budget is shared across a whole run — a per-call ceiling is not a ceiling on anything, since
-  thirty-three fixtures would each stay inside it. Hitting it currently aborts the run with a typed
-  error; the orchestrator stopping dispatch and reporting how many failures went unclassified is
-  **M7 (#66)**.
+  thirty-nine fixtures would each stay inside it. In the pipeline, once it refuses a call the
+  orchestrator stops dispatching, and every test it never reached is reported as `not-dispatched`
+  rather than left out. In the evaluation harness a refusal ends the run, because a partly scored
+  dataset is not a result.
 
 ### One transport, enforced
 
@@ -78,8 +81,9 @@ error and is recorded.
 **Runs for:** every failing or newly-flaky test in the run.
 
 **Input:** the context bundle from [architecture.md](architecture.md#3-analysisjson--agent-inputs)
-— error, stack, snippet, flakiness signal, status history, diff summary, whether the diff touches
-the file under test, and the test's own source.
+— error, stack, snippet, flakiness signal, status history, the pull request's diff, whether the
+diff touches the file under test, the test's own source, and the tests that ran before it in the
+same worker ([ADR-0008](adr/0008-run-level-context-is-the-worker-sequence.md)).
 
 **Output:** the `Classification` object from [taxonomy.md](taxonomy.md#output-schema).
 
@@ -124,7 +128,7 @@ User (`agents/sanitise.ts`):
   is checked: each quoted fragment must appear in the text the model was shown, with whitespace
   normalised and elisions honoured, so the count means "invented" rather than "reformatted".
   Reported, not rejected — throwing away an otherwise usable classification would hide the rate, and
-  the rate is the thing worth knowing. #38 publishes it beside the accuracy figures.
+  the rate is the thing worth knowing. #38 will publish it beside the accuracy figures.
 - **Prompts are versioned and published versions are immutable.** `prompts/triage.v1.md`;
   `eval/report.md` and `eval/metrics.json` record which version produced which numbers, so a
   regression is attributable. Editing a version in place keeps the record and destroys the link —
@@ -143,8 +147,8 @@ about the two paths differs after this function returns.
 The seam is async for both. That costs the baseline nothing and keeps every caller identical.
 
 One token budget is shared across the whole run rather than one per call — a per-call ceiling is
-not a ceiling on anything, since thirty-three fixtures would each stay inside it and the run would
-spend thirty-three times what was authorised. Fixtures are scored sequentially: concurrency would
+not a ceiling on anything, since thirty-nine fixtures would each stay inside it and the run would
+spend thirty-nine times what was authorised. Fixtures are scored sequentially: concurrency would
 buy wall-clock and cost a deterministic order for the budget to run out in.
 
 In replay mode the transport handed to the decorator is one that throws on any call. Constructing a
@@ -153,12 +157,16 @@ cassette miss into a live request from a run that was supposed to be free.
 
 ## 2. Root-cause agent
 
-**Runs for:** classifications of `owner: app_code` above the confidence threshold. The threshold
-is chosen from the calibration curve, not picked by hand — see
-[eval-methodology.md](eval-methodology.md#confidence-calibration).
+**Runs for:** classifications of `owner: app_code` at or above the confidence threshold. The
+threshold is read off the calibration curve, not picked by hand — see
+[eval-methodology.md](eval-methodology.md#4-confidence-calibration).
 
-**Input:** the triage output, the full diff of the files implicated, and the source of the
-function(s) named in the stack trace.
+**Implemented, and off.** No threshold can be derived yet — `eval/report.md` says why — so
+`agents:analyze` passes `null`, and `null` means the agent does not run at all rather than running
+on a guessed default.
+
+**Input:** the triage verdict, the same evidence bundle, and the source of the files the stack
+trace implicates.
 
 **Output:**
 
@@ -180,7 +188,8 @@ makes uncertainty visible in the report rather than buried in a number.
 
 ## 3. Fix-suggestion agent
 
-**Runs for:** root-cause outputs above threshold.
+**Runs for:** every root-cause output. It has no threshold of its own, so it is off for exactly as
+long as the root-cause agent is.
 
 **Input:** the hypothesis plus the relevant source.
 
@@ -200,19 +209,21 @@ type FixSuggestion = {
 applies its output. `patch` is a fenced code block in markdown. There is no code path from this
 agent's output to `fs.writeFile`, and a unit test asserts that.
 
-`risks` and `testGap` are required fields. A fix suggestion without stated risks reads as more
-authoritative than it deserves to be, and the most valuable output for a flaky-test system is
-often "the real problem is that nothing tests this path".
+`risks` is required and must be non-empty: a fix suggestion without stated risks reads as more
+authoritative than it deserves to be. `testGap` is optional in the schema but prompted for, because
+the most valuable output for a flaky-test system is often "the real problem is that nothing tests
+this path".
 
 ## Orchestration
 
 ```
 analysis.json
   → filter to failing / newly-flaky
-  → sort by (owner-uncertainty, flakinessScore) so budget goes to ambiguous cases first
+  → sort most ambiguous first (passed on retry, flakiness score, a long streak counting against)
+    so budget goes to ambiguous cases first
   → concurrency-limited fan-out (default 4)
   → triage each
-  → for app_code above threshold: root cause → fix suggestion
+  → for app_code above threshold: root cause → fix suggestion (off: the threshold is null)
   → assemble report.md
 ```
 
@@ -224,11 +235,13 @@ Failures of individual agent calls are isolated: one test's API error produces a
 1. Header: run summary, counts per quadrant, whether the run was degraded (no API key, budget
    hit, missing history).
 2. A table of every failure, one row each: test, quadrant, confidence, one-line reason.
-3. Expanded sections for `app_code` findings — hypothesis, alternative, fix suggestion, risks.
+3. Expanded sections for `app_code` findings — the reasoning, and the hypothesis, alternative,
+   fix suggestion and risks once root cause is switched on.
 4. Collapsed `<details>` sections for the rest.
-5. Footer: model, prompt version, token count, cost, eval accuracy of the current prompt, and a
-   link to the methodology. **The report states the classifier's own measured accuracy inline**,
-   so nobody reads it as ground truth.
+5. Footer: model, prompt version, token count, cost, the measured accuracy of whichever
+   classifier produced the report — the baseline's, today — and a link to the methodology. **The
+   report states the classifier's own measured accuracy inline**, so nobody reads it as ground
+   truth.
 
 ## Why there is no agent loop
 
@@ -237,9 +250,10 @@ available before the first token. There is nothing to explore, no external state
 sub-goal to decompose. A ReAct-style loop would add latency, cost, and non-determinism in exchange
 for the model re-reading text it already has.
 
-This is a claim, not an axiom, and the project treats it as testable: `npm run eval:ablation`
-includes a multi-step variant. If it wins on the hard quadrants by a margin that justifies the
-cost, the result becomes an ADR and the architecture changes. Until then, the simple thing stays.
+This is a claim, not an axiom, and the project treats it as testable: the ablation harness
+(`npm run eval:ablation`, 🚧 #78) will include a multi-step variant (#80). If it wins on the hard
+quadrants by a margin that justifies the cost, the result becomes an ADR and the architecture
+changes. Until then, the simple thing stays.
 
 ## Prompt-injection considerations
 

@@ -56,6 +56,13 @@ record/replay, calibration measurement, and self-consistency sampling.
 its confidence interval — or the finding that it does not is documented in the README. Either way,
 `npm run demo` runs the classifier end to end with no API key.
 
+**Every issue but #38 is closed, and the criterion is not met.** The agent, the prompt, replay,
+calibration and self-consistency sampling are built and tested. What does not exist is the number:
+scoring the agent needs live model calls, and there is no `ANTHROPIC_API_KEY` and no budget for one
+yet, so #38 is deferred until there is. The second half of the criterion holds — `npm run demo`
+runs end to end with no key, on the baseline, and says so. The first half is unmeasured rather than
+failed, and when it is measured the README reports the result whichever way it goes.
+
 ## M4 — TaskFlow application
 
 The system under test: React + TypeScript client, Express + SQLite API, task CRUD, status filter,
@@ -148,26 +155,51 @@ Three issues carry the same shortfall and no other: #64 and #65 are complete but
 cassettes, and #70 for replay. All three become one command each the moment a key exists, which is
 also what #38 needs. Nothing has been spent.
 
+Even then, root cause and fix suggestion stay off in the shipped pipeline: `agents:analyze` passes
+`threshold: null`, which means neither agent runs, until a threshold can be read off the
+calibration curve. `eval/report.md` says why none can be yet.
+
 ## M8 — End-to-end CI & PR comment
 
 Wiring the whole thing together in one workflow, plus the comment upsert, the fork degradation
 path, and the truncation notice.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** a pull request that touches a flaky spec produces exactly one bot comment, and
 pushing again updates that comment rather than adding another.
+
+**Four of five issues are closed, and the criterion is not yet demonstrated.** One
+workflow runs tests, `Flakiness analysis` and `Agent triage` as jobs, and the comment upsert is
+live: a later push edits the comment carrying the `<!-- sentra:report -->` marker instead of adding
+one. `npm run analyze`, the one-command wrapper this milestone planned, was not needed for that and
+was never written.
+
+The fork path degrades by construction rather than by observation. GitHub gives a fork's
+`pull_request` run no secrets and a read-only `GITHUB_TOKEN`, so the pipeline produces a baseline
+report and uploads it as the `triage-report` artifact, and the comment step cannot post. Nobody has
+yet tried it from a real fork — the one box #73 closed without. #75 is the deliberate end-to-end
+pull request the criterion asks for.
 
 ## M9 — Observability, ablation & cost
 
 OpenTelemetry spans to a file exporter, per-run token and cost accounting, and the ablation study
 that measures what each context field actually contributes.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** `eval/ablation.md` reports every variant from
 [eval-methodology.md](docs/eval-methodology.md#ablation-study), and at least one context field is
 either justified by the numbers or removed because of them.
+
+Spans are in (#76): a file exporter writes `otel-spans.json` — one root span per run and one per
+model call, carrying ids, counts, tokens and cost and no untrusted text — and CI uploads it in the
+`triage-report` artifact. Cost accounting is partly there: `agents/pricing.ts` prices every call,
+the report footer carries tokens and dollars, and `eval/report.md` adds a per-fixture cost and a
+50-failure projection whenever a model ran. #77 is the remainder.
+
+The ablation harness (#78) and the three experiments built on it (#79–#81) are not started, and
+every one of them needs live model calls.
 
 ## M10 — Documentation, wiki & v1.0
 

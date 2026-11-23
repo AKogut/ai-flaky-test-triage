@@ -3,8 +3,8 @@
 ## Design constraint that shapes everything
 
 **Nothing runs persistently.** Every component is a function invoked by a CLI script that exits.
-State between runs is a file — carried by the CI cache, an artifact, or a commit to an orphan
-branch. There is no server, no queue, no listener, no hosted database.
+State between runs is a file — carried by the CI cache or a job artifact. There is no server, no
+queue, no listener, no hosted database.
 
 This is not a simplification for its own sake. A triage system that only ever runs once per CI
 job has no reason to be a service, and making it one would add an availability problem, a
@@ -38,11 +38,11 @@ flowchart LR
     APP --> TESTS
     TESTS -->|results.json| FM
     FM -->|analysis.json| TRIAGE
-    TRIAGE -->|app_code + confident| RC
-    RC --> FIX
+    TRIAGE -.->|"app_code + confident<br/>(off until calibrated)"| RC
+    RC -.-> FIX
     TRIAGE --> REPORT
-    RC --> REPORT
-    FIX --> REPORT
+    RC -.-> REPORT
+    FIX -.-> REPORT
 
     DATASET --> TRIAGE
     DATASET --> BASELINE
@@ -66,6 +66,7 @@ type TestRun = {
   branch: string
   startedAt: string // ISO 8601
   durationMs: number
+  source: 'playwright' | 'vitest' | 'synthetic' // diagnostic only — nothing branches on it
   results: TestResult[]
 }
 
@@ -75,9 +76,12 @@ type TestResult = {
   file: string
   status: 'passed' | 'failed' | 'timedOut' | 'skipped'
   attempts: number
+  flakyWithinRun: boolean // an earlier attempt failed and a later one passed
   durationMs: number
-  error?: { message: string; stack?: string; snippet?: string }
-  annotations?: string[]
+  workerIndex?: number // Playwright only — ADR-0008
+  startedAt?: string // Playwright only — ADR-0008
+  error?: { message: string; stack?: string; snippet?: string; expected?: string; actual?: string }
+  annotations: string[]
 }
 ```
 
@@ -239,15 +243,16 @@ the exact double-counting the id exists to prevent.
 
 For each failing or newly-flaky test the orchestrator assembles a **context bundle**:
 
-| Field                                        | Source         | Why the agent needs it                               |
-| -------------------------------------------- | -------------- | ---------------------------------------------------- |
-| Error message + stack                        | test report    | primary evidence                                     |
-| Code snippet at failure                      | test report    | distinguishes assertion from infrastructure failure  |
-| Flakiness score + status history             | flakemetry-lib | separates deterministic from intermittent            |
-| `isNew`, `consecutiveFailures`               | flakemetry-lib | a brand-new always-failing test is a different story |
-| Diff of files touched in this commit         | `simple-git`   | separates app regression from test drift             |
-| Whether the diff touches the file under test | derived        | the single strongest heuristic signal                |
-| Test source                                  | filesystem     | detects missing waits, shared state                  |
+| Field                                        | Source                                   | Why the agent needs it                               |
+| -------------------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| Error message + stack                        | test report                              | primary evidence                                     |
+| Code snippet at failure                      | test report                              | distinguishes assertion from infrastructure failure  |
+| Flakiness score + status history             | flakemetry-lib                           | separates deterministic from intermittent            |
+| `isNew`, `consecutiveFailures`               | flakemetry-lib                           | a brand-new always-failing test is a different story |
+| The pull request's `git diff`                | `agents/git.ts` (read-only `simple-git`) | separates app regression from test drift             |
+| Whether the diff touches the file under test | derived                                  | the single strongest heuristic signal                |
+| Test source                                  | filesystem                               | detects missing waits, shared state                  |
+| Tests that ran before it in the same worker  | test report                              | a state leak's culprit usually passed — ADR-0008     |
 
 `agents/context.ts` assembles it, and three things about how are load-bearing.
 
@@ -277,9 +282,14 @@ the prompt.
 
 ### 4. Agents → `report.md`
 
-Three single-shot LLM calls, described in [agent-design.md](agent-design.md). No loop, no
+Up to three single-shot LLM calls, described in [agent-design.md](agent-design.md). No loop, no
 scratchpad, no tool use beyond the structured-output schema. The orchestrator handles fan-out,
 concurrency limit, token budget, retries, and partial failure.
+
+Today only the first runs. Root cause and fix suggestion are implemented, and `agents:analyze`
+passes them a threshold of `null` — off — until one can be read off the calibration curve. Without
+credentials the triage call is replaced by the baseline heuristic, which is every run so far, and
+the report says which classifier produced it.
 
 ### 5. `report.md` → PR comment
 
@@ -287,33 +297,38 @@ A workflow step reads the file and calls `actions/github-script`. Comments are *
 step looks for a previous comment carrying a hidden marker (`<!-- sentra:report -->`) and edits
 it in place instead of appending a new one on every push.
 
+On a pull request from a fork this step cannot post: GitHub gives that run a read-only
+`GITHUB_TOKEN`. The report is still written and uploaded as the `triage-report` artifact, and the
+job's `continue-on-error` keeps the refusal out of the build's status. Not yet tried with a real
+fork.
+
 ## State between runs
 
 | What                   | Where                                                             | Why                                                    |
 | ---------------------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
 | Test-run history       | `actions/cache` keyed on branch, restore-key falls back to `main` | Survives across runs; cache is keyed, unlike artifacts |
 | Golden dataset         | Committed to the repo                                             | It is source, not state                                |
-| Recorded LLM cassettes | Committed under `agents/replay/cassettes/`                        | Makes the demo reproducible                            |
+| Recorded LLM cassettes | Committed under `agents/replay/cassettes/` — none recorded yet    | Makes the demo reproducible                            |
 | Eval baseline scores   | Committed to `eval/report.md`                                     | Regressions become visible in the diff                 |
-| OTel spans             | Job artifact                                                      | Diagnostic only, disposable                            |
+| OTel spans             | `otel-spans.json`, in the `triage-report` job artifact            | Diagnostic only, disposable                            |
 
 **Concurrency hazard:** two PR runs finishing at once both read the same history and both write.
 The loser's update is lost. Mitigations, in order of preference: (a) only the `main` branch job
 writes history, PR jobs read-only; (b) merge-on-write rather than overwrite; (c) accept it and
-document it. Option (a) is the plan — see ADR-0004.
+document it. Option (a) is what ships — see ADR-0004.
 
 ## Failure modes and degradation
 
 The pipeline never fails the build because of its own problems. It degrades:
 
-| Failure                | Behaviour                                                                  |
-| ---------------------- | -------------------------------------------------------------------------- |
-| No API key (fork PR)   | Baseline heuristic only, comment states it                                 |
-| API error / rate limit | Retry with backoff; on exhaustion, that test is reported `unclassified`    |
-| Token budget exceeded  | Stop fanning out, report what was classified, note the truncation          |
-| No history file        | Treat every test as `isNew`, reduce confidence in intermittency judgements |
-| Malformed test report  | Zod error, pipeline step fails loudly — this one _should_ be noisy         |
-| Zero failures          | Skip the agent stage entirely, post nothing                                |
+| Failure                | Behaviour                                                                                                                   |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| No API key             | Baseline heuristic only, and the report states it — every run so far; on a fork PR the report is an artifact, not a comment |
+| API error / rate limit | Retry with backoff; on exhaustion, that test is reported `unclassified`                                                     |
+| Token budget exceeded  | Stop fanning out, report what was classified, note the truncation                                                           |
+| No history file        | Treat every test as `isNew`, reduce confidence in intermittency judgements                                                  |
+| Malformed test report  | Zod error, pipeline step fails loudly — this one _should_ be noisy                                                          |
+| Zero failures          | Skip the agent stage entirely, post nothing                                                                                 |
 
 ### What the pipeline costs, in wall-clock
 

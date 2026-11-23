@@ -64,7 +64,7 @@ the cheap option is the one a reader would assume was chosen.
 
 - The cross-file leak becomes _possible_ to classify correctly. It was not, before.
 - The material was already in the reports; only the assembly was missing.
-- Ten neighbours is a knob, and #74's ablation can turn it — including to zero.
+- Ten neighbours is a knob, and #78's ablation can turn it — including to zero.
 
 ### Negative / accepted costs
 
@@ -78,7 +78,7 @@ the cheap option is the one a reader would assume was chosen.
 
 ### What would make us revisit this
 
-The ablation (#74) showing the field does not change accuracy, in which case it should be removed
+The ablation (#78) showing the field does not change accuracy, in which case it should be removed
 rather than left in as a plausible-sounding cost. A negative result here is worth publishing: it
 would say that the sequence is not enough on its own, and that Option C is the only thing that would
 work.
