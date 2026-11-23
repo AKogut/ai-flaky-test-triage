@@ -1,3 +1,4 @@
+import { CURRENT_PROMPT } from '@sentra/prompts'
 import { describe, expect, it, vi } from 'vitest'
 import { credentialState, main, parseArgs } from './run.js'
 import type { ModelRequest, ModelResponse, Transport } from './transport.js'
@@ -229,6 +230,102 @@ describe('a run that works', () => {
       transport: stub(),
     })
     expect(result.written['report.md']).toContain('no history')
+  })
+})
+
+describe('the accuracy the footer quotes', () => {
+  /**
+   * The footer is the line that stops a verdict being read as ground truth, so
+   * the figure in it has to be the one for the classifier that ran. Anything
+   * short of an exact match says "not scored", which is at least true.
+   */
+  const metrics = (over: Record<string, unknown> = {}): string =>
+    JSON.stringify({
+      version: 1,
+      classifier: 'baseline',
+      promptVersion: null,
+      slice: 'dev',
+      datasetRevision: '08b6da23ebcfe892',
+      n: 26,
+      joint: { point: 0.34615384615384615, lower: 0.194, upper: 0.538 },
+      selfConsistency: null,
+      costPerFixtureUsd: null,
+      ...over,
+    })
+
+  const agentMetrics = (promptVersion: string | null = CURRENT_PROMPT.triage): string =>
+    metrics({ classifier: 'agent', promptVersion, joint: { point: 0.62 } })
+
+  const report = async (
+    metricsFile: string | undefined,
+    over: { env?: NodeJS.ProcessEnv; transport?: Transport } = {},
+  ): Promise<{ code: number; report: string }> => {
+    const files: Record<string, string> = { 'analysis.json': analysis() }
+    if (metricsFile !== undefined) files['eval/metrics.json'] = metricsFile
+    const result = await run([], { files, ...over })
+    return { code: result.code, report: result.written['report.md'] ?? '' }
+  }
+
+  /** The CI default today: no key, so the baseline runs, and its numbers are on main. */
+  it('quotes the baseline’s figure when the baseline ran', async () => {
+    const { report: text } = await report(metrics(), { env: { SENTRA_LIVE: '1' } })
+    expect(text).toContain('Measured accuracy of this classifier: 35% joint')
+    expect(text).toContain('(baseline heuristic, dev slice, n=26)')
+    expect(text).not.toContain('has not been scored')
+  })
+
+  it('quotes the model’s figure when the model ran under the scored prompt', async () => {
+    const { report: text } = await report(agentMetrics(), { transport: stub() })
+    expect(text).toContain('Measured accuracy of this classifier: 62% joint')
+    expect(text).toContain(`prompt ${CURRENT_PROMPT.triage}, dev slice`)
+  })
+
+  /** A key in CI with only baseline numbers committed: the model ran, and nobody scored it. */
+  it('does not lend the baseline’s figure to the model', async () => {
+    const { report: text } = await report(metrics(), { transport: stub() })
+    expect(text).toContain('has not been scored yet')
+    expect(text).not.toContain('Measured accuracy')
+  })
+
+  it('does not lend the model’s figure to the baseline', async () => {
+    const { report: text } = await report(agentMetrics(), { env: { SENTRA_LIVE: '1' } })
+    expect(text).toContain('has not been scored yet')
+  })
+
+  /** A figure recorded under another prompt describes text that is not the text that ran. */
+  it('quotes nothing recorded under another prompt version', async () => {
+    const { report: text } = await report(agentMetrics('triage.v0'), { transport: stub() })
+    expect(text).toContain('has not been scored yet')
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['not JSON', '{ "version": 1, '],
+    ['not a snapshot', JSON.stringify({ version: 1, classifier: 'baseline' })],
+  ])('says not scored, and still exits 0, when the metrics file is %s', async (_name, file) => {
+    const { code, report: text } = await report(file, { env: { SENTRA_LIVE: '1' } })
+    expect(code).toBe(0)
+    expect(text).toContain('has not been scored yet')
+  })
+
+  /** A footer is not worth a failed run. */
+  it('survives a metrics file that cannot be read', async () => {
+    const written: Record<string, string> = {}
+    const code = await main([], {
+      env: { SENTRA_LIVE: '1' },
+      read: (p) => {
+        if (p === 'eval/metrics.json') throw new Error('EACCES: permission denied')
+        return p === 'analysis.json' ? analysis() : ''
+      },
+      exists: (p) => p === 'analysis.json' || p === 'eval/metrics.json',
+      write: (p, contents) => {
+        written[p] = contents
+      },
+      log: () => undefined,
+      cassetteCount: () => 0,
+    })
+    expect(code).toBe(0)
+    expect(written['report.md']).toContain('has not been scored yet')
   })
 })
 
