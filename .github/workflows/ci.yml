@@ -22,7 +22,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
+  # The newest 24.x, the line `.nvmrc` names. The floor is `engines.node`: 24.15,
+  # the oldest 24.x that jsdom 30 accepts (`^22.22.2 || ^24.15.0 || >=26.0.0`).
+  NODE_VERSION: '24'
 
 jobs:
   # ---------------------------------------------------------------------------

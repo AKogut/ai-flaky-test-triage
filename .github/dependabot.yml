@@ -54,38 +54,45 @@ updates:
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
 
-      # lint-staged 17 requires Node >=22.22.1. A commit-hook helper should not set
-      # the runtime floor for a project that ships nothing depending on it; revisit
-      # when the repository moves to Node 24.
+      # lint-staged 17 requires Node >=22.22.1, which the 24.15 floor clears, so the
+      # runtime is no longer the reason. What decides it now is the hook: 17 re-stages
+      # fixed files with `git update-index --again` instead of `git add`, and that is
+      # checked with a commit made through the hook, in a PR of its own.
       - dependency-name: 'lint-staged'
         update-types: ['version-update:semver-major']
 
-      # jsdom 30 requires Node ^22.22.2 — above engines.node, and above what a
-      # contributor on any earlier 22.x has. Same reasoning as lint-staged: the
-      # DOM the client tests run in should not set the runtime floor. Closed in
-      # #180; revisit with the move to Node 24.
+      # jsdom 30 and 31 accept `^22.22.2 || ^24.15.0 || >=26.0.0` — the range that set
+      # the floor at 24.15, so the runtime is no longer the reason. What decides it now
+      # is the client suite: both majors rewrite CSS parsing and computed styles, and
+      # the tests that run in that DOM have to hold on it. Closed in #180; the upgrade
+      # follows in a PR of its own.
       - dependency-name: 'jsdom'
         update-types: ['version-update:semver-major']
 
       # @types/node is versioned by Node major, so its major has to track
       # engines.node rather than the newest release. @types/node@26 declares
-      # node:ffi and node:quic, which Node 22 does not have — importing them
-      # would type-check and then throw. Held until the runtime floor moves;
+      # node:ffi and node:quic, which Node 24 does not have — importing them
+      # would type-check and then throw. Held until the runtime floor moves, and
+      # moved by hand when it does, as it was for Node 24;
       # tests/unit/node-floor.test.ts fails if the two ever disagree.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
 
-      # The OpenTelemetry SDK's 3.x line requires Node >=22.15 and @opentelemetry/api
-      # 1.10, both above what engines.node promises. Same reasoning as jsdom: tracing
-      # should not set the runtime floor. Held until the repository moves to Node 24;
-      # minor and patch releases of the 2.x SDK still arrive through the otel group.
+      # The OpenTelemetry SDK's 3.x line requires Node >=22.15, which the 24.15 floor
+      # clears, so the runtime is no longer the reason. What decides it now is the
+      # public interface 3.0 changed (removed packages and exports, a new build
+      # layout), checked against the tracing code and its span tests, with
+      # @opentelemetry/api 1.10 in the same PR. Minor and patch releases of the 2.x
+      # SDK still arrive through the otel group.
       - dependency-name: '@opentelemetry/*'
         update-types: ['version-update:semver-major']
 
       # The API is the exception the rule above misses: 1.10 is a minor release, and
       # every 2.x SDK package declares a peer range of `@opentelemetry/api <1.10.0`.
       # It installs and the tests pass, which is what makes it dangerous — the SDK
-      # makes no promise about it. It moves with the SDK major, not before it.
+      # makes no promise about it. Node never held it (1.10 accepts >=8); every 3.x
+      # package peers on `>=1.10.0 <1.11.0`, so it moves with the SDK major, not
+      # before it.
       - dependency-name: '@opentelemetry/api'
         versions: ['>=1.10.0']
 

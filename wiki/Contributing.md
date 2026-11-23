@@ -25,7 +25,7 @@ npm run eval            # score the baseline against the golden dataset
 npm run demo            # classifies a bundled run, no API key — writes report.md
 ```
 
-Node ≥ 22.13. A key is only required for live model calls, and nothing that works today needs one.
+Node ≥ 24.15. A key is only required for live model calls, and nothing that works today needs one.
 
 ## Who can merge, and what happens to an outside pull request
 

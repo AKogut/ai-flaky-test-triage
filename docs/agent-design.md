@@ -119,8 +119,10 @@ can turn a classification into a failed row changes what it measures.
 including on answers the schema rejected; the report footer's usage line counts successful calls
 only. Reconciling the two is part of #77.
 
-The OpenTelemetry SDK is held on the 2.x line: 3.x requires Node 22.15 or later, newer than the
-floor `engines.node` declares, so `.github/dependabot.yml` ignores its majors.
+The OpenTelemetry SDK is held on the 2.x line. Node no longer holds it — 3.x needs 22.15 or later,
+below the 24.15 floor in `engines.node` — but 3.0 changed the public interface and moves together
+with `@opentelemetry/api` 1.10, so it comes in a change of its own and `.github/dependabot.yml`
+still ignores its majors.
 
 ## 1. Triage agent
 
