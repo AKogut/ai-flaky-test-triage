@@ -590,4 +590,29 @@ describe('fitting under GitHub’s comment limit', () => {
     const report = renderReport(input({ triaged: many }))
     expect(report.length).toBeLessThanOrEqual(COMMENT_LIMIT)
   })
+
+  /**
+   * A collapsed section starts at `<details>`, not at a heading. Cut inside one
+   * and the notice and the footer render inside a block that never closes —
+   * still in the text, folded out of sight under the last test's summary.
+   */
+  it('cuts before a collapsed section, so the footer is not folded into it', () => {
+    const many = Array.from({ length: 120 }, (_, i) =>
+      named(`case ${String(i)}`, {
+        classification: {
+          owner: 'test_code',
+          determinism: 'intermittent',
+          confidence: 0.7,
+          reasoning: 'the locator matches two rows while the list re-renders. '.repeat(7),
+          evidence: ['x'],
+        },
+      }),
+    )
+    const report = renderReport(input({ triaged: many, accuracy: agentAccuracy }))
+    const [kept = ''] = report.split(TRUNCATION_NOTICE)
+    expect(report).toContain(TRUNCATION_NOTICE)
+    expect(kept.split('<details>').length).toBe(kept.split('</details>').length)
+    expect(kept.trimEnd().endsWith('</details>')).toBe(true)
+    expect(report).toContain('Measured accuracy of this classifier: 62% joint')
+  })
 })

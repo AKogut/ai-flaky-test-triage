@@ -432,6 +432,11 @@ function measured(accuracy: MeasuredAccuracy): string {
  * treating the rest as ground truth — so it is the one part that must survive
  * truncation. Sections are dropped from the end, where the collapsed
  * non-`app_code` findings are, rather than characters from the middle.
+ *
+ * A collapsed section starts at `<details>`, not at a heading. Cut anywhere
+ * inside one and the notice and the footer render inside a `<details>` that
+ * never closes, folded under the last test's summary, so a footer that is
+ * still in the text is no longer on the page.
  */
 export function fit(body: string, footer: string, limit: number): string {
   const whole = body + footer
@@ -440,6 +445,6 @@ export function fit(body: string, footer: string, limit: number): string {
   const room = limit - footer.length - TRUNCATION_NOTICE.length - RESERVE
   const kept = body.slice(0, Math.max(0, room))
   // Cut at a section boundary so the document does not end mid-sentence.
-  const boundary = kept.lastIndexOf('\n### ')
+  const boundary = Math.max(kept.lastIndexOf('\n### '), kept.lastIndexOf('\n<details>'))
   return (boundary > 0 ? kept.slice(0, boundary) : kept) + TRUNCATION_NOTICE + footer
 }
