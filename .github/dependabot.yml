@@ -6,6 +6,15 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # A release is proposed once it is two weeks old, not the day it ships. A
+    # compromised or broken version is usually found and pulled within days, and
+    # a pipeline that installs on every pull request is exactly where it would
+    # land first. Every dependency picked by hand in this repository already
+    # followed this rule; this makes Dependabot follow it too.
+    #
+    # Security updates are not delayed: cooldown applies to version updates only.
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: 'chore(deps)'
       prefix-development: 'chore(deps-dev)'
@@ -75,6 +84,10 @@ updates:
     directory: '/'
     schedule:
       interval: monthly
+    # Same rule as npm above. Actions run with this repository's token, so a
+    # release that turns out to be malicious is worth waiting out more, not less.
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: 'ci(deps)'
     groups:
