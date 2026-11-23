@@ -5,9 +5,13 @@
 Partly, and the interesting question is how much value the LLM part adds — which is why the project
 answers it with numbers instead of assertions.
 
-A thirty-line non-LLM heuristic classifies the same dataset, and every agent number is reported next
-to it. If the heuristic wins, the README says the heuristic wins. That comparison, plus the ablation
-study measuring what each piece of context contributes, is the part that is not a wrapper.
+A non-LLM heuristic of about ninety lines classifies the same dataset, and every agent number is
+reported next to it. If the heuristic wins, the README says the heuristic wins. That comparison,
+plus an ablation study that will measure what each piece of context contributes (🚧 M9, #78), is
+the part that is not a wrapper.
+
+No model has been scored yet. Scoring one needs an API key the project does not have, so today the
+comparison has one column; the agent's arrives with #38, and the commitment above does not move.
 
 ## How is this different from Flakemetry or similar tools?
 
@@ -26,16 +30,20 @@ Once ground truth stops being reproducible, every metric built on it is decorati
 
 ## Can I run it without an API key?
 
-Yes — `npm run demo` runs the whole pipeline against recorded model responses, offline and free. The
-test suite and the evaluation harness also run in replay mode.
+Yes — nothing that runs today needs one. `npm run demo` classifies a bundled CI run offline and
+free, and `npm run eval` scores the golden dataset. Both run the baseline heuristic for now, and
+both say so: replay needs recorded model responses, and recording them needs a key the project
+does not have yet (#38). The test suite drives the agents through a scripted transport, so it needs
+no key either.
 
-You need a key only to classify a _new_ failure with a live model.
+You need a key to run the model at all — live, or once, to record the cassettes that would let
+everyone else replay it.
 
 ## Why is the accuracy number not higher?
 
-Because the dataset is built to be hard on purpose. Roughly 20% of fixtures are the hard quadrant,
-another 20% are specifically designed to defeat the obvious shortcuts — a test flaky for 200 runs
-that today fails for a new reason, an environment failure inside a suspicious diff.
+Because the dataset is built to be hard on purpose. It over-weights the hard quadrant and the cases
+designed specifically to defeat the obvious shortcuts — a test flaky for 200 runs that today fails
+for a new reason, an environment failure inside a suspicious diff.
 
 A dataset of clearly-flaky tests would produce a much better number and would measure nothing. The
 headline is also **joint accuracy** — both axes correct on the same fixture — which is always lower
@@ -91,13 +99,15 @@ Triage is one decision over a fixed, complete input — error, stack, history, d
 needs discovering, so a loop would mostly re-read text the model already has, at the cost of
 latency, money, and non-determinism.
 
-That is a claim rather than an axiom, and the ablation study tests it against a bounded multi-step
-variant. If the loop wins on the hard quadrant, the architecture changes.
+That is a claim rather than an axiom, and the ablation study will test it against a bounded
+multi-step variant (🚧 M9, #80). If the loop wins on the hard quadrant, the architecture changes.
 
 ## What happens on a pull request from a fork?
 
 GitHub does not give fork-triggered workflows access to secrets, so there is no API key and the
-pipeline runs the baseline heuristic only. The comment says so explicitly.
+pipeline runs the baseline heuristic only. The workflow token is read-only as well, so the report
+is produced and uploaded as the `triage-report` artifact, but the comment cannot be posted. That
+path has not yet been exercised by a real fork pull request.
 
 The popular workaround, `pull_request_target`, runs untrusted code with a write-scoped token and
 secrets in the environment. It is not used here and a CI check asserts it never appears.
@@ -110,9 +120,11 @@ project with a different set of problems.
 
 ## Why is the evaluation itself slightly flaky?
 
-Because model output is non-deterministic and this model exposes no sampling controls to pretend otherwise, and 60 fixtures carry a ±11pp
-confidence interval. Rather than pretending otherwise, the harness samples each fixture five times,
-reports variance and label stability, and gates CI on interval lower bounds.
+Because model output is non-deterministic and this model exposes no sampling controls to pretend otherwise, and a
+small dataset carries wide intervals — 39 fixtures today, 60 at target, and even at 60 the lower
+bound of a 95% interval around 90% accuracy sits ten points below it. Rather than pretending
+otherwise, the harness samples each fixture five times when a model is classifying, reports
+variance and label stability, and gates CI on interval lower bounds.
 
 A flaky-test triage tool with a mildly flaky test suite is a fair irony, and hiding it would be
 worse than owning it.

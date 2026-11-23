@@ -19,7 +19,7 @@ the person labelling has to choose arbitrarily — and chooses differently a wee
 That is not a cosmetic problem. Everything this project claims about itself rests on a hand-labelled
 dataset. If two people, or one person on two days, produce different ground truth for the same
 failure, then accuracy measured against that ground truth is decoration. The CI gate, the ablation
-study, the calibration curve — all of them inherit the noise.
+study, the calibration curve — all of them would inherit the noise.
 
 ## Two axes instead
 
@@ -63,12 +63,14 @@ It matters because:
   reading all three is precisely the tedious work people skip at 6pm.
 
 The evaluation reports this quadrant's accuracy separately from the headline. If the agent cannot
-beat a thirty-line heuristic here, it is not earning its cost, and the project would rather find
+beat a ninety-line heuristic here, it is not earning its cost, and the project would rather find
 that out and say so.
 
 ## Cases chosen to be hard
 
-Each of these is in the golden dataset on purpose, because each defeats one tempting shortcut:
+Each of these is a case the golden dataset is built to cover, because each defeats one tempting
+shortcut. Two are not in it yet: no fixture pairs a regression with a dependency bump, and the one
+cross-file leak is a row left behind by another spec rather than a modal.
 
 | Case                                                                | Truth                        | What it defeats                    |
 | ------------------------------------------------------------------- | ---------------------------- | ---------------------------------- |
@@ -99,7 +101,7 @@ justifications visible in review, and gives the evaluation something to check be
 itself.
 
 Whether `confidence` means anything is treated as an open question rather than an assumption — see
-[Evaluation Methodology](Evaluation-Methodology#does-confidence-mean-anything).
+[Evaluation Methodology](Evaluation-Methodology#4-does-confidence-mean-anything).
 
 ## Decision record
 

@@ -9,21 +9,22 @@ unusually clear about its own.
 ## What the agents are not allowed to do
 
 The distinction that matters: the enforced ones are not promises, they are **absent capabilities**.
-The planned ones are labelled as planned, because a guardrail nobody has built yet reads exactly
-like one that works.
+Every row below is enforced today. A guarantee that was only planned would be labelled as planned,
+because a guardrail nobody has built yet reads exactly like one that works — and three of these
+rows were, until #63, #65 and #66 closed.
 
-| Guarantee                         | Status            | How it holds                                                                                                                                                                   |
-| --------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Never modify the working tree     | **enforced**      | No agent module can import `fs` or `child_process` — a lint rule fails the build, and a test feeds that rule a real violation to prove it fires.                               |
-| Cannot fail your build            | **enforced**      | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red.                                                                                     |
-| Never approve or merge            | **enforced**      | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests.                                                                  |
-| Cost cannot run away              | **partly** — #66  | A per-run token budget is checked before dispatch and enforced in the eval harness. The orchestrator half — stopping dispatch and reporting the truncation — is not built yet. |
-| Never push, tag, or commit        | **planned** — #63 | A read-only git facade exposing `diff`, `log`, `show`. Today no agent reads git at all, so this holds by absence rather than by design.                                        |
-| Fix suggestions are never applied | **planned** — #65 | `patch` will be a string in a fenced code block with no path to an apply step. There is no fix-suggestion agent yet, so there is nothing to apply and nothing preventing it.   |
+| Guarantee                         | Status       | How it holds                                                                                                                                                                                                                |
+| --------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Never modify the working tree     | **enforced** | The pure agent modules cannot import `fs` or `child_process` — a lint rule fails the build, and a test feeds that rule a real violation to prove it fires. Another test drives a full run and asserts the files it writes.  |
+| Cannot fail your build            | **enforced** | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red.                                                                                                                                  |
+| Never approve or merge            | **enforced** | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests.                                                                                                               |
+| Cost cannot run away              | **enforced** | One token budget per run, checked before dispatch against a real `count_tokens` call. Once it refuses a call the orchestrator stops dispatching, and every test it never reached appears in the report as `not-dispatched`. |
+| Never push, tag, or commit        | **enforced** | `agents/git.ts` hands out four reads — `diff`, `log`, `show`, `fileAtRef` — and holds the client in a closure, so there is nothing to reach through. Lint makes it the only module allowed to import the git client.        |
+| Fix suggestions are never applied | **enforced** | `agents/fix-suggestion.ts` exports two functions, both of which return objects. There is no apply step to switch off, and a test asserts the module's whole export list.                                                    |
 
 A promise enforced by discipline is not a guardrail. A promise enforced by the absence of a
-capability holds in six months, in a hurry, when nobody is thinking about it — which is why the
-ones that are not yet enforced say so.
+capability holds in six months, in a hurry, when nobody is thinking about it — which is why a
+guarantee that is not yet enforced says so.
 
 ## What it genuinely cannot do
 
@@ -40,7 +41,8 @@ ones that are not yet enforced say so.
 
 ## Where it will be wrong
 
-Measured and published in `eval/report.md`, not hypothetical:
+Measured and published in `eval/report.md`, not hypothetical — so far for the baseline only, since
+no model has been scored yet (#38):
 
 - **The hard quadrant is the weakest and the most consequential.** A missed product race gets rerun
   until green and ships.
@@ -59,7 +61,9 @@ names, assertion messages, comments, or diff hunks — all of which flow into a 
 **`pull_request_target` is not used.** It is the popular workaround for fork PRs not receiving
 secrets, and combined with checking out the PR head it executes attacker-controlled code with a
 write-scoped token and repository secrets in the environment. The project degrades instead: no key
-means baseline-heuristic output, and the comment says so.
+means baseline-heuristic output, and the report says so. A fork's token is read-only too, so the
+report is uploaded as the `triage-report` artifact rather than posted as a comment — a path not
+yet exercised by a real fork pull request.
 ([ADR-0007](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0007-no-github-app-no-pull-request-target.md))
 
 **Injection has a low ceiling by construction.** Untrusted text is delimited and length-capped;
@@ -67,8 +71,8 @@ output is schema-constrained, so the model can emit enum values and bounded stri
 instructions; output is escaped before rendering; and nothing downstream _executes_ it. The worst
 achievable outcome is a wrong label and a misleading comment.
 
-**One real egress path.** Source snippets and diff hunks are sent to the model API during the agent
-stage. A best-effort secret scrub runs first, but it is not a guarantee. Anyone adding an API key to
+**One real egress path.** Source snippets and diff hunks are sent to the model API whenever the
+agent stage runs with a key. A best-effort secret scrub runs first, but it is not a guarantee. Anyone adding an API key to
 a private fork should understand that before doing so.
 
 ## The risk nobody puts in a README
@@ -76,10 +80,11 @@ a private fork should understand that before doing so.
 **Automation bias.** A confident wrong classification is worse than no classification, because it
 redirects attention with unearned authority. That is why `alternativeHypothesis` is mandatory below
 the confidence threshold, why `risks` is a required field, and why every report states the
-classifier's own measured accuracy inline.
+measured accuracy of whichever classifier produced it, inline.
 
 **Making flakiness comfortable.** A tool that makes flaky tests pleasant to live with can entrench
-them. The report deliberately surfaces long-lived flaky tests as accumulating debt rather than as
-routine noise.
+them. The intent is for the report to surface long-lived flaky tests as accumulating debt rather
+than as routine noise. That is planned, not built: today the report classifies the failures in
+front of it and says nothing about how long a test has been flaky.
 
 The output is advisory. It is a prioritisation aid for a human reviewer, and it is never a verdict.

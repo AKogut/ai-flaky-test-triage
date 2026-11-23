@@ -24,8 +24,10 @@ Prefixes: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`, `perf`, `exp`.
 The issue number makes the branch self-linking in the UI and makes a stale branch traceable to
 closed work six months later.
 
-**Special branches.** `main` is protected — no direct pushes, no force-push, no deletion.
-`flakemetry-history` is machine-written and excluded from CI; humans do not commit there.
+**Special branches.** `main` is protected — no direct pushes, no force-push, no deletion. There is
+no machine-written branch: run history lives in the GitHub Actions cache, written only from
+`main`, and an orphan history branch was considered and rejected
+([ADR-0004](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0004-history-persistence-via-ci-cache.md)).
 
 ## Commits
 
@@ -41,11 +43,12 @@ description. Prompts are code.
 
 Required before merge:
 
-1. Green CI — lint, typecheck, unit, e2e, contract
-2. Green eval gate when the change touches `agents/`, `eval/`, or `prompts/`
-3. A description that says **how the change was verified**, not that tests pass
-4. The before/after eval table for any prompt or agent change
-5. No unresolved threads
+1. The five required checks green — repository hygiene, PR title, static analysis, unit & contract
+   tests, and the eval gate, which runs on every pull request. E2E runs too but is not required:
+   its flaky specs are deliberate input, not defects
+2. A description that says **how the change was verified**, not that tests pass
+3. The before/after eval table for any prompt or agent change
+4. No unresolved threads
 
 Target under ~400 changed lines. Draft pull requests are opened early on purpose: CI runs, the eval
 delta becomes visible, and the work is still cheap to change.
