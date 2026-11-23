@@ -183,7 +183,11 @@ Pre-1.0, the public surface is the CLI script contract and the `analysis.json` /
 `v1.0.0` ships when the Definition of Done in the README is met end to end.
 
 Releases are cut from `main` by tagging. `CHANGELOG.md` is generated from Conventional Commits by
-`npm run changelog`.
+`npm run changelog`: one section per release tag, newest first, each holding the commits since the
+release before it, under an `Unreleased` section for what has landed since the newest. A tag
+counts when it is a semver version — `v0.3.0`, `v1.0.0-rc.1` — and the checked-out commit contains
+it; any other tag is ignored. A release is dated by the commit its tag points at, not by when the
+tag was made. Its section appears once the tag exists, so regenerate after tagging.
 
 **When it is regenerated: at every milestone close, and at every release.** Deliberately not on
 every merge — that would make every open pull request conflict on `CHANGELOG.md`, and the cure
@@ -194,7 +198,8 @@ and M2 (#117).
 `npm run changelog:check` fails when the committed file is behind `main`. It is run by hand at
 those two moments rather than in per-PR CI, for the same conflict reason. GitHub Releases carry the changelog section plus the current
 `eval/report.md` headline numbers — **the accuracy of the classifier is part of the release
-notes.**
+notes.** `npm run --silent changelog -- --section v0.3.0` prints that one section and nothing else;
+`--silent` keeps npm's own banner out of it.
 
 ## Issue workflow
 
