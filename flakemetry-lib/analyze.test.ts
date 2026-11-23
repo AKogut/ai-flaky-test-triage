@@ -250,22 +250,33 @@ describe('the range, over every sequence rather than a sampled few', () => {
     expect(sequences).toHaveLength(2 ** 14 - 2)
   })
 
+  /**
+   * Every sequence is still scored; what changed is the assertion. One `expect`
+   * per bound per sequence was 32 thousand of them, and building those cost
+   * more than the scoring did: two seconds on an ordinary run, ten on a busy
+   * machine, past the five-second limit. Collecting what falls outside and
+   * asserting once on the list checks the same thing, and a failure now names
+   * every sequence that escaped rather than the first.
+   *
+   * `!(score >= 0 && score <= 1)` rather than the obvious comparison, so a NaN
+   * counts as outside — it fails both of the original matchers too.
+   */
+  const outside = (score: number): boolean => !(score >= 0 && score <= 1)
+
   it('stays within 0..1 for all of them', () => {
-    for (const history of sequences) {
-      const score = scoreStatusHistory(history)
-      expect(score, history).toBeGreaterThanOrEqual(0)
-      expect(score, history).toBeLessThanOrEqual(1)
-    }
+    expect(sequences.filter((history) => outside(scoreStatusHistory(history)))).toEqual([])
   })
 
   it('stays within 0..1 at any half-life', () => {
+    const escaped: string[] = []
     for (const halfLife of [0.25, 1, 3, 10, 50, 1e6]) {
       for (const history of sequences.slice(0, 2000)) {
-        const score = scoreStatusHistory(history, halfLife)
-        expect(score, `${history} @ ${String(halfLife)}`).toBeGreaterThanOrEqual(0)
-        expect(score, `${history} @ ${String(halfLife)}`).toBeLessThanOrEqual(1)
+        if (outside(scoreStatusHistory(history, halfLife))) {
+          escaped.push(`${history} @ ${String(halfLife)}`)
+        }
       }
     }
+    expect(escaped).toEqual([])
   })
 
   it('reaches both ends, so the bounds above are not vacuous', () => {

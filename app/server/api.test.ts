@@ -50,8 +50,15 @@ import { seed, SEED, SEED_TIME } from './seed.js'
  * a spec in this repository has a whole file explaining why that is a defect
  * rather than bad luck. Sixty seconds is far past anything the API can
  * legitimately take, so a test that reaches it is genuinely stuck.
+ *
+ * Both limits, for the reason #245 gave: the database and the listener are
+ * opened in `beforeEach` and closed in `afterEach`, and a hook answers to
+ * `hookTimeout` — 10s by default — not `testTimeout`. Raising only the second
+ * left the work this comment describes on the short clock, and a hook that runs
+ * out of time is reported against whichever test it was running for — a
+ * different one each time.
  */
-vi.setConfig({ testTimeout: 60_000 })
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 })
 
 /** One directory for the whole file, removed once. Per-test dirs are 84 syscalls for nothing. */
 const workspace = mkdtempSync(join(tmpdir(), 'taskflow-api-'))

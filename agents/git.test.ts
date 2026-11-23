@@ -20,7 +20,10 @@ import {
  * bites in CI, exists nowhere except in git itself.
  */
 
-vi.setConfig({ testTimeout: 30_000 })
+// Both limits: the repository is built in `beforeAll` — seven git processes —
+// and a hook answers to `hookTimeout`, 10s by default. With the machine busy
+// that hook took 9.3s, so the slowest part of the file was on the shortest clock.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 })
 
 const git = (cwd: string, args: string[]): string =>
   execFileSync('git', args, {

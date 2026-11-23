@@ -51,7 +51,10 @@ afterEach(() => {
   window.history.replaceState(null, '', '/')
 })
 
-describe('loading', () => {
+// The first render in a worker, and its first query by role, pay to warm up
+// React DOM and the accessibility lookups — and these run first: 2.2s on an
+// ordinary run, 4.5s on a busy machine.
+describe('loading', { timeout: 30_000 }, () => {
   it('says so while the request is in flight', () => {
     fetchMock.mockReturnValue(new Promise(() => undefined))
     render(<App />)

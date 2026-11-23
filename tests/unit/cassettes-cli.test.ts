@@ -76,7 +76,9 @@ describe('what the check expects', () => {
    * would actually request — asserted by running the agent against a transport
    * that records what it was handed, and comparing.
    */
-  it('is the key the agent would really send', async () => {
+  // Builds every expected request again and runs the agent: 0.6s on an ordinary
+  // run, 3.8s on a busy machine.
+  it('is the key the agent would really send', { timeout: 30_000 }, async () => {
     const { triage } = await import('@sentra/agents')
     const { loadPrompt, CURRENT_PROMPT } = await import('@sentra/prompts')
     const { loadPayload, listFixtures } = await import('@sentra/eval')
@@ -116,7 +118,9 @@ describe('what the check expects', () => {
   })
 })
 
-describe('the check', () => {
+// Most of these build every expected request and then run the check, which
+// builds them again: 1s on an ordinary run, 7.4s on a busy machine.
+describe('the check', { timeout: 30_000 }, () => {
   it('passes and says why when nothing is recorded', () => {
     const lines: string[] = []
     expect(check({ read, cassettes: () => [], log: (m) => lines.push(m) })).toBe(0)
