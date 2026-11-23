@@ -56,8 +56,14 @@ export const MODEL_CONFIG: ModelConfig = {
    * reason: a model change moves every metric in `eval/report.md`, so it is
    * made on purpose with an eval run attached, not absorbed by a dependency
    * bump.
+   *
+   * Moved from `claude-opus-5` before the first scored run (#38), which is the
+   * one moment a model change costs nothing: no agent number had been
+   * published, so none is invalidated. The request shape — structured output
+   * and an explicit effort, no forced tool choice, no sampling parameters — is
+   * accepted unchanged by both models.
    */
-  model: 'claude-opus-5',
+  model: 'claude-opus-5-5',
 
   /**
    * Caps thinking *and* response text together on this model tier, where
@@ -68,12 +74,12 @@ export const MODEL_CONFIG: ModelConfig = {
   maxTokens: 8_000,
 
   /**
-   * Left at the API default rather than guessed downward.
+   * Set explicitly, because on this model the API default is `medium`, one
+   * level below what the classifier was designed against.
    *
-   * Lower effort is unusually strong on this model and is the obvious cost
-   * lever, but picking a level before measuring is tuning without evidence.
-   * The sweep belongs to #38, where it can be run against the dataset and the
-   * chosen value defended with numbers.
+   * Lower effort is the obvious cost lever, but picking a level before
+   * measuring is tuning without evidence. The sweep belongs to #38, where it
+   * can be run against the dataset and the chosen value defended with numbers.
    */
   effort: 'high',
 

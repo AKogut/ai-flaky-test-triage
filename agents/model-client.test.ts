@@ -378,7 +378,7 @@ describe('MODEL_CONFIG', () => {
   it('pins a model rather than tracking whatever is newest', () => {
     // A model change moves every number in eval/report.md, so it happens in a
     // reviewable commit with an eval run attached — never via a dependency bump.
-    expect(MODEL_CONFIG.model).toBe('claude-opus-5')
+    expect(MODEL_CONFIG.model).toBe('claude-opus-5-5')
   })
 
   it('leaves room for thinking and the answer together', () => {
