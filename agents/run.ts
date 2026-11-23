@@ -10,6 +10,8 @@ import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
 import { CassetteTransport, listCassettes, resolveMode } from './cassettes.js'
 import { classifyWithBaseline } from './baseline.js'
 import { runContextFor } from './context.js'
+import { readDiff } from './diff.js'
+import { openRepository, type GitReader } from './git.js'
 import { TokenBudget } from './model-client.js'
 import { hasWork } from './orchestrate.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
@@ -50,6 +52,11 @@ export interface RunDeps {
   transport?: Transport
   /** Injected so a test can drive a whole run without a clock or a network. */
   cassetteCount?: () => number
+  /**
+   * The read-only git facade, opened once per run. Injected so a test needs no
+   * repository; production opens the checkout it runs in.
+   */
+  git?: () => GitReader
 }
 
 export interface RunOptions {
@@ -155,11 +162,16 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
   const countCassettes = deps.cassetteCount ?? ((): number => listCassettes().length)
   const credentials = credentialState(env, countCassettes())
 
+  // Read once, handed to every classifier. A failed read is reported, not fatal.
+  const change = await readDiff(deps.git ?? (() => openRepository()), env)
+  if (change.failure !== undefined) log(`  no diff for ${change.range}: ${change.failure}`)
+
   // Every notice comes from one table, so the report and the command cannot
   // describe the same degradation in two different sets of words.
   const notices: string[] = []
   if (analysis.historySource === 'unreadable') notices.push(DEGRADATIONS.unreadableHistory)
   else if (!analysis.historyAvailable) notices.push(DEGRADATIONS.noHistory)
+  if (change.failure !== undefined) notices.push(DEGRADATIONS.noDiff)
   if (!credentials.canRun) {
     notices.push(credentials.notice ?? DEGRADATIONS.noKey)
     notices.push(DEGRADATIONS.baselineOnly)
@@ -260,6 +272,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
     return {
       subject: test,
       historyAvailable: analysis.historyAvailable,
+      ...(change.diff === undefined ? {} : { diff: change.diff }),
       ...(runContext === null ? {} : { runContext }),
       ...(exists(source) ? { testSource: read(source) } : {}),
     }

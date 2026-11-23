@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import type { GitReader } from '../../agents/git.js'
 import { main } from '../../agents/run.js'
 import type { ModelRequest, ModelResponse, Transport } from '../../agents/transport.js'
 
@@ -63,6 +64,18 @@ const scripted = (
   return transport
 }
 
+/**
+ * The checkout, with nothing in it. The diff is the commit under test, and a
+ * fixture run is not a commit — reading this repository's own history here would
+ * make the prompt depend on whichever commit the suite happens to run at.
+ */
+const noChange: GitReader = {
+  diff: () => Promise.resolve(''),
+  log: () => Promise.resolve([]),
+  show: () => Promise.resolve(''),
+  fileAtRef: () => Promise.resolve(null),
+}
+
 interface Run {
   code: number
   report: string | undefined
@@ -85,6 +98,7 @@ const run = async (
     },
     log: () => undefined,
     cassetteCount: () => 0,
+    git: () => noChange,
     transport,
   })
   return { code, report: written['report.md'], files: Object.keys(written), calls: transport.calls }
