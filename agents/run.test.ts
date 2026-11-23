@@ -280,8 +280,7 @@ describe('a run that works', () => {
 
   it('classifies and reports', async () => {
     const report = (await run([], { transport: stub() })).written['report.md'] ?? ''
-    expect(report).toContain('app_code+intermittent')
-    expect(report).toContain('board › reorders')
+    expect(report).toContain('| tests/e2e/board.spec.ts›reorders | app_code+intermittent |')
   })
 
   /**
