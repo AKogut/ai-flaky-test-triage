@@ -16,7 +16,13 @@ commitlint because a well-formed history needs them, but they are not release no
 
 ## Unreleased
 
-_No user-facing changes since v0.2.0._
+_No user-facing changes since v0.3.0._
+
+## v0.3.0 — 2026-11-23
+
+### Documentation
+
+- **docs:** a 60-second tour, and the demo as a GIF ([#262](https://github.com/AKogut/ai-flaky-test-triage/pull/262))
 
 ## v0.2.0 — 2026-11-23
 
