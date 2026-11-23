@@ -1,4 +1,5 @@
 import { ClassificationSchema } from '@sentra/contracts'
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { callModel, SchemaViolationError } from './model-client.js'
 import { REDACTED } from './redact.js'
@@ -12,12 +13,14 @@ import {
   FIELD_ORDER,
   MIN_CAP,
   sanitiseField,
+  stripAnsi,
   UNTRUSTED_PREAMBLE,
   type UntrustedField,
 } from './sanitise.js'
 import type { ModelRequest, Transport } from './transport.js'
 
 const ESC = String.fromCharCode(0x1b)
+const BEL = String.fromCharCode(0x07)
 const BEGIN = '[BEGIN UNTRUSTED DATA'
 const END = '[END UNTRUSTED DATA'
 
@@ -165,6 +168,77 @@ describe('normalisation', () => {
     expect(sanitiseField('errorStack', 'a\r\nb\rc').text).toBe('a\nb\nc')
   })
 })
+
+/* eslint-disable no-control-regex -- the reference matches escape sequences, which are control characters. */
+
+/**
+ * The expression ANSI was removed with before it became a scan, kept as the
+ * reference the scan is checked against. Do not tidy it: it is the spec.
+ */
+const ANSI_BEFORE =
+  /\u001B\[[0-9;?]*[\u0020-\u002F]*[\u0040-\u007E]|\u001B\][\s\S]*?(?:\u0007|\u001B\\)/g
+
+/* eslint-enable no-control-regex */
+
+/**
+ * Text dense in what makes the two kinds of sequence: escapes, both openers,
+ * both terminators, parameter and final bytes, and sequences already whole. At
+ * most 50 pieces, so the quadratic reference stays fast.
+ */
+const ansiText = fc.string({
+  unit: fc.constantFrom(
+    ...[ESC, '[', ']', BEL, '\\', '0', '9', ';', '?', ' ', '!', '/', '@', 'm', '~', 'a', '\n'],
+    ...[`${ESC}[`, `${ESC}]`, `${ESC}\\`, `${ESC}[31m`, `${ESC}[0m`, `${ESC}]8;;`, '\r', '\u009B'],
+  ),
+  maxLength: 50,
+})
+
+describe('the scan that replaced the ANSI expression', () => {
+  it('removes exactly what the expression removed', () => {
+    fc.assert(
+      fc.property(ansiText, (text) => {
+        expect(stripAnsi(text)).toBe(text.replace(ANSI_BEFORE, ''))
+      }),
+      { numRuns: 5_000 },
+    )
+  })
+
+  /**
+   * Where a body that cannot hold an escape, the obvious linear rewrite, would
+   * part from the expression: it would leave both of these in place.
+   */
+  it('removes an OSC whose body holds another escape, to the first terminator', () => {
+    expect(stripAnsi(`${ESC}]8;;x${ESC}[31m${BEL}link`)).toBe('link')
+    expect(stripAnsi(`${ESC}]a${ESC}]b${BEL}c`)).toBe('c')
+  })
+
+  it('leaves an OSC nothing closes, and still removes colour after it', () => {
+    expect(stripAnsi(`${ESC}]8;;x ${ESC}[31mred${ESC}]y`)).toBe(`${ESC}]8;;x red${ESC}]y`)
+  })
+
+  /**
+   * The expression took 2.0 seconds on 50,000 unclosed `ESC]`, measured once on
+   * a laptop, and the scan 3.7 milliseconds. The bound is loose on purpose, so a
+   * busy machine does not trip it. Checked through `sanitiseField` as well, so
+   * nothing after the scan is quadratic in the same input either.
+   */
+  it.each([
+    ['50,000 unclosed OSC openers', `${ESC}]`.repeat(50_000)],
+    ['an unclosed OSC before 100,000 characters', `${ESC}]${'a'.repeat(100_000)}`],
+    ['50,000 unfinished CSI sequences', `${ESC}[`.repeat(50_000)],
+    ['a CSI with 100,000 parameters and no final byte', `${ESC}[${'0;'.repeat(50_000)}`],
+  ])('reads %s in linear time', (_label, text) => {
+    expect(elapsed(() => stripAnsi(text))).toBeLessThan(200)
+    expect(elapsed(() => sanitiseField('errorStack', text))).toBeLessThan(200)
+  })
+})
+
+/** Wall time of one call, in milliseconds. */
+function elapsed(run: () => unknown): number {
+  const start = performance.now()
+  run()
+  return performance.now() - start
+}
 
 // ---------------------------------------------------------------------------
 // Injection
