@@ -16,7 +16,26 @@ commitlint because a well-formed history needs them, but they are not release no
 
 ## Unreleased
 
-_No user-facing changes since v0.1.0._
+_No user-facing changes since v0.2.0._
+
+## v0.2.0 — 2026-11-23
+
+### Features
+
+- **agents:** the first scored run uses claude-opus-5-5 ([#249](https://github.com/AKogut/ai-flaky-test-triage/pull/249))
+
+### Fixes
+
+- **agents:** a refusal on the PR-comment path really falls back ([#253](https://github.com/AKogut/ai-flaky-test-triage/pull/253))
+- **agents:** the report says each finding once ([#255](https://github.com/AKogut/ai-flaky-test-triage/pull/255))
+- **agents:** untrusted text is read in linear time, results unchanged ([#259](https://github.com/AKogut/ai-flaky-test-triage/pull/259))
+- **tests:** a busy laptop no longer times out what CI passes ([#256](https://github.com/AKogut/ai-flaky-test-triage/pull/256))
+- **tests:** the #49 budget is enforced where it was set, on CI ([#258](https://github.com/AKogut/ai-flaky-test-triage/pull/258))
+
+### Documentation
+
+- **docs:** the README screenshot shows the comment as it is posted now ([#257](https://github.com/AKogut/ai-flaky-test-triage/pull/257))
+- **docs:** the README shows a comment the pipeline actually posted ([#250](https://github.com/AKogut/ai-flaky-test-triage/pull/250))
 
 ## v0.1.0 — 2026-11-23
 
