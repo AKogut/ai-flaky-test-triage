@@ -333,6 +333,18 @@ describe('the notices block', () => {
       expect(String(notice).length).toBeGreaterThan(80)
     },
   )
+
+  /**
+   * Notices go through the same escaping as model text, which is right — but
+   * then a backtick in one of our own sentences reaches the page as `&#96;`.
+   * The fix is in the wording, not in exempting notices from the escape.
+   */
+  it.each(Object.entries(DEGRADATIONS).filter(([, v]) => typeof v === 'string'))(
+    '%s survives the escape unchanged',
+    (_name, notice) => {
+      expect(escapeAgentText(String(notice))).toBe(notice)
+    },
+  )
 })
 
 describe('fitting under GitHub’s comment limit', () => {
