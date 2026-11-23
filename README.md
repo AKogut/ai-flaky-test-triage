@@ -137,13 +137,13 @@ schema, the report — never the model's behaviour today; that is measured separ
 npm test                     # unit + e2e, produces results.json and results-unit.json
 npm run flakemetry:analyze   # test reports + history → analysis.json
 npm run agents:analyze       # analysis.json → report.md
-npm run analyze              # 🚧 M8 — the two stages above as one command
+npm run analyze              # the two stages above as one command
 ```
 
 `agents:analyze` calls the triage agent when `ANTHROPIC_API_KEY` is set, and runs the baseline
 heuristic when it is not, naming which in the report. CI runs the two stages as separate jobs, so
-the one-command wrapper was never written; its placeholder still names #71, which closed without
-it.
+each can be read, retried and cached on its own; `npm run analyze` is the same two steps for a
+terminal.
 
 **Run TaskFlow locally:**
 
@@ -197,11 +197,11 @@ cat eval/report.md
 | `npm test`                   | M5        | Unit and E2E together                                                             |
 | `npm run flakemetry:analyze` | M6        | Test report + history → analysis.json                                             |
 | `npm run agents:analyze`     | M7        | analysis.json → report.md                                                         |
-| `npm run analyze`            | M8 🚧     | flakemetry and agents in sequence                                                 |
+| `npm run analyze`            | M8        | flakemetry and agents in sequence                                                 |
 | `npm run capture`            | M5        | Turn a real Playwright report into golden-dataset payloads                        |
 | `npm run eval`               | M2        | Golden-dataset evaluation → eval/report.md                                        |
 | `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                                         |
-| `npm run demo`               | M3        | Full pipeline in replay mode, no credentials                                      |
+| `npm run demo`               | M3        | Full pipeline with no credentials; baseline until cassettes exist                 |
 
 🚧 marks a script that is not implemented yet; running it says so and names its issue.
 Everything else runs today. `npm run help` prints this table from the terminal.
