@@ -192,11 +192,13 @@ that measures what each context field actually contributes.
 [eval-methodology.md](docs/eval-methodology.md#ablation-study), and at least one context field is
 either justified by the numbers or removed because of them.
 
-Spans are in (#76): a file exporter writes `otel-spans.json` — one root span per run and one per
-model call, carrying ids, counts, tokens and cost and no untrusted text — and CI uploads it in the
-`triage-report` artifact. Cost accounting is partly there: `agents/pricing.ts` prices every call,
-the report footer carries tokens and dollars, and `eval/report.md` adds a per-fixture cost and a
-50-failure projection whenever a model ran. #77 is the remainder.
+Spans are done (#76, closed by #235): `agents:analyze` writes `otel-spans.json` — one root span per
+run and one per model call, carrying identifiers, counts, tokens and cost and no untrusted text —
+and CI uploads it in the `triage-report` artifact. Cost accounting is partly there:
+`agents/pricing.ts` prices every call, the report footer carries tokens and dollars, and
+`eval/report.md` adds a per-fixture cost and a 50-failure projection whenever a model ran. #77 is
+the remainder, including the gap between span cost, which counts the tokens failed calls spent, and
+the footer, which counts successful calls only.
 
 The ablation harness (#78) and the three experiments built on it (#79–#81) are not started, and
 every one of them needs live model calls.

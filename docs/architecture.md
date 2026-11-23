@@ -291,6 +291,11 @@ passes them a threshold of `null` — off — until one can be read off the cali
 credentials the triage call is replaced by the baseline heuristic, which is every run so far, and
 the report says which classifier produced it.
 
+Beside the report, `agents:analyze` writes `otel-spans.json`: one span for the run and one per
+model call, described in [agent-design.md](agent-design.md#spans). `--spans <path>` moves it, as
+`--out` moves the report. CI uploads it in the `triage-report` artifact with `report.md` and
+`analysis.json`. A run with nothing to triage writes neither file.
+
 ### 5. `report.md` → PR comment
 
 A workflow step reads the file and calls `actions/github-script`. Comments are **upserted**: the
@@ -350,6 +355,12 @@ green pass on `main`:
 The two analysis stages add 45 seconds of machine time and nothing to the critical path — they run
 after the suites, and nothing waits on them. That is the number to watch: the moment triage is on
 the path to a merge, somebody will want it switched off.
+
+**What spans add.** Medians of interleaved runs with and without them, measured for #235: the bare
+`agents:analyze` on the baseline path went from ~200 ms to ~234 ms, +17%. Most of that is loading
+the OpenTelemetry SDK — ~24 ms measured on its own — which happens once per process whatever the
+size of the run; the per-run work, second file write included, is a third of a millisecond.
+Against the 25 s Agent triage job above it is +0.14%.
 
 Recorded here rather than left to be re-derived, so a regression is a diff rather than a memory.
 

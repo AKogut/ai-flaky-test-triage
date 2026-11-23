@@ -49,9 +49,14 @@ structural rather than aspirational:
   yet — recording needs a key the project does not have (#38) — so the demo runs the baseline and
   says so, and the integration tests drive the agents through a scripted transport instead. A
   cassette miss is a loud error, never a silent fall-through to a live call.
-- **Telemetry.** OpenTelemetry spans written to `otel-spans.json` by a file exporter: one root span
-  per run and one per model call, carrying identifiers, counts, tokens and cost — never the
-  untrusted text itself. CI uploads the file in the `triage-report` artifact.
+- **Telemetry.** `agents:analyze` writes OpenTelemetry spans to `otel-spans.json` with a file
+  exporter: one root span per run and one per model call, including calls that were refused, ran
+  out of budget or never matched the schema. They carry identifiers, counts, tokens and cost —
+  never the untrusted text itself; a run id, commit or branch that does not look like an
+  identifier is recorded as `[withheld]`. The file is written once, at the end, and a failure to
+  write it is logged rather than failing the run. CI uploads it in the `triage-report` artifact.
+  The schema is in the JSDoc of
+  [`agents/spans.ts`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/agents/spans.ts).
 - **Budget.** A per-run token ceiling. When hit, the orchestrator stops dispatching and the report
   says how many failures went unclassified — rather than truncating silently.
 

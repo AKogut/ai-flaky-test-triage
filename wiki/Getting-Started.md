@@ -127,7 +127,7 @@ optimistic-update race is captured for the dataset rather than waited for.
 | `results-unit.json`        | `npm run test:unit`                                  | no                                                 |
 | `analysis.json`            | `flakemetry:analyze`                                 | no                                                 |
 | `report.md`                | `agents:analyze`, or `npm run demo`                  | no                                                 |
-| `otel-spans.json`          | `agents:analyze`, via an OpenTelemetry file exporter | no — CI uploads it in the `triage-report` artifact |
+| `otel-spans.json`          | `agents:analyze`; `--spans <path>` puts it elsewhere | no — CI uploads it in the `triage-report` artifact |
 | `eval/report.md`           | `npm run eval`                                       | **yes** — a regression shows up as a diff          |
 | `.flakemetry/history.json` | CI, on `main` only                                   | no — lives in the CI cache                         |
 

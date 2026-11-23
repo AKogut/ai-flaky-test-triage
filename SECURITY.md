@@ -44,8 +44,13 @@ rather than a public issue. Expect an initial response within 7 days.
   to have are capabilities they were never given.
 - **Untrusted text is data, not instruction.** Test titles, error messages, source, and diff hunks
   are delimited, length-capped, and introduced as data; output is schema-constrained and escaped
-  before rendering. None of it reaches a span: `otel-spans.json` carries ids, counts, tokens and
-  cost only.
+  before rendering.
+- **Spans carry no text.** `otel-spans.json` holds identifiers, counts, enums and numbers only —
+  no test title, error message, diff, prompt or model output. The three strings it takes from
+  outside the code — run id, commit and branch — must look like identifiers and also pass the
+  secret scrub, or they are recorded as `[withheld]`. A failure is recorded by class in
+  `error.type`, never by message: `recordException` is not used, because it would copy the
+  message, and a schema violation's message names the test.
 
 ## Data egress
 
