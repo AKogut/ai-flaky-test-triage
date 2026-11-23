@@ -82,6 +82,13 @@ updates:
       - dependency-name: '@opentelemetry/*'
         update-types: ['version-update:semver-major']
 
+      # The API is the exception the rule above misses: 1.10 is a minor release, and
+      # every 2.x SDK package declares a peer range of `@opentelemetry/api <1.10.0`.
+      # It installs and the tests pass, which is what makes it dangerous — the SDK
+      # makes no promise about it. It moves with the SDK major, not before it.
+      - dependency-name: '@opentelemetry/api'
+        versions: ['>=1.10.0']
+
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
