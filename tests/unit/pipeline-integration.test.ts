@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { CURRENT_PROMPT } from '@sentra/prompts'
 import { describe, expect, it, vi } from 'vitest'
 import { main } from '../../agents/run.js'
 import type { ModelRequest, ModelResponse, Transport } from '../../agents/transport.js'
+import { MetricsSnapshotSchema } from '../../eval/gate.js'
 
 /**
  * `agents/run.ts`, end to end, against committed fixtures.
@@ -28,6 +30,8 @@ vi.setConfig({ testTimeout: 15_000 })
 const root = new URL('../..', import.meta.url).pathname
 const fixture = (name: string): string =>
   readFileSync(join(root, `tests/fixtures/pipeline/${name}.analysis.json`), 'utf8')
+
+const METRICS = 'eval/metrics.json'
 
 const CLASSIFICATION = {
   owner: 'app_code',
@@ -72,14 +76,25 @@ interface Run {
 
 const run = async (
   name: string,
-  over: { transport?: Transport & { calls: number }; argv?: string[] } = {},
+  over: {
+    transport?: Transport & { calls: number }
+    argv?: string[]
+    env?: NodeJS.ProcessEnv
+    /** Let the run see the metrics committed on this branch. */
+    metrics?: boolean
+  } = {},
 ): Promise<Run> => {
   const transport = over.transport ?? scripted()
   const written: Record<string, string> = {}
   const code = await main(over.argv ?? [], {
-    env: { ANTHROPIC_API_KEY: 'test' },
-    read: (p) => (p === 'analysis.json' ? fixture(name) : ''),
-    exists: (p) => p === 'analysis.json',
+    env: over.env ?? { ANTHROPIC_API_KEY: 'test' },
+    read: (p) =>
+      p === 'analysis.json'
+        ? fixture(name)
+        : p === METRICS
+          ? readFileSync(join(root, METRICS), 'utf8')
+          : '',
+    exists: (p) => p === 'analysis.json' || (over.metrics === true && p === METRICS),
     write: (p, contents) => {
       written[p] = contents
     },
@@ -120,6 +135,28 @@ describe('a run with one failure', () => {
     expect(report).toContain('## Flaky-test triage')
     expect(report).toContain('| Test | Quadrant | Confidence | Reason |')
     expect(report).toContain('has not been scored yet')
+  })
+})
+
+describe('the footer, against the metrics committed on this branch', () => {
+  /**
+   * Read through the eval gate's own schema, so a snapshot the gate accepts and
+   * the report silently refuses — and quietly reverts to "not scored" over —
+   * fails here rather than on a pull request nobody looks at twice.
+   */
+  const committed = MetricsSnapshotSchema.parse(
+    JSON.parse(readFileSync(join(root, METRICS), 'utf8')),
+  )
+  const figure = `Measured accuracy of this classifier: ${String(Math.round(committed.joint.point * 100))}% joint`
+
+  it('quotes the committed figure on the run it describes, and only there', async () => {
+    const baseline = (await run('one-failure', { env: {}, metrics: true })).report ?? ''
+    const model = (await run('one-failure', { metrics: true })).report ?? ''
+
+    expect(baseline.includes(figure)).toBe(committed.classifier === 'baseline')
+    expect(model.includes(figure)).toBe(
+      committed.classifier === 'agent' && committed.promptVersion === CURRENT_PROMPT.triage,
+    )
   })
 })
 

@@ -7,6 +7,7 @@ import {
   type ClassificationInput,
 } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
+import { METRICS_FILE, measuredAccuracy } from './accuracy.js'
 import { CassetteTransport, listCassettes, resolveMode } from './cassettes.js'
 import { classifyWithBaseline } from './baseline.js'
 import { runContextFor } from './context.js'
@@ -167,6 +168,16 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
 
   const triagePrompt = loadPrompt(CURRENT_PROMPT.triage)
 
+  // Quoted only when the committed metrics describe the classifier about to run;
+  // anything else leaves the footer saying it is unscored.
+  const accuracy = measuredAccuracy(
+    readOptional(METRICS_FILE),
+    credentials.canRun
+      ? { classifier: 'agent', promptVersion: triagePrompt.version }
+      : { classifier: 'baseline' },
+  )
+  const scored = accuracy === undefined ? {} : { accuracy }
+
   return await renderAndWrite()
 
   async function renderAndWrite(): Promise<number> {
@@ -196,6 +207,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
           promptVersions: { triage: triagePrompt.version },
           usage: [],
           notices,
+          ...scored,
         }),
       )
       log(`  wrote ${options.out} (degraded: ${String(notices.length)} notice(s))`)
@@ -247,11 +259,21 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
           outputTokens: t.outputTokens,
         })),
         notices,
+        ...scored,
       }),
     )
     log(
       `  wrote ${options.out} (${String(result.triaged.length)} tests, degraded: ${String(result.degraded)})`,
     )
+  }
+
+  /** Null when absent or unreadable — a footer is never worth failing the run over. */
+  function readOptional(path: string): string | null {
+    try {
+      return exists(path) ? read(path) : null
+    } catch {
+      return null
+    }
   }
 
   function inputFor(test: AnalysedTest): ClassificationInput {
