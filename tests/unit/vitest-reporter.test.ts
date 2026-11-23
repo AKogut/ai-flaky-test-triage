@@ -38,7 +38,11 @@ const SUITE = 'app/server/api.test.ts'
 // slower than that again. Left at the 5s default this becomes a test that fails
 // under load — which is #55, and writing it by accident in the file that checks
 // the control group would be an embarrassing way to make the point.
-vi.setConfig({ testTimeout: 180_000 })
+//
+// Both limits, because the child run happens in `beforeAll`, and a hook answers
+// to `hookTimeout` — 10s by default — not `testTimeout`. Raising only the second
+// left the slow part on the short clock, and on a loaded machine it timed out.
+vi.setConfig({ testTimeout: 180_000, hookTimeout: 180_000 })
 
 let emitted: unknown
 let startedAt = 0
