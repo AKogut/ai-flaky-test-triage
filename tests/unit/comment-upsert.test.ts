@@ -2,6 +2,11 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
+// Imported here rather than awaited inside the one test that uses it. Loading
+// `agents/report.ts` and its imports took 5s on a busy machine, all of it charged
+// to that test's five-second limit; here it is paid while the file is collected,
+// like every other import.
+import { renderReport } from '../../agents/report.js'
 
 /**
  * The comment upsert, asserted against the workflow that contains it.
@@ -79,8 +84,7 @@ describe('what the comment carries', () => {
    * The commit is the first line of the report, because a comment edited in
    * place otherwise gives no way to tell which push it describes.
    */
-  it('names the commit it analysed', async () => {
-    const { renderReport } = await import('../../agents/report.js')
+  it('names the commit it analysed', () => {
     const report = renderReport({
       triaged: [],
       commitSha: 'abc1234def5678',

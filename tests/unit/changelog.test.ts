@@ -499,7 +499,8 @@ describe('against a real repository', { timeout: 30_000 }, () => {
  * formatting gate is a release step somebody skips.
  */
 describe('the committed changelog', () => {
-  it('is formatted the way Prettier formats it', async () => {
+  // Prettier over the whole changelog: 1.2s on an ordinary run, 6.3s on a busy machine.
+  it('is formatted the way Prettier formats it', { timeout: 30_000 }, async () => {
     const committed = readFileSync('CHANGELOG.md', 'utf8')
     expect(await format(committed, { parser: 'markdown' })).toBe(committed)
   })

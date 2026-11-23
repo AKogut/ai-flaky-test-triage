@@ -438,7 +438,9 @@ describe('the provenance gap, in words', () => {
   })
 })
 
-describe('the rendered markdown', () => {
+// The first Prettier call in a worker loads its markdown parser: 1s on an
+// ordinary run, 5s on a busy machine.
+describe('the rendered markdown', { timeout: 30_000 }, () => {
   const report = [
     '#### `owner`',
     '',

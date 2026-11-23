@@ -299,7 +299,8 @@ describe('stopping a child', () => {
 })
 
 describe('prefixed output', () => {
-  it('labels every line with the process that wrote it', async () => {
+  // A real Node process, started and waited out: 0.7s on an ordinary run, 3.6s on a busy machine.
+  it('labels every line with the process that wrote it', { timeout: 30_000 }, async () => {
     const lines: string[] = []
     const spy = vi.spyOn(console, 'log').mockImplementation((m: unknown) => {
       lines.push(String(m))

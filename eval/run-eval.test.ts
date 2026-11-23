@@ -319,7 +319,9 @@ describe('the rendered report', () => {
   })
 })
 
-describe('the committed report', () => {
+// Each of these spawns git, runs the whole evaluation, or formats an 18KB report
+// with Prettier: 2.5s on an ordinary run, up to 7.5s on a busy machine.
+describe('the committed report', { timeout: 30_000 }, () => {
   it('is actually tracked by git', () => {
     // It was not. `.gitignore` carried an unanchored `report.md`, meant for the
     // pipeline output at the repository root, which also matched this file at

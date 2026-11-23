@@ -134,7 +134,10 @@ describe('the hygiene CLI', () => {
 // npm run eval
 // ---------------------------------------------------------------------------
 
-describe('the eval CLI', () => {
+// Nearly every test here runs the whole evaluation and formats the report with
+// Prettier, and the first in a worker also loads Prettier's markdown parser: 4s
+// on an ordinary run and up to 8s on a busy machine, against a 5s default.
+describe('the eval CLI', { timeout: 30_000 }, () => {
   it('writes a report and its metrics, and says where', async () => {
     const out = join(scratch(), 'report.md')
     expect(await evalMain([`--out=${out}`])).toBe(0)

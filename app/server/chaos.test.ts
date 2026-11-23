@@ -274,35 +274,52 @@ describe('the server with chaos on', () => {
     const first = rows.at(-1)?.id ?? 0
     const second = rows.at(-2)?.id ?? 0
 
-    // The first request's answer is held far longer than the second's, which is
-    // the inversion; the numbers are fixed rather than drawn so the test is
-    // about ordering rather than about luck.
-    const held = [180, 5]
-    let call = 0
-    const chaos: Chaos = { enabled: true, seed: 1, delay: () => held[call++] ?? 0 }
+    // The first answer is held until the second has arrived, which is the
+    // inversion. Held by the test rather than by a clock: delays of 180ms and
+    // 5ms with 20ms between the requests were a race, and on a busy machine the
+    // second request lost it — an ordering test that depends on load is the
+    // kind of flaky test this app exists to contain, not to be.
+    let handled: () => void = () => undefined
+    const firstHandled = new Promise<void>((resolve) => {
+      handled = resolve
+    })
+    let release: () => void = () => undefined
+    const released = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let sleeps = 0
+    const chaos: Chaos = { enabled: true, seed: 1, delay: () => 1 }
+    // Called as a handler ends its response, so by the first call the first
+    // write has been applied and its answer is the one being held.
+    const sleep = (): Promise<void> => {
+      sleeps += 1
+      if (sleeps > 1) return Promise.resolve()
+      handled()
+      return released
+    }
 
-    const server = createApp({ db, chaos }).listen(0)
+    const server = createApp({ db, chaos, sleep }).listen(0)
     const port = (server.address() as { port: number }).port
 
-    const move = async (id: number): Promise<{ at: number; titles: string[] }> => {
+    const move = async (id: number): Promise<{ titles: string[] }> => {
       const response = await fetch(`http://127.0.0.1:${String(port)}/api/tasks/reorder`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, index: 0 }),
       })
       const body = (await response.json()) as { tasks: { title: string }[] }
-      return { at: Date.now(), titles: body.tasks.map((task) => task.title) }
+      return { titles: body.tasks.map((task) => task.title) }
     }
 
+    // The answers come back inverted…
     const one = move(first)
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    const two = move(second)
-    const [a, b] = await Promise.all([one, two])
+    await firstHandled
+    await move(second)
+    release()
+    const a = await one
 
     await new Promise<void>((resolve) => server.close(() => resolve()))
 
-    // The answers came back inverted…
-    expect(a.at).toBeGreaterThan(b.at)
     // …but the server applied them in the order they were sent, so the second
     // move is the one on top.
     expect(list(db)[0]?.title).toBe(rows.at(-2)?.title)

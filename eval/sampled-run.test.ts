@@ -43,7 +43,9 @@ function flipping(byIndex: (sample: number) => string): Transport & { samples: n
 const agent = { ...DEFAULTS, classifier: 'agent' as const, samples: 3 }
 const replay = { SENTRA_REPLAY: '1' }
 
-describe('a sampled run', () => {
+// Each test scores the whole dataset three times over: 1s for whichever runs
+// first on an ordinary run, 6s on a busy machine.
+describe('a sampled run', { timeout: 30_000 }, () => {
   it('asks the transport for each sample index in turn', async () => {
     const transport = flipping(() => 'app_code')
     await evaluate(agent, { env: replay, transport })

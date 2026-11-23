@@ -27,8 +27,13 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
  *
  * The warm-up pays the cost where it is visible instead of charging it to
  * whichever test happens to run first.
+ *
+ * The hook gets three times the tests' limit because it is the part that grows
+ * with load: 15s on an ordinary run, then 40s and 68s with every test file
+ * running at once on a busy 28-core machine — the last past the sixty it had. A
+ * laptop with fewer cores is slower again, and the program is the same size.
  */
-vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 })
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 180_000 })
 
 const eslint = new ESLint()
 
