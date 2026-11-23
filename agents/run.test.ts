@@ -76,7 +76,7 @@ function stub(fail?: Error, seen: ModelRequest[] = []): Transport {
         ? Promise.resolve({
             raw: CLASSIFICATION,
             stopReason: 'end_turn',
-            model: 'claude-opus-5',
+            model: 'claude-opus-5-5',
             usage: { inputTokens: 100, outputTokens: 30 },
           })
         : Promise.reject(fail)
@@ -469,7 +469,7 @@ describe('the spans a run leaves behind', () => {
 
   it('are one span for the run and one per model call beneath it', async () => {
     const file = spansIn((await run([], { transport: stub() })).written)
-    expect(file.spans.map((span) => span.name)).toEqual(['sentra.run', 'chat claude-opus-5'])
+    expect(file.spans.map((span) => span.name)).toEqual(['sentra.run', 'chat claude-opus-5-5'])
 
     const [root, call] = file.spans
     expect(root?.parentSpanId).toBeUndefined()
@@ -490,7 +490,7 @@ describe('the spans a run leaves behind', () => {
       'sentra.run.tests.considered': 1,
       'sentra.run.tests.classified': 1,
       'sentra.run.calls': 1,
-      'sentra.run.cost_usd': 0.00125,
+      'sentra.run.cost_usd': 0.001,
       'sentra.run.unpriced_calls': 0,
       'sentra.budget.limit': 200_000,
       'sentra.budget.used': 100,
@@ -505,15 +505,15 @@ describe('the spans a run leaves behind', () => {
       'gen_ai.operation.name': 'chat',
       'gen_ai.provider.name': 'anthropic',
       'gen_ai.agent.name': 'triage',
-      'gen_ai.request.model': 'claude-opus-5',
-      'gen_ai.response.model': 'claude-opus-5',
+      'gen_ai.request.model': 'claude-opus-5-5',
+      'gen_ai.response.model': 'claude-opus-5-5',
       'gen_ai.usage.input_tokens': 100,
       'gen_ai.usage.output_tokens': 30,
       'sentra.prompt.version': 'triage.v1',
       'sentra.call.outcome': 'ok',
       'sentra.call.attempts': 1,
-      // 100 in at $5/M and 30 out at $25/M, from agents/pricing.ts.
-      'sentra.call.cost_usd': 0.00125,
+      // 100 in at $4/M and 30 out at $20/M, from agents/pricing.ts.
+      'sentra.call.cost_usd': 0.001,
     })
   })
 
@@ -654,7 +654,7 @@ describe('what the spans file will never carry', () => {
       Promise.resolve({
         raw,
         stopReason: 'end_turn',
-        model: 'claude-opus-5',
+        model: 'claude-opus-5-5',
         usage: { inputTokens: 100, outputTokens: 30 },
       }),
   })

@@ -18,11 +18,17 @@ export interface Price {
   outputPerMillion: number
 }
 
-/** Read from the published pricing on 2026-08-12. */
+/**
+ * Read from the published pricing on 2026-11-23.
+ *
+ * `claude-sonnet-5` was $3/$15 here: its launch price of $2/$10 was announced
+ * as introductory, and the increase it was due to revert to was cancelled.
+ */
 export const PRICES: Readonly<Record<string, Price>> = {
+  'claude-opus-5-5': { inputPerMillion: 4, outputPerMillion: 20 },
   'claude-opus-5': { inputPerMillion: 5, outputPerMillion: 25 },
   'claude-opus-4-8': { inputPerMillion: 5, outputPerMillion: 25 },
-  'claude-sonnet-5': { inputPerMillion: 3, outputPerMillion: 15 },
+  'claude-sonnet-5': { inputPerMillion: 2, outputPerMillion: 10 },
   'claude-haiku-4-5': { inputPerMillion: 1, outputPerMillion: 5 },
 }
 
