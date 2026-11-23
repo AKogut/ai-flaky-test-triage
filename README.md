@@ -3,6 +3,7 @@
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
 [![CI](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/codeql.yml/badge.svg)](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/codeql.yml)
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.13-brightgreen)](package.json)
