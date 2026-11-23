@@ -47,6 +47,14 @@ updates:
       # so it is upgraded manually with an eval run attached to the PR.
       - dependency-name: '@anthropic-ai/sdk'
 
+      # The API moves with the SDK, not ahead of it. sdk-trace, core and resources
+      # 3.1 all declare a peer range of `@opentelemetry/api >=1.10.0 <1.11.0`, so an
+      # API minor released before the SDK that accepts it would install, pass every
+      # test and run outside what the SDK supports — what #239 was for the 2.x line.
+      # Move this bound when the SDK's peer range moves.
+      - dependency-name: '@opentelemetry/api'
+        versions: ['>=1.11.0']
+
       # typescript-eslint caps its peer range at `typescript <6.1.0`, and every
       # type-aware rule — including the agent I/O guardrail — runs through it. A
       # major TypeScript bump is unsatisfiable until that cap moves, so it is held
