@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   BudgetExceededError,
   callModel,
+  callOutcome,
   MODEL_CONFIG,
   SchemaViolationError,
   TokenBudget,
   type CallDeps,
+  type CallRecord,
   type ModelConfig,
 } from './model-client.js'
 import {
@@ -270,6 +272,105 @@ describe('the token budget', () => {
     const error = await call({ transport: scripted([ok()]), budget }).catch((e: unknown) => e)
     expect((error as Error).message).toContain('100 input tokens')
     expect((error as Error).message).toContain('30 remain')
+  })
+})
+
+describe('the record every call leaves, however it ends', () => {
+  /**
+   * `onTelemetry` fires only on success, because it feeds the cost figures.
+   * `onCall` is what a span is built from, and the calls worth a span are the
+   * ones that did not succeed — so it has to fire on every exit.
+   */
+  const observed = async (
+    deps: Partial<CallDeps> & { transport: Transport },
+  ): Promise<CallRecord | undefined> => {
+    const records: CallRecord[] = []
+    await call({ ...deps, onCall: (record) => records.push(record) }).catch(() => undefined)
+    expect(records).toHaveLength(1)
+    return records[0]
+  }
+
+  it('describes a success, with its timing', async () => {
+    let clock = 1_000
+    const record = await observed({
+      transport: scripted([ok()]),
+      now: () => (clock += 250),
+    })
+    expect(record).toEqual({
+      promptVersion: 'triage.v1',
+      schemaName: 'Classification',
+      requestModel: MODEL_CONFIG.model,
+      responseModel: MODEL_CONFIG.model,
+      maxTokens: MODEL_CONFIG.maxTokens,
+      outcome: 'ok',
+      attempts: 1,
+      schemaViolations: 0,
+      transientFailures: 0,
+      inputTokens: 100,
+      outputTokens: 40,
+      startedAt: 1_250,
+      // Read twice after the start: once for CallTelemetry, once here.
+      durationMs: 500,
+    })
+  })
+
+  it('keeps the tokens a call spent on answers it then rejected', async () => {
+    const record = await observed({ transport: scripted([ok({}), ok({}), ok({})]) })
+    expect(record).toMatchObject({
+      outcome: 'schema-invalid',
+      attempts: 3,
+      schemaViolations: 3,
+      inputTokens: 300,
+      outputTokens: 120,
+    })
+    expect(record?.error).toBeInstanceOf(SchemaViolationError)
+  })
+
+  it('names a refusal as a refusal, not as a fault', async () => {
+    const record = await observed({
+      transport: scripted([new TransportError('refusal', 'the model declined', 200)]),
+    })
+    expect(record?.outcome).toBe('refused')
+    expect(record).not.toHaveProperty('responseModel')
+  })
+
+  it('names a budget refusal apart from both', async () => {
+    const record = await observed({
+      transport: scripted([ok()], 500),
+      budget: new TokenBudget(100),
+    })
+    expect(record).toMatchObject({ outcome: 'budget', attempts: 0, inputTokens: 0 })
+  })
+
+  it('calls anything else an error, with the retries it took to get there', async () => {
+    const record = await observed({
+      transport: scripted([
+        new TransportError('rate-limit', '429', 429),
+        new TransportError('client', 'bad request', 400),
+      ]),
+    })
+    expect(record).toMatchObject({ outcome: 'error', transientFailures: 1 })
+  })
+
+  /** Instrumentation that can turn a classification into a failed row changes what it measures. */
+  it('ignores an observer that throws', async () => {
+    const { value } = await call({
+      transport: scripted([ok()]),
+      onCall: () => {
+        throw new Error('the span exporter is broken')
+      },
+    })
+    expect(value.owner).toBe('app_code')
+  })
+
+  it.each([
+    [new BudgetExceededError(1, 0, 0), 'budget'],
+    [new SchemaViolationError('triage', 3, ''), 'schema-invalid'],
+    [new TransportError('refusal', 'no', 200), 'refused'],
+    [new TransportError('server', 'down', 503), 'error'],
+    [new Error('anything'), 'error'],
+  ] as const)('maps %s to %s', (error, outcome) => {
+    expect(callOutcome(error)).toBe(outcome)
   })
 })
 

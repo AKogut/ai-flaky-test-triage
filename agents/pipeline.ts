@@ -7,7 +7,12 @@ import {
   type RootCause,
 } from '@sentra/contracts'
 import { suggestFix, type FixSuggestionDeps } from './fix-suggestion.js'
-import { BudgetExceededError, type CallTelemetry, type TokenBudget } from './model-client.js'
+import {
+  BudgetExceededError,
+  type CallRecord,
+  type CallTelemetry,
+  type TokenBudget,
+} from './model-client.js'
 import { mapWithLimit, workList, type MapOptions } from './orchestrate.js'
 import { rootCause, shouldInvestigate, type RootCauseDeps } from './root-cause.js'
 import { triage, type TriageDeps } from './triage.js'
@@ -70,6 +75,8 @@ export interface PipelineDeps {
   inputFor: (test: AnalysedTest) => ClassificationInput
   concurrency?: number
   onTelemetry?: (telemetry: CallTelemetry) => void
+  /** Every model call, however it ended — what the run's spans are built from. */
+  onCall?: (call: CallRecord) => void
 }
 
 /** Budget exhaustion mid-run is expected; anything else is a fault worth naming as one. */
@@ -85,6 +92,7 @@ export async function runPipeline(analysis: Analysis, deps: PipelineDeps): Promi
     telemetry.push(t)
     deps.onTelemetry?.(t)
   }
+  const observe = deps.onCall === undefined ? {} : { onCall: deps.onCall }
 
   /**
    * Once the budget has refused a call, the run is over.
@@ -111,6 +119,7 @@ export async function runPipeline(analysis: Analysis, deps: PipelineDeps): Promi
           ...deps.triage,
           budget: deps.budget,
           onTelemetry: collect,
+          ...observe,
         })
 
         const row: TriagedTest = {
@@ -128,7 +137,7 @@ export async function runPipeline(analysis: Analysis, deps: PipelineDeps): Promi
 
         const cause = await rootCause(
           { ...input, classification: triaged.classification },
-          { ...deps.rootCause, budget: deps.budget, onTelemetry: collect },
+          { ...deps.rootCause, budget: deps.budget, onTelemetry: collect, ...observe },
         )
         row.rootCause = cause.rootCause
         row.droppedFiles = cause.droppedFiles
@@ -137,7 +146,7 @@ export async function runPipeline(analysis: Analysis, deps: PipelineDeps): Promi
 
         const fix = await suggestFix(
           { ...input, classification: triaged.classification, rootCause: cause.rootCause },
-          { ...deps.fixSuggestion, budget: deps.budget, onTelemetry: collect },
+          { ...deps.fixSuggestion, budget: deps.budget, onTelemetry: collect, ...observe },
         )
         row.fixSuggestion = fix.suggestion
         return row

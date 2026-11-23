@@ -167,6 +167,44 @@ export interface CallResult<T> {
   telemetry: CallTelemetry
 }
 
+/** How a call ended, in the five terms a span records. */
+export type CallOutcome = 'ok' | 'refused' | 'schema-invalid' | 'budget' | 'error'
+
+/**
+ * One model call, however it ended — what `agents/spans.ts` builds a span from.
+ *
+ * `CallTelemetry` exists only for calls that succeeded, because it feeds the
+ * cost figures in `eval/report.md`, where a failed call would be counted as an
+ * answer. A span has the opposite requirement: the calls worth looking at are
+ * the ones that refused, ran out of budget or never matched the schema. So this
+ * is a second record rather than a widened first one.
+ *
+ * It carries no `label` and no prompt. The label names the test under triage,
+ * and a test title is text a contributor wrote. `error` is passed through for
+ * the observer to classify by type; its message is never meant to be copied.
+ */
+export interface CallRecord {
+  promptVersion: string
+  schemaName: string
+  /** What `MODEL_CONFIG` asked for. Always known. */
+  requestModel: string
+  /** What answered, when any response arrived at all. */
+  responseModel?: string
+  maxTokens: number
+  outcome: CallOutcome
+  /** Absent on success. */
+  error?: unknown
+  attempts: number
+  schemaViolations: number
+  transientFailures: number
+  /** Summed over every attempt that got a response, including rejected ones. */
+  inputTokens: number
+  outputTokens: number
+  /** Epoch milliseconds, from the same clock as `durationMs`. */
+  startedAt: number
+  durationMs: number
+}
+
 /** Injected so every retry branch is reachable from a test without waiting or a network. */
 export interface CallDeps {
   transport: Transport
@@ -176,6 +214,14 @@ export interface CallDeps {
   random?: () => number
   now?: () => number
   onTelemetry?: (telemetry: CallTelemetry) => void
+  /**
+   * Called once per call, success or failure, after the outcome is known.
+   *
+   * An observer that throws is ignored. Instrumentation that can turn a
+   * classification into a failed row is instrumentation that changes what it
+   * measures.
+   */
+  onCall?: (call: CallRecord) => void
 }
 
 export class SchemaViolationError extends Error {
@@ -187,6 +233,20 @@ export class SchemaViolationError extends Error {
     super(`${label} did not return a valid ${String(attempts)} time(s): ${issues}`)
     this.name = 'SchemaViolationError'
   }
+}
+
+/**
+ * The outcome a thrown error stands for.
+ *
+ * A refusal is kept apart from other transport failures because it is a policy
+ * decision rather than a fault, and the budget apart from both because running
+ * out of allowance means the run was too big, not that anything broke.
+ */
+export function callOutcome(error: unknown): CallOutcome {
+  if (error instanceof BudgetExceededError) return 'budget'
+  if (error instanceof SchemaViolationError) return 'schema-invalid'
+  if (error instanceof TransportError && error.kind === 'refusal') return 'refused'
+  return 'error'
 }
 
 /**
@@ -227,63 +287,91 @@ export async function callModel<T>(
   const started = now()
   const counters = { attempts: 0, schemaViolations: 0, transientFailures: 0 }
   const usage = { inputTokens: 0, outputTokens: 0 }
+  let responseModel: string | undefined
 
   const request = buildRequest(options, config)
+
+  const settle = (outcome: CallOutcome, error?: unknown): void => {
+    try {
+      deps.onCall?.({
+        promptVersion: options.promptVersion,
+        schemaName: options.schemaName,
+        requestModel: config.model,
+        ...(responseModel !== undefined && { responseModel }),
+        maxTokens: config.maxTokens,
+        outcome,
+        ...(error !== undefined && { error }),
+        ...counters,
+        ...usage,
+        startedAt: started,
+        durationMs: now() - started,
+      })
+    } catch {
+      // Deliberately swallowed — see `CallDeps.onCall`.
+    }
+  }
 
   let corrections = ''
   let lastIssues = ''
 
-  for (let schemaAttempt = 0; schemaAttempt <= config.schemaRetries; schemaAttempt++) {
-    const attempt: ModelRequest = { ...request, prompt: `${options.prompt}${corrections}` }
+  try {
+    for (let schemaAttempt = 0; schemaAttempt <= config.schemaRetries; schemaAttempt++) {
+      const attempt: ModelRequest = { ...request, prompt: `${options.prompt}${corrections}` }
 
-    // Counted every time, because a correction makes the prompt longer — a
-    // budget checked once against the first attempt is not a budget.
-    const inputTokens = await withTransientRetry(
-      () => deps.transport.countInputTokens(attempt),
-      config,
-      counters,
-      { sleep, random },
-    )
-    budget.reserve(inputTokens)
+      // Counted every time, because a correction makes the prompt longer — a
+      // budget checked once against the first attempt is not a budget.
+      const inputTokens = await withTransientRetry(
+        () => deps.transport.countInputTokens(attempt),
+        config,
+        counters,
+        { sleep, random },
+      )
+      budget.reserve(inputTokens)
 
-    counters.attempts += 1
-    const response = await withTransientRetry(
-      () => deps.transport.send(attempt),
-      config,
-      counters,
-      {
-        sleep,
-        random,
-      },
-    )
-    usage.inputTokens += response.usage.inputTokens
-    usage.outputTokens += response.usage.outputTokens
+      counters.attempts += 1
+      const response = await withTransientRetry(
+        () => deps.transport.send(attempt),
+        config,
+        counters,
+        {
+          sleep,
+          random,
+        },
+      )
+      usage.inputTokens += response.usage.inputTokens
+      usage.outputTokens += response.usage.outputTokens
+      responseModel = response.model
 
-    const parsed = options.schema.safeParse(response.raw)
-    if (parsed.success) {
-      const telemetry: CallTelemetry = {
-        label: options.label,
-        promptVersion: options.promptVersion,
-        model: response.model,
-        ...counters,
-        ...usage,
-        durationMs: now() - started,
+      const parsed = options.schema.safeParse(response.raw)
+      if (parsed.success) {
+        const telemetry: CallTelemetry = {
+          label: options.label,
+          promptVersion: options.promptVersion,
+          model: response.model,
+          ...counters,
+          ...usage,
+          durationMs: now() - started,
+        }
+        deps.onTelemetry?.(telemetry)
+        settle('ok')
+        return { value: parsed.data, telemetry }
       }
-      deps.onTelemetry?.(telemetry)
-      return { value: parsed.data, telemetry }
+
+      counters.schemaViolations += 1
+      lastIssues = describe(parsed.error)
+
+      // The model is shown its own failure. A bare "try again" retries the same
+      // misunderstanding at the same price.
+      corrections =
+        `\n\nYour previous response did not match the required schema:\n${lastIssues}\n` +
+        `Return a corrected response. Change only what the errors above require.`
     }
 
-    counters.schemaViolations += 1
-    lastIssues = describe(parsed.error)
-
-    // The model is shown its own failure. A bare "try again" retries the same
-    // misunderstanding at the same price.
-    corrections =
-      `\n\nYour previous response did not match the required schema:\n${lastIssues}\n` +
-      `Return a corrected response. Change only what the errors above require.`
+    throw new SchemaViolationError(options.label, config.schemaRetries + 1, lastIssues)
+  } catch (error) {
+    settle(callOutcome(error), error)
+    throw error
   }
-
-  throw new SchemaViolationError(options.label, config.schemaRetries + 1, lastIssues)
 }
 
 /**

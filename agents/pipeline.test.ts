@@ -1,6 +1,6 @@
 import type { AnalysedTest, Analysis, ClassificationInput } from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
-import { TokenBudget } from './model-client.js'
+import { TokenBudget, type CallRecord } from './model-client.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
 import type { ModelRequest, ModelResponse, Transport } from './transport.js'
 
@@ -158,6 +158,17 @@ describe('driving the three agents', () => {
     const result = await runPipeline(analysis([]), deps(transport))
     expect(transport.sent).toEqual([])
     expect(result.triaged).toEqual([])
+  })
+
+  /** One span per agent call: the record has to reach every agent, not only the first. */
+  it('reports every call of all three agents to onCall', async () => {
+    const calls: CallRecord[] = []
+    await runPipeline(analysis([test('a')]), deps(stub(), { onCall: (call) => calls.push(call) }))
+    expect(calls.map((call) => call.promptVersion)).toEqual([
+      'triage.v1',
+      'root-cause.v1',
+      'fix-suggestion.v1',
+    ])
   })
 })
 
