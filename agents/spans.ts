@@ -5,7 +5,6 @@ import {
   SpanKind,
   SpanStatusCode,
   trace,
-  type Attributes,
   type Context,
   type Span,
   type Tracer,
@@ -62,7 +61,7 @@ export type { IdGenerator }
  *
  *     {
  *       "schemaVersion": 1,
- *       "resource": { "service.name": "sentra", "telemetry.sdk.version": "2.12.1", … },
+ *       "resource": { "service.name": "sentra", "telemetry.sdk.version": "3.1.0", … },
  *       "scope": { "name": "@sentra/agents" },
  *       "spans": [ … ]          // the run first, then each model call by start time
  *     }
@@ -139,6 +138,17 @@ export const SPANS_SCHEMA_VERSION = 1
 export const WITHHELD = '[withheld]'
 
 const SCOPE = '@sentra/agents'
+
+/**
+ * What an attribute here may hold: a string, a number or a boolean.
+ *
+ * `@opentelemetry/api` 1.10 types every attribute value as `unknown`, and SDK 3
+ * records an object or a mixed array where 2.x dropped it. Together those let a
+ * structure carrying a test title reach the file with no type error and nothing
+ * at runtime to stop it, so every attribute below is built against this type
+ * rather than `Attributes`.
+ */
+type FlatAttributes = Readonly<Record<string, string | number | boolean>>
 
 /**
  * What an identifier may look like to be recorded.
@@ -401,7 +411,7 @@ export class RunSpans {
           'sentra.run.branch': identifier(run.branch),
           'sentra.budget.limit': options.budgetLimit,
           ...(this.cassetteMode !== undefined && { 'sentra.cassette.mode': this.cassetteMode }),
-        },
+        } satisfies FlatAttributes,
       },
       ROOT_CONTEXT,
     )
@@ -420,7 +430,7 @@ export class RunSpans {
     if (isPriced) this.totals.costUsd += priced.usd
     else this.totals.unpriced += 1
 
-    const attributes: Attributes = {
+    const attributes: FlatAttributes = {
       'gen_ai.operation.name': 'chat',
       'gen_ai.provider.name': 'anthropic',
       ...(agent !== undefined && { 'gen_ai.agent.name': agent }),
@@ -466,7 +476,7 @@ export class RunSpans {
       'sentra.run.tests.considered': outcome.considered,
       'sentra.run.tests.classified': outcome.classified,
       'sentra.budget.used': outcome.budgetUsed,
-    })
+    } satisfies FlatAttributes)
   }
 
   /**
@@ -481,7 +491,7 @@ export class RunSpans {
         'sentra.run.calls': this.totals.calls,
         'sentra.run.cost_usd': dollars(this.totals.costUsd),
         'sentra.run.unpriced_calls': this.totals.unpriced,
-      })
+      } satisfies FlatAttributes)
       if (!this.completed) {
         this.root.setStatus({ code: SpanStatusCode.ERROR, message: 'incomplete' })
       }
