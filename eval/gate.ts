@@ -352,7 +352,7 @@ function agentOnly(
     status: 'skipped',
     detail:
       `a target for the agent, not the baseline — currently ${pp(observed)} against ` +
-      `${pp(floor)}. Enforced from M3, when \`--classifier=agent\` runs (#35).`,
+      `${pp(floor)}. Enforced whenever \`--classifier=agent\` is scored (#38).`,
   }
 }
 

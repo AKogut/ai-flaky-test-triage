@@ -109,7 +109,7 @@ describe('thresholds that are agent targets', () => {
       const result = check(runGate({ current: at(0.2), reference: null }), id)
       expect(result?.status).toBe('skipped')
       expect(result?.detail).toContain('target for the agent')
-      expect(result?.detail).toContain('Enforced from M3')
+      expect(result?.detail).toContain('Enforced whenever')
     },
   )
 
