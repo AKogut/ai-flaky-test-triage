@@ -86,8 +86,8 @@ npm run flakemetry:analyze   # test reports + history → analysis.json
 npm run agents:analyze       # analysis.json → report.md
 ```
 
-`npm run analyze` will run the last two in one step; it is still a stub (🚧 M8 · #71), and CI
-runs the two stages as separate jobs. With a key, `agents:analyze` calls the triage agent live;
+`npm run analyze` runs the last two in one step; CI runs them as separate jobs, so each can be
+read and retried on its own. With a key, `agents:analyze` calls the triage agent live;
 without one it runs the baseline heuristic and the report says so. Root cause and fix suggestion
 stay off either way until a calibration threshold exists — see
 [Architecture Overview](Architecture-Overview#stage-by-stage-and-why-each-exists).

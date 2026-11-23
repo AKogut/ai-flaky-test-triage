@@ -69,7 +69,7 @@
       "description": "flakemetry and agents in sequence",
       "milestone": "M8",
       "issue": 71,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "eval",
@@ -87,7 +87,7 @@
     },
     {
       "name": "demo",
-      "description": "Full pipeline in replay mode, no credentials",
+      "description": "Full pipeline with no credentials; baseline until cassettes exist",
       "milestone": "M3",
       "issue": 39,
       "status": "implemented"

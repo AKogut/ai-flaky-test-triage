@@ -172,8 +172,8 @@ pushing again updates that comment rather than adding another.
 **Four of five issues are closed, and the criterion is not yet demonstrated.** One
 workflow runs tests, `Flakiness analysis` and `Agent triage` as jobs, and the comment upsert is
 live: a later push edits the comment carrying the `<!-- sentra:report -->` marker instead of adding
-one. `npm run analyze`, the one-command wrapper this milestone planned, was not needed for that and
-was never written.
+one. `npm run analyze`, the one-command wrapper this milestone planned, was not needed for that;
+it now exists for local runs and chains the same two stages CI runs as separate jobs.
 
 The fork path degrades by construction rather than by observation. GitHub gives a fork's
 `pull_request` run no secrets and a read-only `GITHUB_TOKEN`, so the pipeline produces a baseline
