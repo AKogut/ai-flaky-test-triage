@@ -59,6 +59,35 @@ off until the classifier's confidence is calibrated well enough to say which fai
 
 ---
 
+## What it posts today
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pr-comment-dark.png">
+  <img src="docs/assets/pr-comment-light.png" width="720" alt="The triage comment this repository's CI posted on pull request #249: three failing end-to-end tests, each classified app_code plus deterministic with confidence 0.60 by the baseline heuristic, under a footer giving that classifier's measured accuracy of 35% joint.">
+</picture>
+
+A real comment, posted by this repository's own CI on
+[#249](https://github.com/AKogut/ai-flaky-test-triage/pull/249#issuecomment-7099666661) and not
+retouched. The verdicts come from the **baseline heuristic**, because no model has been scored yet,
+and the comment says so twice.
+
+It is also a fair picture of why the baseline is the bar rather than the product. The pull request
+touched `agents/`, so every failure was blamed on the change; all three are intermittent, and
+`find-by-name` is a test bug, not a product one. Telling the race in the product from the race in
+the test is the job the model is measured on.
+
+| Classifier                      | Joint accuracy, dev slice (n = 26) | Hard quadrant, `app_code` + `intermittent` (n = 8) |
+| ------------------------------- | ---------------------------------: | -------------------------------------------------: |
+| Baseline heuristic              |                  34.6% [19.4–53.8] |                                   25.0% [7.1–59.1] |
+| Triage agent, `claude-opus-5-5` |        not scored yet — [#38][i38] |                                                  — |
+
+95% Wilson intervals, from [`eval/report.md`](eval/report.md). The agent row stays empty until a run
+with an API key fills it, and when it does, the number goes here whichever way it points.
+
+[i38]: https://github.com/AKogut/ai-flaky-test-triage/issues/38
+
+---
+
 ## Architecture
 
 ```mermaid
