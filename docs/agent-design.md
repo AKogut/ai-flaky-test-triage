@@ -69,11 +69,20 @@ The model ID lives in `MODEL_CONFIG` and nowhere else, so "which model produced 
 one answer per commit. `.github/dependabot.yml` ignores the SDK for the same reason: a model change
 moves every figure in `eval/report.md` and belongs in a reviewable commit with an eval run attached.
 
-Server-side model fallback on a refusal is **off by default**. It is a real feature and a
-reasonable default for the PR-comment path, where an answer from a second model beats no answer.
-It is the wrong default here: a silent substitution part-way through an evaluation would make the
-headline a blend of two models while the report still names one. A refusal surfaces as a typed
-error and is recorded.
+Server-side model fallback on a refusal is **off by default** and on for the PR-comment path
+only. There, `agents/run.ts` builds the transport with `allowModelFallback: true`, which sends the
+request to the beta endpoint with `fallbacks: "default"`: when the pinned model declines, the API
+re-runs the request inside the same call on the model it routes that refusal category to. The
+response names the model that answered, so that call's telemetry, span and cost line name it too
+(what this leaves uncounted is under
+[operational limitations](limitations-and-guardrails.md#operational-limitations)). On a pull
+request, an answer from a second model beats no answer. `npm run eval` never asks for it: a silent
+substitution part-way through an evaluation would make the headline a blend of two models while
+the report still names one. With fallback off the request is the plain `messages.create` call,
+byte for byte, and a test pins that. A refusal that survives the fallback, or any refusal on the
+evaluation path, surfaces as a typed error and is recorded. None of this has been exercised
+against the live API: the project has no key, so the tests drive a stubbed SDK client with the
+response shapes the pinned SDK declares.
 
 ### Spans
 
