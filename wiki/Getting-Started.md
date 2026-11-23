@@ -14,7 +14,7 @@
 
 ## Requirements
 
-Node ≥ 22.13. Nothing else. No Docker, no database, and no API key for anything that works today.
+Node ≥ 24.15. Nothing else. No Docker, no database, and no API key for anything that works today.
 
 ## Clone and run
 

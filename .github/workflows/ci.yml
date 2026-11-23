@@ -22,7 +22,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
+  # The newest 24.x, the line `.nvmrc` names. The floor is `engines.node`: 24.15,
+  # the oldest 24.x that jsdom 30 accepts (`^22.22.2 || ^24.15.0 || >=26.0.0`).
+  NODE_VERSION: '24'
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -58,6 +60,14 @@ jobs:
           flag has-eval   eval/run-eval.ts
           flag has-flakemetry scripts/analyze.ts
           flag has-agents agents/run.ts
+
+      # The steps below run `npm ci` and the repository's own scripts. Without
+      # this they run on the image's default Node, which on ubuntu-24.04 is 22 —
+      # below engines.node, with `npm ci --silent` hiding the EBADENGINE warning.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
       # Parsed with the `yaml` package the lockfile pins, not a `pip install` of
       # whatever PyYAML was newest: that was the one dependency anywhere in CI

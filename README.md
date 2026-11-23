@@ -7,7 +7,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/AKogut/ai-flaky-test-triage/badge)](https://scorecard.dev/viewer/?uri=github.com/AKogut/ai-flaky-test-triage)
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D22.13-brightgreen)](package.json)
+[![Node](https://img.shields.io/badge/node-%3E%3D24.15-brightgreen)](package.json)
 
 <!-- status:start -->
 

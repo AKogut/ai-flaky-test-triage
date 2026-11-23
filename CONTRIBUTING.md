@@ -40,8 +40,8 @@ npm run test:e2e        # Playwright, one TaskFlow per worker — needs `npx pla
 npm test                # unit and e2e together
 ```
 
-Requires Node ≥ 22.13 — the floor ESLint 10 sets, not an arbitrary one. An `ANTHROPIC_API_KEY` is
-only needed for live model calls; nothing that works today needs one.
+Requires Node ≥ 24.15 — the oldest 24.x that jsdom 30 accepts, not an arbitrary one. An
+`ANTHROPIC_API_KEY` is only needed for live model calls; nothing that works today needs one.
 
 ```bash
 cp .env.example .env    # optional, for live runs

@@ -12,7 +12,8 @@ import { describe, expect, it } from 'vitest'
  * These drifted the moment ESLint 10 raised the real floor from 22 to 22.13. The
  * failure is quiet in the worst way: the docs keep promising a version that no
  * longer installs, and the person who believes them gets an ERESOLVE wall instead
- * of a sentence telling them to upgrade.
+ * of a sentence telling them to upgrade. The move to Node 24 set it at 24.15, the
+ * oldest 24.x that jsdom 30 accepts.
  *
  * `engines.node` is the source of truth here because it is the copy that has
  * consequences.
@@ -37,7 +38,7 @@ const packageJson = JSON.parse(read('package.json')) as {
   devDependencies: Record<string, string>
 }
 
-/** `">=22.13"` → `"22.13"`. The comparator is fixed; only the version travels. */
+/** `">=24.15"` → `"24.15"`. The comparator is fixed; only the version travels. */
 const declaredFloor = (): string => {
   const match = /^>=(\d+(?:\.\d+)*)$/.exec(packageJson.engines.node)
   if (match?.[1] === undefined) {
@@ -60,7 +61,14 @@ describe('the documented Node floor', () => {
   it.each(PROSE_COPIES)('%s does not still claim the superseded bare major', (file) => {
     // `Node ≥ 22` reads as correct and is not — 22.0 through 22.12 fail to install.
     // Matching the major with nothing after it is what catches a half-done update.
-    expect(read(file)).not.toMatch(/Node\s*(?:≥|>=)\s*22(?!\.)/)
+    // "Nothing after it" means no `.minor`: a full stop ending the sentence, as in
+    // `Node ≥ 22.`, is still the bare major, and `(?!\.)` used to let it through.
+    expect(read(file)).not.toMatch(/Node\s*(?:≥|>=)\s*22(?!\.\d)/)
+    // The same trap one major on: `Node ≥ 24` promises 24.0 through 24.14, which
+    // the floor excludes. The major is read from engines.node so the check moves
+    // with it.
+    const major = floor.split('.')[0] ?? ''
+    expect(read(file)).not.toMatch(new RegExp(`Node\\s*(?:≥|>=)\\s*${major}(?!\\.\\d)`))
   })
 
   it('checks every copy that exists, not a subset someone remembered', () => {
@@ -86,9 +94,11 @@ describe('the documented Node floor', () => {
   })
 
   it('is at or above the floor ESLint requires', () => {
-    // ESLint 10 accepts `^20.19.0 || ^22.13.0 || >=24`. The repository is on the
-    // 22 line, so 22.13 is the binding constraint; dropping below it silently
-    // breaks `npm run lint` for anyone who trusts engines.node.
+    // ESLint 10 accepts `^20.19.0 || ^22.13.0 || >=24`. On the 24 line it accepts
+    // every release, so it no longer binds: 24.15 comes from jsdom 30, which takes
+    // `^22.22.2 || ^24.15.0 || >=26.0.0`. These assertions still stop a move back
+    // to the 22 line from going below 22.13, where `npm run lint` silently breaks
+    // for anyone who trusts engines.node.
     const [major = 0, minor = 0] = floor.split('.').map(Number)
     expect(major).toBeGreaterThanOrEqual(22)
     if (major === 22) expect(minor).toBeGreaterThanOrEqual(13)
@@ -103,7 +113,7 @@ describe('@types/node tracks the runtime, not the newest release', () => {
    * do not exist.
    *
    * Concretely: `@types/node@26` declares `node:ffi` and `node:quic`, neither of
-   * which Node 22 has. Under those types an import from `node:quic` type-checks
+   * which Node 24 has. Under those types an import from `node:quic` type-checks
    * cleanly and throws `ERR_UNKNOWN_BUILTIN_MODULE` at runtime — the compiler
    * turned from a check into a rubber stamp, silently.
    */

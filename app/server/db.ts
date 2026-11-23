@@ -12,10 +12,11 @@ import Database from 'better-sqlite3'
  * layer, and a schema that fits on a screen.
  *
  * `better-sqlite3` rather than `node:sqlite`, which would have been one fewer
- * dependency. Node 22 — the floor this repository sets, and the version CI pins
- * — still prints an ExperimentalWarning for the built-in on every process start.
- * A warning on every test run is noise, and noise on stderr is how people learn
- * to stop reading stderr.
+ * dependency. Node 22, the floor when this was written, prints an
+ * ExperimentalWarning for the built-in on every process start. A warning on every
+ * test run is noise, and noise on stderr is how people learn to stop reading
+ * stderr. Node 24.15, the floor now, no longer prints it, so that reason is gone;
+ * moving to the built-in is a change of its own, not part of a runtime bump.
  */
 
 export interface Task {
