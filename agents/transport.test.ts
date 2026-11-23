@@ -146,6 +146,7 @@ describe('TransportError', () => {
  */
 const stubClient = (over: {
   create?: (params: unknown) => Promise<unknown>
+  betaCreate?: (params: unknown) => Promise<unknown>
   countTokens?: (params: unknown) => Promise<unknown>
 }): Anthropic =>
   ({
@@ -153,10 +154,27 @@ const stubClient = (over: {
       create: over.create ?? (() => Promise.resolve(reply([textBlock('{}')]))),
       countTokens: over.countTokens ?? (() => Promise.resolve({ input_tokens: 42 })),
     },
+    beta: {
+      messages: {
+        // Fails loudly by default: a test that reaches the beta endpoint
+        // without saying so has found a path the plain call was meant to keep.
+        create:
+          over.betaCreate ??
+          (() => Promise.reject(new Error('the beta endpoint was not expected'))),
+      },
+    },
   }) as unknown as Anthropic
 
 const textBlock = (text: string) => ({ type: 'text', text })
 const thinkingBlock = (thinking: string) => ({ type: 'thinking', thinking })
+/** Checked against the SDK's own type, so the fixture moves if the pinned SDK's shape does. */
+const fallbackBlock = (from: string, to: string) =>
+  ({
+    type: 'fallback',
+    from: { model: from },
+    to: { model: to },
+    trigger: { type: 'refusal', category: 'cyber' },
+  }) satisfies Anthropic.Beta.BetaFallbackBlock
 
 const reply = (content: unknown[], over: Record<string, unknown> = {}) => ({
   content,
@@ -239,17 +257,17 @@ describe('AnthropicTransport', () => {
     expect(error.cause).toMatchObject({ category: 'cyber' })
   })
 
-  it('says fallback is off when it is, so the message explains the situation', async () => {
+  it('says whether a fallback was asked for, so the message explains the situation', async () => {
     const refused = () => Promise.resolve(reply([], { stop_reason: 'refusal', stop_details: null }))
 
     const off = new AnthropicTransport({ client: stubClient({ create: refused }) })
-    await expect(off.send(request)).rejects.toThrow(/fallback is disabled/)
+    await expect(off.send(request)).rejects.toThrow(/model fallback is off/)
 
     const on = new AnthropicTransport({
-      client: stubClient({ create: refused }),
+      client: stubClient({ betaCreate: refused }),
       allowModelFallback: true,
     })
-    await expect(on.send(request)).rejects.not.toThrow(/fallback is disabled/)
+    await expect(on.send(request)).rejects.toThrow(/no fallback model answered/)
   })
 
   it('treats a response with no text as a retryable fault, not a crash', async () => {
@@ -324,5 +342,165 @@ describe('AnthropicTransport', () => {
         format: { type: 'json_schema', schema: { type: 'object' } },
       },
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Model fallback
+// ---------------------------------------------------------------------------
+
+/**
+ * What a fallback changes on the wire, and what it must leave alone.
+ *
+ * None of this has met the live API — the project has no key — so the shapes
+ * below are the ones the pinned SDK types, and the assertions are about the
+ * request this file sends and how it reads a response of that shape.
+ */
+describe('AnthropicTransport with model fallback', () => {
+  /**
+   * The request body as it was before fallback existed, key order included.
+   *
+   * Pinned as a string because the claim is "byte-for-byte unchanged", and an
+   * object comparison would let a reordered key through.
+   */
+  const PLAIN_BODY =
+    '{"model":"claude-opus-5","max_tokens":8000,"system":"classify",' +
+    '"messages":[{"role":"user","content":"this failure"}],' +
+    '"output_config":{"effort":"high","format":{"type":"json_schema","schema":{"type":"object"}}}}'
+
+  const plainParams = JSON.parse(PLAIN_BODY) as Record<string, unknown>
+
+  it('leaves the request exactly as it was when fallback is off', async () => {
+    // The evaluation path constructs the transport with no options. Off has to
+    // mean the plain endpoint and the plain body — not the beta endpoint with
+    // the fallback left out, which is a different request to the API and to
+    // anyone reading a recorded run.
+    const create = vi.fn((_params: unknown) => Promise.resolve(reply([textBlock('{}')])))
+    const betaCreate = vi.fn((_params: unknown) => Promise.resolve(reply([textBlock('{}')])))
+    await new AnthropicTransport({ client: stubClient({ create, betaCreate }) }).send(request)
+
+    expect(betaCreate).not.toHaveBeenCalled()
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(create.mock.calls[0]).toHaveLength(1)
+    const sent = create.mock.calls[0]?.[0]
+    // Strict equality catches a key present as `undefined`, which the string
+    // comparison would not see.
+    expect(sent).toStrictEqual(plainParams)
+    expect(JSON.stringify(sent)).toBe(PLAIN_BODY)
+  })
+
+  it('sends the same request to the beta endpoint, plus the header and fallbacks, when on', async () => {
+    const create = vi.fn((_params: unknown) => Promise.resolve(reply([textBlock('{}')])))
+    const betaCreate = vi.fn((_params: unknown) => Promise.resolve(reply([textBlock('{}')])))
+    await new AnthropicTransport({
+      client: stubClient({ create, betaCreate }),
+      allowModelFallback: true,
+    }).send(request)
+
+    expect(create).not.toHaveBeenCalled()
+    expect(betaCreate).toHaveBeenCalledTimes(1)
+    // Everything the plain call sends, unchanged — effort and the JSON schema
+    // format included — plus exactly two fields. `'default'` rather than a
+    // named model, so the fallback is routed by refusal category and no
+    // second model ID lives outside MODEL_CONFIG.
+    expect(betaCreate.mock.calls[0]?.[0]).toStrictEqual({
+      ...plainParams,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+    })
+  })
+
+  it.each([
+    [
+      'after the pinned model declined',
+      [
+        fallbackBlock('claude-opus-5-5', 'claude-opus-4-8'),
+        thinkingBlock('…'),
+        textBlock('{"owner":"test_code"}'),
+      ],
+    ],
+    [
+      // Once a conversation has fallen back, the API serves later turns from the
+      // fallback model directly for a while. Those carry no `fallback` block, so
+      // the block cannot be what decides which model is reported.
+      'on a turn routed straight to the fallback, with no block to mark it',
+      [textBlock('{"owner":"test_code"}')],
+    ],
+  ])('names the model that answered %s', async (_case, content) => {
+    const transport = new AnthropicTransport({
+      client: stubClient({
+        betaCreate: () =>
+          Promise.resolve(
+            reply(content, {
+              model: 'claude-opus-4-8',
+              usage: {
+                input_tokens: 130,
+                output_tokens: 40,
+                iterations: [
+                  {
+                    type: 'message',
+                    model: 'claude-opus-5-5',
+                    input_tokens: 120,
+                    output_tokens: 0,
+                  },
+                  {
+                    type: 'fallback_message',
+                    model: 'claude-opus-4-8',
+                    input_tokens: 130,
+                    output_tokens: 40,
+                  },
+                ],
+              },
+            }),
+          ),
+      }),
+      allowModelFallback: true,
+    })
+    const response = await transport.send({ ...request, model: 'claude-opus-5-5' })
+
+    // The served model, not the requested one: this is what telemetry, the
+    // span and the cost line are built from.
+    expect(response.model).toBe('claude-opus-4-8')
+    expect(response.raw).toEqual({ owner: 'test_code' })
+    expect(response.usage).toEqual({ inputTokens: 130, outputTokens: 40 })
+  })
+
+  it('raises the same refusal when the whole chain declines', async () => {
+    // A fallback model can refuse too. The final `stop_reason` is the chain's
+    // answer, and it has to land exactly where a refusal without fallback does:
+    // a non-retryable TransportError, not a parse of whatever content came back.
+    const transport = new AnthropicTransport({
+      client: stubClient({
+        betaCreate: () =>
+          Promise.resolve(
+            reply([fallbackBlock('claude-opus-5-5', 'claude-opus-4-8')], {
+              model: 'claude-opus-4-8',
+              stop_reason: 'refusal',
+              stop_details: { type: 'refusal', category: 'cyber' },
+            }),
+          ),
+      }),
+      allowModelFallback: true,
+    })
+
+    const error = (await transport
+      .send({ ...request, model: 'claude-opus-5-5' })
+      .catch((e: unknown) => e)) as TransportError
+    expect(error).toBeInstanceOf(TransportError)
+    expect(error.kind).toBe('refusal')
+    expect(error.retryable).toBe(false)
+    expect(error.status).toBe(200)
+    expect(error.cause).toMatchObject({ category: 'cyber' })
+  })
+
+  it('classifies a failure from the beta endpoint like one from the plain endpoint', async () => {
+    const transport = new AnthropicTransport({
+      client: stubClient({ betaCreate: () => Promise.reject(from(529)) }),
+      allowModelFallback: true,
+    })
+    const error = (await transport.send(request).catch((e: unknown) => e)) as TransportError
+    expect(error).toBeInstanceOf(TransportError)
+    expect(error.kind).toBe('server')
+    expect(error.retryable).toBe(true)
   })
 })

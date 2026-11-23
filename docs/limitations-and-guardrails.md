@@ -106,6 +106,12 @@ into a prompt.
   the gate uses a confidence lower bound and N-sample averaging. Acknowledged irony.
 - **Rate limits.** A run with many failures serialises behind API rate limits. Concurrency is
   capped at 4, and the budget stops dispatch on a long tail, listing what it never reached.
+- **A model fallback is only partly accounted for.** On the PR-comment path a refused call can be
+  answered by a second model inside the same request. The call's span carries both the requested
+  and the answering model, and its tokens and cost are the answering attempt's. A declined attempt
+  before it is not counted, though it may be billed, and the token budget is checked against one
+  attempt, not two. The comment's header names the first call's model even when a later call fell
+  back. Never exercised against the live API; the evaluation path does not fall back at all.
 
 ## Ethical and practical caveats
 
