@@ -151,9 +151,17 @@ export function unverified(quotes: readonly string[], shown: string): string[] {
   return quotes.filter((quote) => !contains(haystack, quote))
 }
 
+/**
+ * Split on the ellipsis alone. The `trim` after it removes the whitespace beside
+ * each one, which a `\s*` on either side of the separator used to do, and that
+ * pattern was quadratic in a run of spaces. No quotation ever reached that cost,
+ * because `flatten` collapses every run to one space first, but that kept it
+ * linear only for as long as nobody moved the line above. Now the split is
+ * linear on its own.
+ */
 function contains(haystack: string, quote: string): boolean {
   const segments = flatten(quote)
-    .split(/\s*(?:\.\.\.|…)\s*/)
+    .split(/\.\.\.|…/)
     .map((segment) => segment.trim())
     .filter((segment) => segment !== '')
 

@@ -1,4 +1,5 @@
 import type { ClassificationInput } from '@sentra/contracts'
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
   BudgetExceededError,
@@ -226,3 +227,97 @@ describe('verifying quoted evidence', () => {
     expect(result.classification.owner).toBe('app_code')
   })
 })
+
+/**
+ * `unverified` as it was before the elision split lost its `\s*`, kept as the
+ * reference the new split is checked against. Do not tidy it: it is the spec.
+ */
+function unverifiedBefore(quotes: readonly string[], shown: string): string[] {
+  const flatten = (text: string): string => text.replace(/\s+/g, ' ').trim()
+  const contains = (haystack: string, quote: string): boolean => {
+    const segments = flatten(quote)
+      .split(/\s*(?:\.\.\.|…)\s*/)
+      .map((segment) => segment.trim())
+      .filter((segment) => segment !== '')
+    if (segments.length === 0) return false
+    let from = 0
+    for (const segment of segments) {
+      const at = haystack.indexOf(segment, from)
+      if (at === -1) return false
+      from = at + segment.length
+    }
+    return true
+  }
+  const haystack = flatten(shown)
+  return quotes.filter((quote) => !contains(haystack, quote))
+}
+
+const NBSP = String.fromCharCode(0xa0)
+
+/** Text dense in whitespace of every kind, dots and ellipses. At most 40 pieces. */
+const prose = fc.string({
+  unit: fc.constantFrom(
+    ' ',
+    '  ',
+    '\t',
+    '\n',
+    NBSP,
+    '.',
+    '..',
+    '...',
+    '…',
+    'a',
+    'b',
+    'ab',
+    '3',
+    ':',
+  ),
+  maxLength: 40,
+})
+
+/** A quotation lifted from `shown` with its middle elided, so most of them verify. */
+const lifted = (shown: string, cuts: readonly number[], dots: string): string => {
+  const [i = 0, j = 0, k = 0, l = 0] = cuts.map((n) => n % (shown.length + 1)).sort((a, b) => a - b)
+  return `${shown.slice(i, j)}${dots}${shown.slice(k, l)}`
+}
+
+describe('the elision split', () => {
+  it('verifies exactly what it verified when it trimmed with \\s*', () => {
+    const cut = fc.tuple(
+      fc.array(fc.nat(), { minLength: 4, maxLength: 4 }),
+      fc.constantFrom('...', '…', ' ... ', `${NBSP}…\n`, '......'),
+    )
+    fc.assert(
+      fc.property(
+        prose,
+        fc.array(prose, { maxLength: 3 }),
+        fc.array(cut, { maxLength: 3 }),
+        (shown, invented, cuts) => {
+          const quotes = [...invented, ...cuts.map(([at, dots]) => lifted(shown, at, dots))]
+          expect(unverified(quotes, shown)).toEqual(unverifiedBefore(quotes, shown))
+        },
+      ),
+      { numRuns: 5_000 },
+    )
+  })
+
+  /**
+   * `flatten` collapsed every run of whitespace before the split saw it, so the
+   * old pattern was never slow on a quotation: this took no time before either.
+   * The test is that it stays so without relying on that.
+   */
+  it.each([
+    ['100,000 spaces between two words', `a${' '.repeat(100_000)}b`],
+    ['100,000 spaces and an ellipsis', `${' '.repeat(100_000)}…`],
+    ['100,000 dots', '.'.repeat(100_000)],
+  ])('checks a quotation of %s in linear time', (_label, quote) => {
+    expect(elapsed(() => unverified([quote], 'a b'))).toBeLessThan(200)
+  })
+})
+
+/** Wall time of one call, in milliseconds. */
+function elapsed(run: () => unknown): number {
+  const start = performance.now()
+  run()
+  return performance.now() - start
+}
