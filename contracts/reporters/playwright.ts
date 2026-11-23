@@ -147,9 +147,22 @@ export interface RunMetadata {
  * rather than on prose.
  */
 export function relativise(text: string, root: string): string {
-  const trimmed = root.replace(/\/+$/, '')
+  const trimmed = withoutTrailingSlashes(root)
   if (trimmed === '') return text
   return text.replaceAll(`${trimmed}/`, '')
+}
+
+/**
+ * By index, not `/\/+$/`. The expression tried every slash in the path as the
+ * start of the trailing run and read on to the next non-slash to find out it was
+ * not, so a root of 100,000 slashes and a letter took 3.9 seconds. The pipeline
+ * passes the checkout, but `scripts/capture.ts` takes the root from the report's
+ * `config.rootDir`, which the run under test wrote.
+ */
+function withoutTrailingSlashes(path: string): string {
+  let end = path.length
+  while (end > 0 && path[end - 1] === '/') end -= 1
+  return path.slice(0, end)
 }
 
 /** The title Playwright itself displays: suite path below the file, then the spec. */

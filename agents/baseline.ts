@@ -44,8 +44,26 @@ const INFRASTRUCTURE = [
 const LOCATOR_OR_WAIT =
   /locator|getBy\w+|selector|Timed out \d+ms waiting|Timeout \d+ms exceeded|waitFor/i
 
-/** A changed path that is a test rather than product source. */
-const TEST_PATH = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec)\.[cm]?[jt]sx?$/
+/** A directory that holds tests, at any depth: `tests/`, `app/__tests__/`, `e2e/`. */
+const TEST_DIRECTORY = /(^|\/)(tests?|__tests__|e2e|spec)\//
+
+/** A file named as a test, wherever it sits: `board.test.ts`, `Board.spec.tsx`. */
+const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/
+
+/**
+ * A changed path that is a test rather than product source.
+ *
+ * Two expressions joined by `||` rather than one alternation, so that which
+ * half is anchored where is written down instead of left to operator
+ * precedence. The meaning is the alternation's, exactly.
+ *
+ * `context.ts` uses this rather than a copy. The definition lives here, with the
+ * control, so a change to what counts as a test is a change to the control and
+ * is reviewed as one.
+ */
+export function isTestPath(path: string): boolean {
+  return TEST_DIRECTORY.test(path) || TEST_FILE.test(path)
+}
 
 /**
  * A changed path counts as product source only if it looks like code.
@@ -57,7 +75,15 @@ const TEST_PATH = /(^|\/)(tests?|__tests__|e2e|spec)\/|\.(test|spec)\.[cm]?[jt]s
  * would be tuning the control against the dataset it exists to control for.
  */
 const SOURCE_EXTENSION = /\.(ts|tsx|js|jsx|mjs|cjs|sql|css|html)$/i
-const NOT_PRODUCT = /^(\.github|docs|wiki)\/|\.config\.[cm]?js$/
+
+/** Repository plumbing and prose, at the top level only: `.github/`, `docs/`, `wiki/`. */
+const NOT_PRODUCT_DIRECTORY = /^(\.github|docs|wiki)\//
+
+/** Tool configuration, at any depth: `vite.config.js`, `eslint.config.mjs`. */
+const CONFIG_FILE = /\.config\.[cm]?js$/
+
+const isNotProduct = (path: string): boolean =>
+  NOT_PRODUCT_DIRECTORY.test(path) || CONFIG_FILE.test(path)
 
 /**
  * Confidence per rule, from how specific the rule is.
@@ -81,9 +107,7 @@ const CONFIDENCE = {
 function changedProductPaths(diff: string): string[] {
   return [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)]
     .map((m) => m[1] ?? '')
-    .filter(
-      (p) => p !== '' && SOURCE_EXTENSION.test(p) && !TEST_PATH.test(p) && !NOT_PRODUCT.test(p),
-    )
+    .filter((p) => p !== '' && SOURCE_EXTENSION.test(p) && !isTestPath(p) && !isNotProduct(p))
 }
 
 export function classifyWithBaseline(payload: ClassificationInput): Classification {

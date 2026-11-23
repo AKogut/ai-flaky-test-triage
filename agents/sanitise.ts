@@ -146,15 +146,12 @@ function escapeRegExp(text: string): string {
 // Normalisation
 // ---------------------------------------------------------------------------
 
-/**
- * CSI (`ESC[31m`) and OSC (`ESC]8;;...`) sequences, which test runners emit
- * constantly.
- *
- * Matched as whole sequences rather than left to the control-character pass,
- * which would delete the escape byte and leave `[31m` sitting in the middle of an
- * assertion message looking like something the test printed.
- */
-const ANSI = /\u001B\[[0-9;?]*[\u0020-\u002F]*[\u0040-\u007E]|\u001B\][\s\S]*?(?:\u0007|\u001B\\)/g
+/** A whole CSI sequence (`ESC[31m`), or the two characters that open an OSC (`ESC]8;;...`). */
+const ESCAPE_SEQUENCE = /\u001B\[[0-9;?]*[\u0020-\u002F]*[\u0040-\u007E]|\u001B\]/g
+const OSC_OPEN = '\u001B]'
+
+/** What closes an OSC: BEL, or ST (`ESC\`). */
+const OSC_CLOSE = /\u0007|\u001B\\/g
 
 /**
  * Bidirectional overrides and zero-width characters.
@@ -173,8 +170,47 @@ const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g
 
 /* eslint-enable no-control-regex */
 
+/**
+ * CSI (`ESC[31m`) and OSC (`ESC]8;;...`) sequences removed, which test runners
+ * emit constantly.
+ *
+ * Removed as whole sequences rather than left to the control-character pass,
+ * which would delete the escape byte and leave `[31m` sitting in the middle of an
+ * assertion message looking like something the test printed.
+ *
+ * An OSC runs from its `ESC]` to the first BEL or ST after it, whatever lies
+ * between. That was one lazy expression, `ESC][\s\S]*?(?:BEL|ST)`, and it was
+ * quadratic: an `ESC]` that nothing closes was searched to the end of the text,
+ * and then the same again from the next `ESC]`. 50,000 of them took 2.0 seconds.
+ * Here the search for a close is made once. When one OSC finds none, no later
+ * OSC can, so the rest are left as they are without looking.
+ *
+ * What is removed is what the expression removed, character for character. That
+ * includes an OSC whose body holds another escape: `[^BEL ESC]*` would have been
+ * the obvious linear body, and it would have left those in place.
+ */
+export function stripAnsi(text: string): string {
+  let kept = ''
+  let copied = 0
+  let unclosed = false
+  ESCAPE_SEQUENCE.lastIndex = 0
+  for (let found = ESCAPE_SEQUENCE.exec(text); found; found = ESCAPE_SEQUENCE.exec(text)) {
+    if (found[0] === OSC_OPEN) {
+      OSC_CLOSE.lastIndex = ESCAPE_SEQUENCE.lastIndex
+      if (unclosed || OSC_CLOSE.exec(text) === null) {
+        unclosed = true
+        continue
+      }
+      ESCAPE_SEQUENCE.lastIndex = OSC_CLOSE.lastIndex
+    }
+    kept += text.slice(copied, found.index)
+    copied = ESCAPE_SEQUENCE.lastIndex
+  }
+  return kept + text.slice(copied)
+}
+
 function normalise(text: string): Redacted {
-  const withoutAnsi = text.replace(ANSI, '')
+  const withoutAnsi = stripAnsi(text)
   const unified = withoutAnsi.replace(/\r\n?/g, '\n')
   const cleaned = unified.replace(INVISIBLE, '').replace(CONTROL, '')
   return { text: cleaned, removed: count(text) - count(cleaned) }

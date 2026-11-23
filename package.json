@@ -72,6 +72,7 @@
     "@vitest/coverage-v8": "5.1.1",
     "eslint": "10.15.0",
     "eslint-config-prettier": "10.1.8",
+    "fast-check": "4.10.2",
     "globals": "17.14.0",
     "husky": "9.1.7",
     "jsdom": "^29.1.1",

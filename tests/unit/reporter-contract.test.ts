@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
   TestResultSchema,
@@ -167,6 +168,50 @@ describe('absolute paths from the runner', () => {
     // An empty root would otherwise strip every leading slash in the file.
     expect(relativise('/a/b', '')).toBe('/a/b')
     expect(relativise('/repo/a', '/repo/')).toBe('a')
+  })
+})
+
+/**
+ * `relativise` as it was before its trailing slashes came off by index, kept as
+ * the reference the loop is checked against. Do not tidy it: it is the spec.
+ */
+function relativiseBefore(text: string, root: string): string {
+  const trimmed = root.replace(/\/+$/, '')
+  if (trimmed === '') return text
+  return text.replaceAll(`${trimmed}/`, '')
+}
+
+/** Roots and text pieces made mostly of slashes, at most 12 pieces each. */
+const slashy = fc.string({
+  unit: fc.constantFrom('/', '//', '///', 'repo', 'a', '.', ' ', '\\', '\n'),
+  maxLength: 12,
+})
+
+describe('the trailing slashes of a root', () => {
+  /** Joined with the root, so the root is in the text and there is something to strip. */
+  it('come off exactly as the expression took them off', () => {
+    fc.assert(
+      fc.property(slashy, fc.array(slashy, { maxLength: 4 }), (root, pieces) => {
+        const text = pieces.join(root)
+        expect(relativise(text, root)).toBe(relativiseBefore(text, root))
+      }),
+      { numRuns: 5_000 },
+    )
+  })
+
+  /**
+   * The expression took 3.9 seconds on the first root, measured once on a
+   * laptop. The bound is loose on purpose: linear work here is well under a
+   * millisecond.
+   */
+  it.each([
+    ['100,000 slashes and a letter', `${'/'.repeat(100_000)}a`],
+    ['100,000 slashes', '/'.repeat(100_000)],
+    ['a letter and 100,000 slashes', `a${'/'.repeat(100_000)}`],
+  ])('come off a root of %s in linear time', (_label, root) => {
+    const start = performance.now()
+    relativise('at /repo/tests/e2e/board.spec.ts:12:5', root)
+    expect(performance.now() - start).toBeLessThan(200)
   })
 })
 
