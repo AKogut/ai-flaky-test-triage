@@ -271,6 +271,34 @@ describe('a run that works', () => {
   })
 })
 
+describe('when it cannot do its job', () => {
+  const quiet = async <T>(body: () => Promise<T>): Promise<{ value: T; errors: string }> => {
+    const errors: string[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => {
+      errors.push(String(m))
+    })
+    try {
+      return { value: await body(), errors: errors.join('\n') }
+    } finally {
+      spy.mockRestore()
+    }
+  }
+
+  it('fails when there is no analysis to read', async () => {
+    const { value, errors } = await quiet(() => run([], { files: {} }))
+    expect(value.code).toBe(1)
+    expect(errors).toContain('flakemetry:analyze')
+  })
+
+  it('fails when the analysis is not one', async () => {
+    const { value, errors } = await quiet(() =>
+      run([], { files: { 'analysis.json': '{"schemaVersion":1}' } }),
+    )
+    expect(value.code).toBe(1)
+    expect(errors).toContain('not a valid analysis')
+  })
+})
+
 describe('the diff', () => {
   /** A product file and its spec, the way `git diff` prints them. */
   const DIFF = [
@@ -426,33 +454,5 @@ describe('the diff', () => {
       })
       expect(result.output).toContain('fetch-depth: 0')
     })
-  })
-})
-
-describe('when it cannot do its job', () => {
-  const quiet = async <T>(body: () => Promise<T>): Promise<{ value: T; errors: string }> => {
-    const errors: string[] = []
-    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => {
-      errors.push(String(m))
-    })
-    try {
-      return { value: await body(), errors: errors.join('\n') }
-    } finally {
-      spy.mockRestore()
-    }
-  }
-
-  it('fails when there is no analysis to read', async () => {
-    const { value, errors } = await quiet(() => run([], { files: {} }))
-    expect(value.code).toBe(1)
-    expect(errors).toContain('flakemetry:analyze')
-  })
-
-  it('fails when the analysis is not one', async () => {
-    const { value, errors } = await quiet(() =>
-      run([], { files: { 'analysis.json': '{"schemaVersion":1}' } }),
-    )
-    expect(value.code).toBe(1)
-    expect(errors).toContain('not a valid analysis')
   })
 })
