@@ -50,11 +50,31 @@ export function escapeAgentText(text: string): string {
     .join('\n')
 }
 
+/** Escaped and on one line: what a table cell holds before it is cut to length. */
+const flat = (text: string): string => escapeAgentText(text).replace(/\s+/g, ' ').trim()
+
 /** One cell of a table: escaped, single-line, and short enough to read. */
 const cell = (text: string, max = 120): string => {
-  const flat = escapeAgentText(text).replace(/\s+/g, ' ').trim()
-  return flat.length <= max ? flat : `${flat.slice(0, max - 1)}…`
+  const line = flat(text)
+  return line.length <= max ? line : `${line.slice(0, max - 1)}…`
 }
+
+/** Whether `cell(text, max)` has to cut, and so loses the end of `text`. */
+const cut = (text: string, max: number): boolean => flat(text).length > max
+
+/**
+ * How much of a test's id and of its reason a table row shows.
+ *
+ * Most findings appear in the table and nowhere else, so a cut here is a cut
+ * from the report, not from a summary of it. The name is as wide as a section
+ * heading's title, and every test id in this repository's suites fits in it.
+ * The reason fits every sentence the baseline heuristic writes: the baseline is
+ * what runs on a pull request without a key, and a section that exists only to
+ * finish its sentence is the repetition `addsToRow` is there to stop. A model's
+ * reasoning runs to 400 characters and is cut; its section carries the rest.
+ */
+const ROW_NAME = 120
+const ROW_REASON = 160
 
 /**
  * Every way this pipeline can produce partial output, and what each one costs
@@ -210,10 +230,11 @@ function assemble(
 
   // `app_code` is what a reader has to act on, so it is open. Everything else is
   // information they may want and did not ask for, which is what <details> is for.
-  const detailed = classified
+  const sectioned = classified.filter(addsToRow)
+  const detailed = sectioned
     .filter((r) => r.classification?.owner === 'app_code')
     .map((r) => section(r, true))
-  const collapsed = classified
+  const collapsed = sectioned
     .filter((r) => r.classification?.owner !== 'app_code')
     .map((r) => section(r, false))
 
@@ -253,7 +274,7 @@ function gapLines(gaps: readonly TriagedTest[]): string[] {
 }
 
 function row(entry: TriagedTest): string {
-  const name = cell(entry.test.result.testId, 90)
+  const name = cell(entry.test.result.testId, ROW_NAME)
   if (entry.classification === undefined) {
     return `| ${name} | — | — | unclassified: ${cell(entry.unclassified?.detail ?? '', 60)} |`
   }
@@ -262,9 +283,36 @@ function row(entry: TriagedTest): string {
     name,
     quadrantOf(entry.classification),
     entry.classification.confidence.toFixed(2),
-    cell(entry.classification.reasoning, 100),
+    cell(entry.classification.reasoning, ROW_REASON),
     '',
   ].join(' | ')
+}
+
+/**
+ * Whether a test's section says anything its table row does not.
+ *
+ * A section opens by restating the row — file, quadrant, confidence, reason —
+ * and while root cause and fix suggestion are off, that restatement was all a
+ * section held, so every finding was said twice. One is written now only for
+ * what a row has no room for:
+ *
+ * - a root-cause hypothesis, with its mechanism and confidence, any alternative,
+ *   the files it implicates and a count of the paths it named that do not exist;
+ * - a fix suggestion: summary, approach, illustrative patch, risks, test gap;
+ * - the whole reason, when the row had to cut it;
+ * - the title and the file in full, when the row had to cut the test's id.
+ *
+ * A finding with none of these is in the table and nowhere else.
+ */
+function addsToRow(entry: TriagedTest): boolean {
+  const c = entry.classification
+  if (c === undefined) return false
+  return (
+    entry.rootCause !== undefined ||
+    entry.fixSuggestion !== undefined ||
+    cut(c.reasoning, ROW_REASON) ||
+    cut(entry.test.result.testId, ROW_NAME)
+  )
 }
 
 function section(entry: TriagedTest, open: boolean): string {
@@ -384,6 +432,11 @@ function measured(accuracy: MeasuredAccuracy): string {
  * treating the rest as ground truth — so it is the one part that must survive
  * truncation. Sections are dropped from the end, where the collapsed
  * non-`app_code` findings are, rather than characters from the middle.
+ *
+ * A collapsed section starts at `<details>`, not at a heading. Cut anywhere
+ * inside one and the notice and the footer render inside a `<details>` that
+ * never closes, folded under the last test's summary, so a footer that is
+ * still in the text is no longer on the page.
  */
 export function fit(body: string, footer: string, limit: number): string {
   const whole = body + footer
@@ -392,6 +445,6 @@ export function fit(body: string, footer: string, limit: number): string {
   const room = limit - footer.length - TRUNCATION_NOTICE.length - RESERVE
   const kept = body.slice(0, Math.max(0, room))
   // Cut at a section boundary so the document does not end mid-sentence.
-  const boundary = kept.lastIndexOf('\n### ')
+  const boundary = Math.max(kept.lastIndexOf('\n### '), kept.lastIndexOf('\n<details>'))
   return (boundary > 0 ? kept.slice(0, boundary) : kept) + TRUNCATION_NOTICE + footer
 }

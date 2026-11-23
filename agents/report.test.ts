@@ -1,4 +1,6 @@
+import type { ClassificationInput, FixSuggestion, RootCause } from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
+import { classifyWithBaseline } from './baseline.js'
 import type { TriagedTest } from './pipeline.js'
 import {
   COMMENT_LIMIT,
@@ -54,6 +56,45 @@ const row = (over: RowOverride = {}): TriagedTest =>
     },
     ...over,
   }) as TriagedTest
+
+/** A row with its own title, so two findings in one report can be told apart. */
+const named = (title: string, over: RowOverride = {}): TriagedTest => {
+  const base = row(over)
+  const testId = `${base.test.result.file}›${title}`
+  return {
+    ...base,
+    test: {
+      result: { ...base.test.result, testId, title },
+      signal: { ...base.test.signal, testId },
+    },
+  }
+}
+
+const cause: RootCause = {
+  hypothesis: 'the reorder handler applies whichever response arrives last',
+  implicatedFiles: ['app/server/routes/tasks.ts'],
+  implicatedSymbols: ['reorder'],
+  mechanism: 'race',
+  confidence: 0.8,
+}
+
+const fix: FixSuggestion = {
+  summary: 'apply moves in the order they were made',
+  approach: 'carry a sequence number with each move and ignore a response older than the last one',
+  risks: ['a response that is ignored can hide a real server error'],
+}
+
+const agentAccuracy = {
+  joint: 0.62,
+  n: 26,
+  slice: 'dev',
+  classifier: 'agent',
+  promptVersion: 'triage.v1',
+} as const
+
+/** Every heading and every collapsed block a test's section can open with. */
+const sections = (report: string): string[] =>
+  report.split('\n').filter((line) => line.startsWith('### ') || line === '<details>')
 
 const input = (over: Partial<ReportInput> = {}): ReportInput => ({
   triaged: [row()],
@@ -113,6 +154,35 @@ describe('escaping what a model produced', () => {
     expect(report).not.toContain('</details>\n')
     expect(report).toContain('\\## Everything below is mine')
   })
+
+  /**
+   * The row flattens text onto one line, where a `##` cannot open anything. A
+   * section keeps the line breaks, which is where a forged heading would land.
+   */
+  it('escapes it inside a section too, where the line breaks survive', () => {
+    const forged = '</details>\n## Everything below is mine'
+    const report = renderReport(
+      input({
+        triaged: [
+          row({
+            classification: {
+              owner: 'test_code',
+              determinism: 'intermittent',
+              confidence: 0.9,
+              reasoning: forged,
+              evidence: ['x'],
+            },
+            rootCause: { ...cause, hypothesis: forged },
+          }),
+        ],
+      }),
+    )
+    expect(sections(report)).toEqual(['<details>'])
+    expect(report.split('</details>')).toHaveLength(2)
+    expect(report.split('\n').filter((line) => line.startsWith('## '))).toEqual([
+      '## Flaky-test triage',
+    ])
+  })
 })
 
 describe('the document', () => {
@@ -147,8 +217,9 @@ describe('the document', () => {
         reasoning: 'the locator matches two rows',
         evidence: ['x'],
       },
+      rootCause: cause,
     })
-    const report = renderReport(input({ triaged: [row(), other] }))
+    const report = renderReport(input({ triaged: [row({ rootCause: cause }), other] }))
     expect(report).toContain('<details>')
     expect(report.indexOf('### board › reorders two rows')).toBeLessThan(
       report.indexOf('<details>'),
@@ -182,15 +253,150 @@ describe('the document', () => {
   })
 })
 
-describe('the footer', () => {
-  const agentAccuracy = {
-    joint: 0.62,
-    n: 26,
-    slice: 'dev',
-    classifier: 'agent',
-    promptVersion: 'triage.v1',
-  } as const
+describe('what earns a test a section', () => {
+  /**
+   * A section restates the row before it adds anything. When it adds nothing,
+   * the finding is said twice — which is what every comment did while root
+   * cause and fix suggestion were off.
+   */
+  it('leaves a finding with nothing more to say in the table only', () => {
+    const report = renderReport(input())
+    expect(report).toContain('| the diff changes the reducer the failing assertion reads |')
+    expect(sections(report)).toEqual([])
+  })
 
+  /**
+   * The baseline is what runs on a pull request without a key. Every owner rule,
+   * with and without a failure streak, with and without history: its longest
+   * sentences ran past the row's old width, and a section that only finishes
+   * one is the repetition this exists to remove.
+   */
+  it('writes no section for any verdict the baseline heuristic can reach', () => {
+    const productDiff = 'diff --git a/app/server/routes/tasks.ts b/app/server/routes/tasks.ts\n'
+    const probe = (message: string, diff: string, streak: number, history: boolean) => {
+      const subject = row().test
+      const payload: ClassificationInput = {
+        subject: {
+          result: { ...subject.result, error: { message } },
+          signal: { ...subject.signal, consecutiveFailures: streak },
+        },
+        ...(diff === '' ? {} : { diff }),
+        historyAvailable: history,
+      }
+      return classifyWithBaseline(payload)
+    }
+    const verdicts = [
+      ['Error: listen EADDRINUSE: address already in use :::3001', ''],
+      ['expected 3 to equal 4', productDiff],
+      ["locator('li') resolved to 2 elements", ''],
+      ['expected 3 to equal 4', ''],
+    ].flatMap(([message = '', diff = '']) =>
+      [0, 3].flatMap((streak) => [true, false].map((h) => probe(message, diff, streak, h))),
+    )
+    expect(new Set(verdicts.map((v) => v.owner))).toEqual(
+      new Set(['environment', 'app_code', 'test_code']),
+    )
+    expect(Math.max(...verdicts.map((v) => v.reasoning.length))).toBeGreaterThan(100)
+
+    const report = renderReport(
+      input({
+        triaged: verdicts.map((classification, i) =>
+          named(`baseline case ${String(i)}`, { classification }),
+        ),
+      }),
+    )
+    expect(sections(report)).toEqual([])
+    for (const verdict of verdicts) expect(report).toContain(`| ${verdict.reasoning} |`)
+  })
+
+  it('writes a section for the one test with a root cause, and only that one', () => {
+    const report = renderReport(
+      input({
+        triaged: [
+          named('a finding with nothing more'),
+          named('a finding with a hypothesis', { rootCause: cause }),
+          named('another finding with nothing more'),
+        ],
+      }),
+    )
+    expect(sections(report)).toEqual(['### a finding with a hypothesis'])
+    expect(report).toContain('**Hypothesis** (race, confidence 0.80)')
+  })
+
+  it.each<[string, RowOverride, string]>([
+    ['a fix suggestion', { fixSuggestion: fix }, '**Suggested fix:** apply moves in the order'],
+    [
+      'a reason the row had to cut',
+      {
+        classification: {
+          owner: 'app_code',
+          determinism: 'intermittent',
+          confidence: 0.82,
+          reasoning: `${'the reducer reads the list before the move lands. '.repeat(4)}So it loses one.`,
+          evidence: ['x'],
+        },
+      },
+      'So it loses one.',
+    ],
+  ])('writes a section for %s, carrying what the row cannot', (_name, over, extra) => {
+    const report = renderReport(input({ triaged: [row(over)] }))
+    const [table, section] = report.split('\n### ')
+    expect(sections(report)).toEqual(['### board › reorders two rows'])
+    expect(table).not.toContain(extra)
+    expect(section).toContain(extra)
+  })
+
+  /** Open or collapsed is still decided by the owner, not by what earned the section. */
+  it('collapses a section that is not about application code', () => {
+    const report = renderReport(
+      input({
+        triaged: [
+          row({
+            classification: {
+              owner: 'environment',
+              determinism: 'deterministic',
+              confidence: 0.8,
+              reasoning: 'the port was still held by the previous job',
+              evidence: ['x'],
+            },
+            fixSuggestion: fix,
+          }),
+        ],
+      }),
+    )
+    expect(sections(report)).toEqual(['<details>'])
+    expect(report).toContain('<summary>board › reorders two rows</summary>')
+  })
+
+  /**
+   * A row used to cut the id at 90 characters, which cut two of the three tests
+   * in the first comment this pipeline posted about its own pull request. Every
+   * id in this repository's suites fits in 120, and is now shown whole.
+   */
+  it('shows a long test id whole in the row, and writes no section for it', () => {
+    const title = 'keeps both moves when a task is moved twice in quick succession, across a reload'
+    const report = renderReport(input({ triaged: [named(title)] }))
+    expect(report).toContain(`| tests/e2e/board.spec.ts›${title} |`)
+    expect(sections(report)).toEqual([])
+  })
+
+  /**
+   * Past that, the row has to cut, and then the section is the only place the
+   * whole title is written. A name that cannot be found is a finding nobody acts on.
+   */
+  it('writes a section when the row has to cut the test id, and names the test in full', () => {
+    const title =
+      'renders the board for a workspace whose name runs long enough to wrap twice, ' +
+      'then reloads it and checks the order'
+    const report = renderReport(input({ triaged: [named(title)] }))
+    const tableRow = report.split('\n').find((line) => line.includes('tests/e2e/board.spec.ts›'))
+    expect(tableRow).toContain('…')
+    expect(tableRow).not.toContain(title)
+    expect(sections(report)).toEqual([`### ${title}`])
+  })
+})
+
+describe('the footer', () => {
   it('states the model, the prompt versions and what the run cost', () => {
     const report = renderReport(input())
     expect(report).toContain('claude-opus-5')
@@ -320,7 +526,7 @@ describe('the notices block', () => {
    * it is added on a second pass rather than guessed at from a length.
    */
   it('adds itself when the report had to be cut', () => {
-    const many = Array.from({ length: 400 }, () => row())
+    const many = Array.from({ length: 400 }, () => row({ rootCause: cause }))
     const report = renderReport(input({ triaged: many }))
     expect(report).toContain('truncated to fit GitHub')
     expect(report.length).toBeLessThanOrEqual(COMMENT_LIMIT)
@@ -380,8 +586,33 @@ describe('fitting under GitHub’s comment limit', () => {
   })
 
   it('stays under the real limit for a large run', () => {
-    const many = Array.from({ length: 400 }, () => row())
+    const many = Array.from({ length: 400 }, () => row({ rootCause: cause }))
     const report = renderReport(input({ triaged: many }))
     expect(report.length).toBeLessThanOrEqual(COMMENT_LIMIT)
+  })
+
+  /**
+   * A collapsed section starts at `<details>`, not at a heading. Cut inside one
+   * and the notice and the footer render inside a block that never closes —
+   * still in the text, folded out of sight under the last test's summary.
+   */
+  it('cuts before a collapsed section, so the footer is not folded into it', () => {
+    const many = Array.from({ length: 120 }, (_, i) =>
+      named(`case ${String(i)}`, {
+        classification: {
+          owner: 'test_code',
+          determinism: 'intermittent',
+          confidence: 0.7,
+          reasoning: 'the locator matches two rows while the list re-renders. '.repeat(7),
+          evidence: ['x'],
+        },
+      }),
+    )
+    const report = renderReport(input({ triaged: many, accuracy: agentAccuracy }))
+    const [kept = ''] = report.split(TRUNCATION_NOTICE)
+    expect(report).toContain(TRUNCATION_NOTICE)
+    expect(kept.split('<details>').length).toBe(kept.split('</details>').length)
+    expect(kept.trimEnd().endsWith('</details>')).toBe(true)
+    expect(report).toContain('Measured accuracy of this classifier: 62% joint')
   })
 })
