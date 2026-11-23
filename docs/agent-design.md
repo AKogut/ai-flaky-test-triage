@@ -119,10 +119,14 @@ can turn a classification into a failed row changes what it measures.
 including on answers the schema rejected; the report footer's usage line counts successful calls
 only. Reconciling the two is part of #77.
 
-The OpenTelemetry SDK is held on the 2.x line. Node no longer holds it — 3.x needs 22.15 or later,
-below the 24.15 floor in `engines.node` — but 3.0 changed the public interface and moves together
-with `@opentelemetry/api` 1.10, so it comes in a change of its own and `.github/dependabot.yml`
-still ignores its majors.
+The OpenTelemetry SDK is on the 3.x line, with the `@opentelemetry/api` 1.10 that every 3.x
+package requires. Most of what 3.0 changed does not reach this code: the removed packages and
+exports are ones it never used, and it imports four packages by name, so the new `dist/` build
+behind an `exports` map is invisible to it. Its spans are the same as under 2.x apart from
+`telemetry.sdk.version`. One change does reach it. The API now types every attribute value as
+`unknown`, and SDK 3 records an object or a mixed array where 2.x dropped it, so neither the
+compiler nor the SDK would stop a structure that carries a test title. `agents/spans.ts` builds
+every attribute against a type of its own that admits strings, numbers and booleans only.
 
 ## 1. Triage agent
 
