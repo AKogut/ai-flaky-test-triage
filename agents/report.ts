@@ -79,6 +79,10 @@ export const DEGRADATIONS = {
   unreadableHistory:
     'The run history existed and could not be read, so every test reads as new. That is a ' +
     'stronger signal than a cache miss: something is writing that file wrongly.',
+  noDiff:
+    'The diff could not be read from git, so every verdict below was reached without knowing ' +
+    'what this change touched. A product change is unproven here, not ruled out. The job log ' +
+    'names the git error.',
   budget:
     'The run reached its token budget. Tests it never reached are listed as unclassified rather ' +
     'than omitted — a missing row would read as "nothing was wrong with this test".',
@@ -94,6 +98,25 @@ export const DEGRADATIONS = {
     'the workflow run as an artifact.',
 } as const
 
+/**
+ * A figure from `eval/metrics.json`, quoted only for the classifier it describes.
+ *
+ * Carries what was scored as well as the score. "62% joint" from the model's
+ * prompt and "35% joint" from the baseline are different claims, and a footer
+ * that drops the distinction makes one of them a lie whenever the other ran.
+ */
+export interface MeasuredAccuracy {
+  /** Owner and determinism both right, as a point estimate in [0, 1]. */
+  joint: number
+  /** Fixtures scored. */
+  n: number
+  /** The golden-dataset slice the figure comes from — `dev` or `held-out`. */
+  slice: string
+  classifier: 'baseline' | 'agent'
+  /** The triage prompt that produced the figure; null for the baseline, which has none. */
+  promptVersion: string | null
+}
+
 export interface ReportInput {
   triaged: readonly TriagedTest[]
   commitSha: string
@@ -104,11 +127,11 @@ export interface ReportInput {
   usage: readonly Usage[]
   /**
    * How well this classifier scored on the golden dataset, and where that came
-   * from. Absent when no evaluation has been published, which the footer says
-   * rather than omitting the line — a report with no accuracy figure and no
-   * explanation reads as a report from a system that does not measure itself.
+   * from. Absent when no evaluation describes the classifier that ran, which the
+   * footer says rather than omitting the line — a report with no accuracy figure
+   * and no explanation reads as a report from a system that does not measure itself.
    */
-  accuracy?: { joint: number; n: number; promptVersion: string }
+  accuracy?: MeasuredAccuracy
   /** Degradations the run already knows about — no key, no history, budget hit. */
   notices?: readonly string[]
   limit?: number
@@ -310,6 +333,9 @@ function section(entry: TriagedTest, open: boolean): string {
   ].join('\n')
 }
 
+const METHODOLOGY =
+  '[Methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md)'
+
 function renderFooter(input: ReportInput): string {
   const spend = cost(input.usage)
   const versions = Object.entries(input.promptVersions)
@@ -324,14 +350,31 @@ function renderFooter(input: ReportInput): string {
     '',
     input.accuracy === undefined
       ? '**This classifier has not been scored yet.** No accuracy figure exists, so none is quoted — ' +
-        'read every verdict above as a suggestion from an unmeasured system. ' +
-        '[Methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md)'
-      : `**Measured accuracy of this classifier: ${(input.accuracy.joint * 100).toFixed(0)}% joint** ` +
-        `(${input.accuracy.promptVersion}, n=${String(input.accuracy.n)}). It is wrong about ` +
-        `${((1 - input.accuracy.joint) * 100).toFixed(0)}% of failures — read the verdicts above with that in mind. ` +
-        '[Methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md)',
+        `read every verdict above as a suggestion from an unmeasured system. ${METHODOLOGY}`
+      : measured(input.accuracy),
     '',
   ].join('\n')
+}
+
+/**
+ * The accuracy line, naming what was scored and on what.
+ *
+ * The slice and the prompt version come from a committed file that a pull
+ * request can edit, so they go through `cell` like any other repository string.
+ * The two percentages are derived from one rounded number, so they always sum
+ * to 100.
+ */
+function measured(accuracy: MeasuredAccuracy): string {
+  const right = Math.round(accuracy.joint * 100)
+  const scored =
+    accuracy.classifier === 'baseline'
+      ? 'baseline heuristic'
+      : `prompt ${cell(accuracy.promptVersion ?? 'unversioned', 40)}`
+  return (
+    `**Measured accuracy of this classifier: ${String(right)}% joint** on the golden dataset ` +
+    `(${scored}, ${cell(accuracy.slice, 40)} slice, n=${String(accuracy.n)}). It is wrong about ` +
+    `${String(100 - right)}% of failures — read the verdicts above with that in mind. ${METHODOLOGY}`
+  )
 }
 
 /**

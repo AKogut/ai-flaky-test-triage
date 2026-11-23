@@ -53,11 +53,13 @@ branches traceable to closed work.
 
 ### Protected and special branches
 
-| Branch               | Rule                                                                              |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `main`               | Protected. No direct pushes, no force-push, no deletion. PR + green CI required.  |
-| `flakemetry-history` | Orphan branch, machine-written only. Excluded from CI. Humans do not commit here. |
-| `gh-pages`           | Reserved for a future published eval dashboard.                                   |
+| Branch     | Rule                                                                             |
+| ---------- | -------------------------------------------------------------------------------- |
+| `main`     | Protected. No direct pushes, no force-push, no deletion. PR + green CI required. |
+| `gh-pages` | Reserved for a future published eval dashboard.                                  |
+
+There is no machine-written branch. Run history lives in the Actions cache, and ADR-0004 rejected
+an orphan history branch because it would need a write-scoped token in CI.
 
 ## Commit convention
 
@@ -78,8 +80,9 @@ Husky `commit-msg` hook.
 `root-cause`, `fix-suggestion`, `eval`, `dataset`, `prompts`, `ci`, `docs`, `otel`, `deps`,
 `deps-dev`, `release`.
 
-The list is enforced by `commitlint.config.js` and mirrored by the `PR title convention` job in
-`.github/workflows/ci.yml`. All three have to agree: a commit that passes the local hook and then
+The list is enforced by `commitlint.config.js`, and the `PR title convention` job in
+`.github/workflows/ci.yml` runs the same config against the pull-request title rather than keeping a
+copy of it. This page and that file have to agree: a commit that passes the local hook and then
 fails the CI check is worse than either gate on its own. `deps` and `deps-dev` exist because
 Dependabot is configured to emit them.
 
@@ -103,11 +106,11 @@ with an eval delta in the PR body. Prompts are code.
 
 **Requirements before merge**
 
-1. Green CI: lint, typecheck, unit, e2e, contract.
-2. Eval gate green when the PR touches `agents/`, `eval/`, or `prompts/`.
-3. PR description follows the template, links its issue, and states how the change was verified.
-4. Prompt/agent changes include the before/after eval table in the description.
-5. No unresolved review threads.
+1. Green on the five required checks listed under [Who can merge](#who-can-merge) — the
+   evaluation gate among them, on every PR.
+2. PR description follows the template, links its issue, and states how the change was verified.
+3. Prompt/agent changes include the before/after eval table in the description.
+4. No unresolved review threads.
 
 **Size.** Target under ~400 changed lines. Larger PRs get split unless the change is genuinely
 atomic (a schema migration, a generated lockfile).
@@ -130,17 +133,19 @@ could quietly drift.
 | Accounts with write access         | one — [@AKogut](https://github.com/AKogut)                                                                 |
 | Direct pushes to `main`            | rejected; a pull request is required                                                                       |
 | Required status checks             | `Repository hygiene`, `PR title convention`, `Static analysis`, `Unit & contract tests`, `Evaluation gate` |
-| Branch must be current with `main` | yes                                                                                                        |
+| Branch must be current with `main` | no — required checks are not strict, so a branch behind `main` merges once its own checks pass             |
 | Merge strategy                     | squash only                                                                                                |
 
 Approval from anyone without write access does not make a pull request mergeable. This is worth
 stating explicitly because the reverse — a repository where the rule is a norm rather than a
 setting — looks identical from the outside.
 
-The still-skipping jobs (`E2E tests`, `Flakiness analysis & triage`) are deliberately **not**
-required yet. A required check that never reports leaves every pull request waiting for a status
-that will not arrive. Each is added to the required set by the milestone that makes it run —
-`Evaluation gate` joined it in #27, the change that made it run at all.
+`E2E tests`, `Flakiness analysis` and `Agent triage` run on every pull request and are
+deliberately **not** required. The E2E suite carries specs that fail on purpose, so its job records
+the outcome rather than failing on it; the two analysis jobs are `continue-on-error`, because a
+triage tool that can block a merge is one people learn to switch off. `Evaluation gate` joined the
+required set in #27, the change that made it run at all — a required check that never reports
+leaves every pull request waiting for a status that will not arrive.
 
 ### Outside pull requests
 
@@ -156,10 +161,11 @@ every time — the Actions approval policy is `all_external_contributors`, not G
 without approval, including one that edits the workflow files themselves. Approving a run is a
 deliberate act of reading the diff first.
 
-**What it can reach once running.** Nothing secret. Fork pull requests receive no secrets, so the
-agent stage cannot run and the pipeline degrades to the baseline heuristic, saying so plainly in
-its comment. `pull_request_target`, the usual workaround, is not used anywhere in this repository —
-the reasoning is in ADR-0007.
+**What it can reach once running.** Nothing secret. Fork pull requests receive no secrets and a
+read-only `GITHUB_TOKEN`, so the model cannot run and the comment cannot be posted: the pipeline
+still produces a baseline report that says why, and uploads it as the `triage-report` artifact. Not
+yet tried with a real fork. `pull_request_target`, the usual workaround, is not used anywhere in
+this repository — the reasoning is in ADR-0007.
 
 ## Review
 

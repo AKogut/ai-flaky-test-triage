@@ -29,8 +29,14 @@ the built-in `GITHUB_TOKEN`, scoped to `pull-requests: write, contents: read`.
 `pull_request_target` is not used anywhere in this repository.
 
 Fork PRs are handled by **degrading, not escalating**: with no API key, the pipeline runs the
-baseline heuristic only, and the comment states plainly that AI classification was skipped because
+baseline heuristic only, and the report states plainly that AI classification was skipped because
 fork pull requests do not receive secrets.
+
+**Corrected after acceptance.** This section originally promised that statement in the PR comment.
+A fork's `pull_request` run also gets a read-only `GITHUB_TOKEN`, so the comment step cannot post
+there; the report reaches the run's `triage-report` artifact instead. The decision is unchanged —
+it is the same least-privilege boundary seen from the other side — and Option D below is the route
+if fork comments ever matter.
 
 ## Options considered
 

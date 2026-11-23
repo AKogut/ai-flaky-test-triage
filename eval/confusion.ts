@@ -141,6 +141,8 @@ export function quadrantBreakdown(judgements: Judgement[]): QuadrantRow[] {
 }
 
 export function renderQuadrantTable(rows: QuadrantRow[]): string {
+  const total = rows.reduce((sum, row) => sum + row.support, 0)
+  const hard = rows.find((row) => row.hard)?.support ?? 0
   const body = rows.map((row) => {
     const name = `${code(row.owner)} + ${code(row.determinism)}`
     return [
@@ -163,7 +165,7 @@ export function renderQuadrantTable(rows: QuadrantRow[]): string {
     '',
     'The bold row is the hard quadrant — an `app_code` defect that does not reproduce on rerun.',
     'It is the case this project exists for, so it is reported on its own rather than averaged',
-    'into the headline, where ten fixtures out of thirty-three would be invisible.',
+    `into the headline, where ${String(hard)} fixtures out of ${String(total)} would be invisible.`,
   ].join('\n')
 }
 

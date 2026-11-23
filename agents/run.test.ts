@@ -1,4 +1,7 @@
+import { CURRENT_PROMPT } from '@sentra/prompts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ShallowCheckoutError, type GitReader } from './git.js'
+import { DEGRADATIONS } from './report.js'
 import { credentialState, main, parseArgs, type RunDeps } from './run.js'
 import type { IdGenerator } from './spans.js'
 import {
@@ -63,18 +66,49 @@ const analysis = (over: Record<string, unknown> = {}): string =>
     ...over,
   })
 
-function stub(fail?: Error): Transport {
+/** `seen` collects every request, so a test can read the prompt the model was given. */
+function stub(fail?: Error, seen: ModelRequest[] = []): Transport {
   return {
     countInputTokens: () => Promise.resolve(100),
-    send: (_request: ModelRequest): Promise<ModelResponse> =>
-      fail === undefined
+    send: (request: ModelRequest): Promise<ModelResponse> => {
+      seen.push(request)
+      return fail === undefined
         ? Promise.resolve({
             raw: CLASSIFICATION,
             stopReason: 'end_turn',
             model: 'claude-opus-5',
             usage: { inputTokens: 100, outputTokens: 30 },
           })
-        : Promise.reject(fail),
+        : Promise.reject(fail)
+    },
+  }
+}
+
+/**
+ * A git facade with no repository behind it. `diff` answers with whatever it is
+ * given — text, or a failure — and records the range it was asked for.
+ */
+const fakeGit = (
+  answer: string | Error = '',
+): { open: () => GitReader; ranges: string[]; opened: () => number } => {
+  const ranges: string[] = []
+  let opened = 0
+  const reader: GitReader = {
+    diff: (options) => {
+      ranges.push(options?.range ?? '')
+      return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer)
+    },
+    log: () => Promise.resolve([]),
+    show: () => Promise.resolve(''),
+    fileAtRef: () => Promise.resolve(null),
+  }
+  return {
+    open: () => {
+      opened += 1
+      return reader
+    },
+    ranges,
+    opened: () => opened,
   }
 }
 
@@ -87,6 +121,7 @@ const run = async (
     /** A path whose write throws, as a full disk or a read-only directory would. */
     failOn?: string
     deps?: Pick<RunDeps, 'now' | 'spanIds'>
+    git?: () => GitReader
   } = {},
 ): Promise<{ code: number; written: Record<string, string>; output: string }> => {
   const files = over.files ?? { 'analysis.json': analysis() }
@@ -103,6 +138,7 @@ const run = async (
     },
     log: (m) => lines.push(m),
     cassetteCount: () => 0,
+    git: over.git ?? fakeGit().open,
     ...(over.transport === undefined ? {} : { transport: over.transport }),
     ...over.deps,
   })
@@ -265,6 +301,102 @@ describe('a run that works', () => {
       transport: stub(),
     })
     expect(result.written['report.md']).toContain('no history')
+  })
+})
+
+describe('the accuracy the footer quotes', () => {
+  /**
+   * The footer is the line that stops a verdict being read as ground truth, so
+   * the figure in it has to be the one for the classifier that ran. Anything
+   * short of an exact match says "not scored", which is at least true.
+   */
+  const metrics = (over: Record<string, unknown> = {}): string =>
+    JSON.stringify({
+      version: 1,
+      classifier: 'baseline',
+      promptVersion: null,
+      slice: 'dev',
+      datasetRevision: '08b6da23ebcfe892',
+      n: 26,
+      joint: { point: 0.34615384615384615, lower: 0.194, upper: 0.538 },
+      selfConsistency: null,
+      costPerFixtureUsd: null,
+      ...over,
+    })
+
+  const agentMetrics = (promptVersion: string | null = CURRENT_PROMPT.triage): string =>
+    metrics({ classifier: 'agent', promptVersion, joint: { point: 0.62 } })
+
+  const report = async (
+    metricsFile: string | undefined,
+    over: { env?: NodeJS.ProcessEnv; transport?: Transport } = {},
+  ): Promise<{ code: number; report: string }> => {
+    const files: Record<string, string> = { 'analysis.json': analysis() }
+    if (metricsFile !== undefined) files['eval/metrics.json'] = metricsFile
+    const result = await run([], { files, ...over })
+    return { code: result.code, report: result.written['report.md'] ?? '' }
+  }
+
+  /** The CI default today: no key, so the baseline runs, and its numbers are on main. */
+  it('quotes the baseline’s figure when the baseline ran', async () => {
+    const { report: text } = await report(metrics(), { env: { SENTRA_LIVE: '1' } })
+    expect(text).toContain('Measured accuracy of this classifier: 35% joint')
+    expect(text).toContain('(baseline heuristic, dev slice, n=26)')
+    expect(text).not.toContain('has not been scored')
+  })
+
+  it('quotes the model’s figure when the model ran under the scored prompt', async () => {
+    const { report: text } = await report(agentMetrics(), { transport: stub() })
+    expect(text).toContain('Measured accuracy of this classifier: 62% joint')
+    expect(text).toContain(`prompt ${CURRENT_PROMPT.triage}, dev slice`)
+  })
+
+  /** A key in CI with only baseline numbers committed: the model ran, and nobody scored it. */
+  it('does not lend the baseline’s figure to the model', async () => {
+    const { report: text } = await report(metrics(), { transport: stub() })
+    expect(text).toContain('has not been scored yet')
+    expect(text).not.toContain('Measured accuracy')
+  })
+
+  it('does not lend the model’s figure to the baseline', async () => {
+    const { report: text } = await report(agentMetrics(), { env: { SENTRA_LIVE: '1' } })
+    expect(text).toContain('has not been scored yet')
+  })
+
+  /** A figure recorded under another prompt describes text that is not the text that ran. */
+  it('quotes nothing recorded under another prompt version', async () => {
+    const { report: text } = await report(agentMetrics('triage.v0'), { transport: stub() })
+    expect(text).toContain('has not been scored yet')
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['not JSON', '{ "version": 1, '],
+    ['not a snapshot', JSON.stringify({ version: 1, classifier: 'baseline' })],
+  ])('says not scored, and still exits 0, when the metrics file is %s', async (_name, file) => {
+    const { code, report: text } = await report(file, { env: { SENTRA_LIVE: '1' } })
+    expect(code).toBe(0)
+    expect(text).toContain('has not been scored yet')
+  })
+
+  /** A footer is not worth a failed run. */
+  it('survives a metrics file that cannot be read', async () => {
+    const written: Record<string, string> = {}
+    const code = await main([], {
+      env: { SENTRA_LIVE: '1' },
+      read: (p) => {
+        if (p === 'eval/metrics.json') throw new Error('EACCES: permission denied')
+        return p === 'analysis.json' ? analysis() : ''
+      },
+      exists: (p) => p === 'analysis.json' || p === 'eval/metrics.json',
+      write: (p, contents) => {
+        written[p] = contents
+      },
+      log: () => undefined,
+      cassetteCount: () => 0,
+    })
+    expect(code).toBe(0)
+    expect(written['report.md']).toContain('has not been scored yet')
   })
 })
 
@@ -561,5 +693,164 @@ describe('what the spans file will never carry', () => {
     })
     const [root] = spansIn(result.written).spans
     expect(root?.attributes['sentra.run.branch']).toBe('[redacted]')
+  })
+})
+
+describe('the diff', () => {
+  /** A product file and its spec, the way `git diff` prints them. */
+  const DIFF = [
+    'diff --git a/app/client/useTasks.ts b/app/client/useTasks.ts',
+    '--- a/app/client/useTasks.ts',
+    '+++ b/app/client/useTasks.ts',
+    '@@ -1 +1 @@',
+    '-export const order = (rows) => rows',
+    '+export const order = (rows) => [...rows].reverse()',
+    '',
+  ].join('\n')
+
+  const PR = { ANTHROPIC_API_KEY: 'test', GITHUB_BASE_REF: 'main' }
+
+  /** On a pull request the change is everything since the merge base with the target. */
+  it('reads the pull request against its base, and hands it to the model', async () => {
+    const git = fakeGit(DIFF)
+    const seen: ModelRequest[] = []
+    const result = await run([], { env: PR, git: git.open, transport: stub(undefined, seen) })
+
+    expect(git.ranges).toEqual(['origin/main...HEAD'])
+    expect(seen[0]?.prompt).toContain('app/client/useTasks.ts')
+    expect(seen[0]?.prompt).toContain('[...rows].reverse()')
+    expect(seen[0]?.prompt).toContain('diff touches the code under test')
+    expect(result.written['report.md']).not.toContain(DEGRADATIONS.noDiff.slice(0, 40))
+  })
+
+  /** A push to main, or a run on a laptop: the commit against its parent. */
+  it('reads the commit against its parent when there is no base', async () => {
+    const git = fakeGit(DIFF)
+    await run([], { env: { ANTHROPIC_API_KEY: 'test', GITHUB_BASE_REF: '' }, git: git.open })
+    expect(git.ranges).toEqual(['HEAD~1..HEAD'])
+  })
+
+  /**
+   * The rule that could never fire in CI: no key means the baseline, and the
+   * baseline's product-change rule reads the same diff the model would have.
+   */
+  it('reaches the baseline too', async () => {
+    const report =
+      (
+        await run([], {
+          env: { SENTRA_LIVE: '1', GITHUB_BASE_REF: 'main' },
+          git: fakeGit(DIFF).open,
+        })
+      ).written['report.md'] ?? ''
+    expect(report).toContain('the commit changes product source')
+    expect(report).not.toContain('no rule matched')
+  })
+
+  it('is read once per run, not once per test', async () => {
+    const one = JSON.parse(analysis()) as { tests: { result: Record<string, unknown> }[] }
+    const second = structuredClone(one.tests[0]!)
+    second.result.testId = 'tests/e2e/board.spec.ts›renames'
+    const git = fakeGit(DIFF)
+    const seen: ModelRequest[] = []
+    await run([], {
+      files: { 'analysis.json': analysis({ tests: [one.tests[0], second] }) },
+      env: PR,
+      git: git.open,
+      transport: stub(undefined, seen),
+    })
+    expect(git.opened()).toBe(1)
+    expect(git.ranges).toHaveLength(1)
+    expect(seen).toHaveLength(2)
+    expect(seen.every((r) => r.prompt.includes('[...rows].reverse()'))).toBe(true)
+  })
+
+  /** A run with nothing to triage writes nothing, and has no reason to ask git anything. */
+  it('is not read when there is nothing to triage', async () => {
+    const green = JSON.parse(analysis()) as {
+      tests: { result: { status: string }; signal: Record<string, number> }[]
+    }
+    green.tests[0]!.result.status = 'passed'
+    green.tests[0]!.signal.flakinessScore = 0
+    green.tests[0]!.signal.consecutiveFailures = 0
+    const git = fakeGit(DIFF)
+    await run([], { files: { 'analysis.json': JSON.stringify(green) }, git: git.open })
+    expect(git.opened()).toBe(0)
+  })
+
+  /** An empty change is a fact about the change, not a failure to read it. */
+  it('says nothing when the change is empty', async () => {
+    const result = await run([], { git: fakeGit('').open, transport: stub() })
+    expect(result.written['report.md']).not.toContain('could not be read from git')
+    expect(result.output).not.toContain('no diff')
+  })
+
+  describe('when git cannot answer', () => {
+    /**
+     * Every one of these degrades to "no diff": the run still classifies, still
+     * writes its one file, still exits 0, and says what it went without.
+     */
+    const failures: [string, () => GitReader][] = [
+      [
+        'the base is unreachable',
+        fakeGit(new Error("fatal: bad revision 'origin/main...HEAD'")).open,
+      ],
+      [
+        'the checkout is not a repository',
+        fakeGit(new Error('fatal: not a git repository (or any of the parent directories): .git'))
+          .open,
+      ],
+      [
+        'the checkout is shallow',
+        fakeGit(new ShallowCheckoutError('git diff HEAD~1..HEAD', new Error('bad object HEAD~1')))
+          .open,
+      ],
+      [
+        'the client cannot even be opened',
+        () => {
+          throw new Error('Cannot use simple-git on a directory that does not exist')
+        },
+      ],
+    ]
+
+    it.each(failures)('degrades when %s', async (_name, git) => {
+      const seen: ModelRequest[] = []
+      const result = await run([], { env: PR, git, transport: stub(undefined, seen) })
+
+      expect(result.code).toBe(0)
+      // The report and its spans, as on any run — a git failure costs the diff, nothing else.
+      expect(Object.keys(result.written).sort()).toEqual(['otel-spans.json', 'report.md'])
+      expect(result.written['report.md']).toContain('could not be read from git')
+      expect(result.written['report.md']).toContain('app_code+intermittent')
+      expect(seen).toHaveLength(1)
+      expect(seen[0]?.prompt).not.toContain('diff touches')
+    })
+
+    it.each(failures)('says why in the log when %s', async (_name, git) => {
+      const result = await run([], { env: PR, git, transport: stub() })
+      expect(result.output).toMatch(/no diff for origin\/main\.\.\.HEAD: \S/)
+    })
+
+    /** The baseline degrades the same way, and its other rules still run. */
+    it('leaves the baseline classifying without the product-change rule', async () => {
+      const report =
+        (
+          await run([], {
+            env: { SENTRA_LIVE: '1', GITHUB_BASE_REF: 'main' },
+            git: fakeGit(new Error("fatal: bad revision 'origin/main...HEAD'")).open,
+          })
+        ).written['report.md'] ?? ''
+      expect(report).toContain('could not be read from git')
+      expect(report).toContain('no rule matched')
+    })
+
+    /** The shallow diagnosis names the fix; the log is where somebody reads it. */
+    it('carries the fetch-depth fix into the log on a shallow checkout', async () => {
+      const result = await run([], {
+        env: PR,
+        git: fakeGit(new ShallowCheckoutError('git diff', new Error('bad object'))).open,
+        transport: stub(),
+      })
+      expect(result.output).toContain('fetch-depth: 0')
+    })
   })
 })

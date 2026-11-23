@@ -183,6 +183,14 @@ describe('the document', () => {
 })
 
 describe('the footer', () => {
+  const agentAccuracy = {
+    joint: 0.62,
+    n: 26,
+    slice: 'dev',
+    classifier: 'agent',
+    promptVersion: 'triage.v1',
+  } as const
+
   it('states the model, the prompt versions and what the run cost', () => {
     const report = renderReport(input())
     expect(report).toContain('claude-opus-5')
@@ -195,12 +203,65 @@ describe('the footer', () => {
    * says otherwise. This is the line that says otherwise.
    */
   it('states the classifier’s measured accuracy, and what it means', () => {
-    const report = renderReport(
-      input({ accuracy: { joint: 0.62, n: 26, promptVersion: 'triage.v1' } }),
-    )
+    const report = renderReport(input({ accuracy: agentAccuracy }))
     expect(report).toContain('Measured accuracy of this classifier: 62% joint')
     expect(report).toContain('wrong about 38% of failures')
     expect(report).toContain('eval-methodology.md')
+  })
+
+  /** "62%" alone does not say of what; the dataset and the slice do. */
+  it('names what the figure was measured on', () => {
+    const report = renderReport(input({ accuracy: agentAccuracy }))
+    expect(report).toContain('on the golden dataset (prompt triage.v1, dev slice, n=26)')
+  })
+
+  /** The baseline has no prompt, and `(null, n=26)` is not a sentence. */
+  it('names the baseline as the baseline', () => {
+    const report = renderReport(
+      input({
+        accuracy: {
+          joint: 0.34615,
+          n: 26,
+          slice: 'dev',
+          classifier: 'baseline',
+          promptVersion: null,
+        },
+      }),
+    )
+    expect(report).toContain(
+      'Measured accuracy of this classifier: 35% joint** on the golden dataset ' +
+        '(baseline heuristic, dev slice, n=26)',
+    )
+    expect(report).toContain('wrong about 65% of failures')
+    expect(report).not.toContain('null')
+    expect(report).not.toContain('has not been scored')
+  })
+
+  /** Both figures come from one rounded number, so they cannot sum to 101. */
+  it('keeps the two percentages consistent at a rounding boundary', () => {
+    const report = renderReport(input({ accuracy: { ...agentAccuracy, joint: 0.345 } }))
+    const [, right, wrong] = /(\d+)% joint.*wrong about (\d+)%/s.exec(report) ?? []
+    expect(Number(right) + Number(wrong)).toBe(100)
+  })
+
+  /**
+   * The slice and the prompt version come from a committed file a pull request
+   * can edit, so they are repository strings like any other.
+   */
+  it('escapes what it quotes from the metrics file', () => {
+    const report = renderReport(
+      input({
+        accuracy: {
+          ...agentAccuracy,
+          slice: '</details>\n## forged',
+          promptVersion: 'v1 | `x`',
+        },
+      }),
+    )
+    expect(report).not.toContain('</details>\n## forged')
+    expect(report).not.toMatch(/^## forged/m)
+    expect(report).toContain('&lt;/details&gt;')
+    expect(report).toContain('v1 &#124; &#96;x&#96;')
   })
 
   /** Silence would read as a system that does not measure itself. */

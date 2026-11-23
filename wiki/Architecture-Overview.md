@@ -26,7 +26,7 @@ flowchart TB
     DIFF[("git diff<br/>read-only facade")] --> BUNDLE
     SRC[("test source")] --> BUNDLE
     BUNDLE --> TRIAGE["Triage agent"]
-    TRIAGE -->|"app_code + confident"| RC["Root-cause agent"]
+    TRIAGE -->|"app_code above a calibrated threshold<br/>(off until one exists)"| RC["Root-cause agent"]
     RC --> FIX["Fix-suggestion agent"]
     TRIAGE --> REPORT["report.md"]
     RC --> REPORT
@@ -51,7 +51,10 @@ it is broken, and conflating those would put every genuine regression in the `in
 
 **Context assembly.** The most consequential and least glamorous stage. It turns one entry in
 `analysis.json` into the evidence bundle the model sees: error, stack, snippet, flakiness history,
-diff, whether the diff touches the file under test, and the test's own source.
+diff, whether the diff touches the file under test, the test's own source, and the tests that ran
+before it on the same worker
+([ADR-0008](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0008-run-level-context-is-the-worker-sequence.md)).
+In CI the diff is the pull request's own, read through the read-only git facade in `agents/git.ts`.
 
 Because the agents are single-shot with no tools, the ceiling on classification accuracy is set
 here, not in the prompt. Improving accuracy means improving what the model can see — which is
@@ -61,11 +64,14 @@ ordinary engineering rather than prompt tinkering, and is arguably the point.
 [Agent Design](Agent-Design).
 
 **Root cause and fix suggestion.** Run only for `app_code` classifications above a confidence
-threshold read off the calibration curve. Both produce text. Neither can write anything.
+threshold read off the calibration curve. Both produce text. Neither can write anything. Both are
+implemented and tested, and both are off today: no threshold can be derived until a model's
+calibration has been measured, so `agents:analyze` runs with the threshold unset rather than with
+a guess.
 
 **Report and comment.** One markdown document, posted once and edited in place on subsequent
-pushes. It states the classifier's own measured accuracy inline, so nobody reads it as ground
-truth.
+pushes. Its footer quotes the measured accuracy of whichever classifier ran — today, the
+baseline — so nobody reads it as ground truth.
 
 ## State between runs
 
@@ -88,8 +94,9 @@ The pipeline never fails a build because of its own problems. A red X caused by 
 rather than by the tests would train everyone to ignore the check, which is the one outcome that
 makes the whole project useless.
 
-So every failure mode degrades and announces itself: no API key on a fork PR → baseline heuristic
-only; API error → that one test is `unclassified`; budget exhausted → stop dispatching and say how
+So every failure mode degrades and announces itself: no API key → baseline heuristic only, which
+is always the case on a fork PR and, until the project has a key, on every run; API error → that
+one test is `unclassified`; budget exhausted → stop dispatching and say how
 many were dropped; no history → reduced confidence, stated.
 
 The one exception is a malformed test report, which fails loudly. That one _should_ be noisy — it
@@ -100,11 +107,11 @@ means a contract broke.
 No agent loop ([ADR-0006](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0006-single-shot-agents-no-loop.md)),
 no vector store, no fine-tuning, no cross-repository service. Each of those was considered and
 rejected for a stated reason rather than overlooked, and each rejection is written as a testable
-claim — the ablation study includes a multi-step agent variant precisely so that "no loop" remains
-an empirical position rather than a preference.
+claim — the ablation study (🚧 M9, #78) will include a multi-step agent variant precisely so that
+"no loop" remains an empirical position rather than a preference.
 
 ## Further reading
 
 - [`docs/architecture.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/architecture.md) — types, field tables, failure modes
 - [Agent Design](Agent-Design) — prompts, schemas, orchestration
-- [Decision Records](Decision-Records) — the seven ADRs
+- [Decision Records](Decision-Records) — the eight ADRs

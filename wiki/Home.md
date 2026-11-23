@@ -19,15 +19,16 @@ After every red CI run somebody still has to open the trace, read the stack, loo
 decide: is this a real bug, a badly written test, or the runner having a bad day? Sentra automates
 that decision and posts the result as a single pull-request comment.
 
-Everything runs inside one CI job or one terminal command. There is deliberately no box that stays
-on.
+Everything runs inside one CI workflow or one terminal command. There is deliberately no box that
+stays on.
 
 ---
 
 ## Where to start
 
 **If you have five minutes** — read [Getting Started](Getting-Started), run `npm run demo`, and look
-at the generated `report.md`. No API key is required.
+at the generated `report.md`. No API key is required. Today the demo classifies its bundled run
+with the baseline heuristic and says so; the model's turn waits on an API key (#38).
 
 **If you want to know whether it works** — go straight to
 [Evaluation Methodology](Evaluation-Methodology) and then to
@@ -52,8 +53,10 @@ Two surfaces, one rule.
 | **[`docs/`](https://github.com/AKogut/ai-flaky-test-triage/tree/main/docs)** in the repository | Normative specifications: schemas, contracts, labelling rules, ADRs                        | Versioned with the code, so it must match the code exactly. A PR that changes behaviour changes these in the same commit. |
 | **This wiki**                                                                                  | Orientation and narrative: how the pieces fit, why decisions were made, what to read first | Free to be discursive; nothing here is a contract                                                                         |
 
-Nothing is duplicated between them. The wiki links into `docs/` rather than restating it, because
-two copies of a specification means one of them is wrong.
+The wiki links into `docs/` rather than copying specifications, because two copies of a
+specification means one of them is wrong. A summary still restates some facts — a guardrail's
+status, a milestone's — and where a wiki page disagrees with `docs/` or the code, the wiki page is
+the one to fix. Measured figures are never restated; they live in `eval/report.md`.
 
 ---
 
@@ -78,13 +81,15 @@ Why not a single flat label: [Classification Taxonomy](Classification-Taxonomy).
 
 Three things, all of which are measured rather than claimed:
 
-1. **A non-LLM baseline.** A thirty-line heuristic classifies the same dataset. Every reported
-   number is the agent _relative to that_. If the heuristic wins, the README says the heuristic
-   wins.
+1. **A non-LLM baseline.** A heuristic of about ninety lines classifies the same dataset. Every
+   reported number is the agent _relative to that_. If the heuristic wins, the README says the
+   heuristic wins. No model has been scored yet — that waits on an API key (#38) — and the
+   commitment was made before the result, not after.
 2. **An adversarial dataset.** The fixtures deliberately over-weight cases designed to defeat the
    obvious shortcuts — real races that look like flakes, environment noise inside a suspicious
    diff, tests that have been flaky for months and today fail for a new reason.
-3. **Reported uncertainty.** Accuracy on 60 fixtures carries a ±11pp interval, and model output is
+3. **Reported uncertainty.** The dataset is 39 fixtures, heading for 60, and even at 60 the lower
+   bound of a 95% interval around 90% accuracy sits ten points below it. Model output is
    non-deterministic, with no sampling controls to pretend otherwise. Every metric ships with its confidence interval, and
    the CI gate fires on the lower bound.
 

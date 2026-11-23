@@ -265,7 +265,7 @@ describe('the rendered report', () => {
     // let the absolute number read as the result.
     expect(report).toContain('| metric')
     expect(report).toContain('agent')
-    expect(report).toContain('issues/35')
+    expect(report).toContain('issues/38')
   })
 
   it('carries every section the methodology promises', () => {

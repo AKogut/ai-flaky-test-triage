@@ -22,7 +22,7 @@ npm install
 npm run help            # every command, and whether it exists yet
 npm run test:coverage   # the full suite, with the coverage floor enforced
 npm run eval            # score the baseline against the golden dataset
-npm run demo            # full pipeline, no API key — writes report.md
+npm run demo            # classifies a bundled run, no API key — writes report.md
 ```
 
 Node ≥ 22.13. A key is only required for live model calls, and nothing that works today needs one.
@@ -39,9 +39,10 @@ Pull requests from a fork are welcome. Two things to expect:
 1. **CI waits for approval.** Workflows on fork pull requests need a maintainer to start them,
    every time — deliberately stricter than GitHub's default, which asks only for the first and then
    lets later runs through, including runs of a workflow file the same pull request changed.
-2. **No secrets, by design.** Fork pull requests receive no API key, so the agent stage is skipped
-   and the baseline heuristic runs instead. The comment says so rather than pretending. See
-   [Decision Records](Decision-Records) — ADR-0007.
+2. **No secrets, by design.** Fork pull requests receive no API key, so the baseline heuristic
+   runs instead of the agent and the report says so rather than pretending. The token is
+   read-only too, so the report arrives as the `triage-report` artifact rather than as a comment —
+   a path not yet exercised by a real fork. See [Decision Records](Decision-Records) — ADR-0007.
 
 Neither is a judgement about the contribution. Approving a run means reading the diff before it
 executes, which is the only moment at which reading it helps.
@@ -64,7 +65,7 @@ The highest-leverage and easiest-to-fool area of the project.
   is gone.
 - Iterate against the **development slice**. The held-out slice is consulted once, at the end, and
   reported separately. Tuning against held-out data destroys the only honest number in the project.
-- Report intervals, not point estimates. A 2pp move on 60 fixtures is noise.
+- Report intervals, not point estimates. A 2pp move on a few dozen fixtures is noise.
 - The rubric in the prompt and the labelling rules in `docs/taxonomy.md` come from one source. If a
   change makes them disagree, that is a bug, not an improvement.
 

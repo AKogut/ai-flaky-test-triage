@@ -749,11 +749,12 @@ function renderHeadline(metrics: Metrics): string {
     '',
     `All figures over **n = ${String(metrics.n)}**, with 95% Wilson intervals.`,
     '',
-    'The agent column is empty because the agent does not exist yet — it lands in M3, tracked in',
-    '[#35](https://github.com/AKogut/ai-flaky-test-triage/issues/35). It is present rather than',
-    'omitted because the delta over the baseline, not the absolute, is what this project reports as',
-    'its result. A number in the baseline column with nothing to compare it against is not yet a',
-    'finding.',
+    'The agent column is empty because the agent has not been scored yet. It exists and',
+    '`--classifier=agent` runs it, but scoring it takes live model calls, and no run with an API key',
+    'has happened — tracked in [#38](https://github.com/AKogut/ai-flaky-test-triage/issues/38). The',
+    'column is present rather than omitted because the delta over the baseline, not the absolute, is',
+    'what this project reports as its result. A number in the baseline column with nothing to compare',
+    'it against is not yet a finding.',
   ].join('\n')
 }
 

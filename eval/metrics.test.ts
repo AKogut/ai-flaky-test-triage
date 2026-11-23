@@ -403,7 +403,7 @@ describe('the baseline scored against the committed dataset', () => {
     // against the baseline's 51.3%. This is not a defect in the baseline — it is
     // the adversarial dataset working as intended, and it is the clearest
     // argument for why macro-F1 is reported next to accuracy: the constant
-    // classifier's macro-F1 is 0.26 against the baseline's 0.36.
+    // classifier's macro-F1 is 0.25 against the baseline's 0.41.
     const alwaysAppCode = score(
       loadAllPayloads().map(({ name }) => {
         const labels = loadLabels(name)
@@ -419,9 +419,9 @@ describe('the baseline scored against the committed dataset', () => {
   })
 
   it('has overlapping intervals against that constant classifier, so neither wins', () => {
-    // The honest reading of the previous test. 54.5% [38.0–70.2] against
-    // 63.6% [46.6–77.8] is not evidence of a difference at n=33, and reporting
+    // The honest reading of the previous test. 51.3% [36.2–66.1] against
+    // 59.0% [43.4–72.9] is not evidence of a difference at n=39, and reporting
     // the point estimates alone would invite exactly that claim.
-    expect(metrics.owner.accuracy.interval.upper).toBeGreaterThan(0.636)
+    expect(metrics.owner.accuracy.interval.upper).toBeGreaterThan(0.59)
   })
 })

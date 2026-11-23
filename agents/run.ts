@@ -7,9 +7,12 @@ import {
   type ClassificationInput,
 } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
+import { METRICS_FILE, measuredAccuracy } from './accuracy.js'
 import { CassetteTransport, listCassettes, resolveMode } from './cassettes.js'
 import { classifyWithBaseline } from './baseline.js'
 import { runContextFor } from './context.js'
+import { readDiff } from './diff.js'
+import { openRepository, type GitReader } from './git.js'
 import { TokenBudget } from './model-client.js'
 import { hasWork, workList } from './orchestrate.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
@@ -52,6 +55,11 @@ export interface RunDeps {
   transport?: Transport
   /** Injected so a test can drive a whole run without a clock or a network. */
   cassetteCount?: () => number
+  /**
+   * The read-only git facade, opened once per run. Injected so a test needs no
+   * repository; production opens the checkout it runs in.
+   */
+  git?: () => GitReader
   /** Epoch milliseconds for the run's span. Injected for the same reason. */
   now?: () => number
   /** Trace and span ids. Injected so a test can pin them; random otherwise. */
@@ -164,17 +172,32 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
   const countCassettes = deps.cassetteCount ?? ((): number => listCassettes().length)
   const credentials = credentialState(env, countCassettes())
 
+  // Read once, handed to every classifier. A failed read is reported, not fatal.
+  const change = await readDiff(deps.git ?? (() => openRepository()), env)
+  if (change.failure !== undefined) log(`  no diff for ${change.range}: ${change.failure}`)
+
   // Every notice comes from one table, so the report and the command cannot
   // describe the same degradation in two different sets of words.
   const notices: string[] = []
   if (analysis.historySource === 'unreadable') notices.push(DEGRADATIONS.unreadableHistory)
   else if (!analysis.historyAvailable) notices.push(DEGRADATIONS.noHistory)
+  if (change.failure !== undefined) notices.push(DEGRADATIONS.noDiff)
   if (!credentials.canRun) {
     notices.push(credentials.notice ?? DEGRADATIONS.noKey)
     notices.push(DEGRADATIONS.baselineOnly)
   }
 
   const triagePrompt = loadPrompt(CURRENT_PROMPT.triage)
+
+  // Quoted only when the committed metrics describe the classifier about to run;
+  // anything else leaves the footer saying it is unscored.
+  const accuracy = measuredAccuracy(
+    readOptional(METRICS_FILE),
+    credentials.canRun
+      ? { classifier: 'agent', promptVersion: triagePrompt.version }
+      : { classifier: 'baseline' },
+  )
+  const scored = accuracy === undefined ? {} : { accuracy }
 
   // Opened only once there is work: a run with nothing to triage writes
   // nothing, spans included.
@@ -222,6 +245,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
           promptVersions: { triage: triagePrompt.version },
           usage: [],
           notices,
+          ...scored,
         }),
       )
       log(`  wrote ${options.out} (degraded: ${String(notices.length)} notice(s))`)
@@ -283,6 +307,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
           outputTokens: t.outputTokens,
         })),
         notices,
+        ...scored,
       }),
     )
     log(
@@ -298,12 +323,22 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
     })
   }
 
+  /** Null when absent or unreadable — a footer is never worth failing the run over. */
+  function readOptional(path: string): string | null {
+    try {
+      return exists(path) ? read(path) : null
+    } catch {
+      return null
+    }
+  }
+
   function inputFor(test: AnalysedTest): ClassificationInput {
     const source = join(process.cwd(), test.result.file)
     const runContext = runContextFor(analysis.tests, test.result.testId)
     return {
       subject: test,
       historyAvailable: analysis.historyAvailable,
+      ...(change.diff === undefined ? {} : { diff: change.diff }),
       ...(runContext === null ? {} : { runContext }),
       ...(exists(source) ? { testSource: read(source) } : {}),
     }

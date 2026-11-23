@@ -49,6 +49,9 @@ const PURE_MODULES = [
   'agents/sanitise.ts',
   'agents/redact.ts',
   'agents/triage.ts',
+  'agents/root-cause.ts',
+  'agents/fix-suggestion.ts',
+  'agents/baseline.ts',
 ] as const
 
 describe('agents cannot touch the filesystem', () => {

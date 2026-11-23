@@ -12,7 +12,7 @@ Four mechanisms keep the numbers honest.
 
 ## 1. A non-LLM baseline
 
-`eval/baseline.ts` implements a deliberately simple heuristic:
+`agents/baseline.ts` implements a deliberately simple heuristic:
 
 ```
 owner:
@@ -49,7 +49,7 @@ answers.
 Per-bucket outcomes are asserted by tests, so a future change to the rules surfaces as a failure
 with a number in it rather than being absorbed silently.
 
-Roughly sixty lines. Every agent number is reported **alongside** the baseline on the same
+About ninety lines of code. Every agent number is reported **alongside** the baseline on the same
 fixtures, and the headline metric is the _delta_, not the absolute.
 
 This has two good outcomes and no bad one. If the agent wins, there is evidence the LLM earns its
@@ -58,7 +58,9 @@ the project demonstrates something rarer than a working classifier: a willingnes
 
 ### What it scores today
 
-Against the 39 committed fixtures, with 95% Wilson intervals:
+The baseline is the only classifier with a number: no model has been scored yet (#38). Against all
+39 committed fixtures — both slices, and the one arguable fixture included — with 95% Wilson
+intervals:
 
 | Metric                | Baseline              | Macro-F1 |
 | --------------------- | --------------------- | -------- |
@@ -79,7 +81,7 @@ test, where there is no product diff for the ownership rule to fire on. It was e
 fixtures arrived. Accuracy hides this completely; macro-F1 is what makes it visible, which is the
 argument for reporting both.
 
-**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 62.9%
+**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 59.0%
 against 51.3%, because 23 of 39 fixtures are `app_code`. That is not a defect in the baseline — it
 is the adversarial dataset doing its job. The constant classifier's macro-F1 is 0.25 against the
 baseline's 0.41, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
@@ -89,9 +91,13 @@ is the honest reading, and it is also the argument for growing the dataset to 60
 Every number above is pinned in `eval/metrics.test.ts`. A change to the rules or to the dataset
 fails the suite with the old and new values side by side.
 
+`eval/report.md` scores the development slice instead, the one `npm run eval` reads by default:
+34.6% joint [19.4–53.8] over the 26 fixtures it scores. That is the figure the README quotes.
+
 ## 2. An adversarial dataset
 
-`eval/golden-dataset/` targets **≥60 fixtures**, hand-labelled, with this composition:
+`eval/golden-dataset/` targets **≥60 fixtures**, hand-labelled — it holds 39 today — with this
+composition:
 
 | Bucket                                                        | Share | Purpose                                                                  |
 | ------------------------------------------------------------- | ----- | ------------------------------------------------------------------------ |
@@ -157,9 +163,10 @@ here are pinned in `eval/confusion.test.ts`.
 
 Two independent sources of noise, both measured.
 
-**Sampling noise from a small dataset.** Accuracy on 60 fixtures has a 95% Wilson interval of
-roughly ±11pp at 90% accuracy. On 15 fixtures it is ±20pp — wide enough that a real regression is
-invisible. Every reported metric carries its interval, and the dataset size is a tracked project
+**Sampling noise from a small dataset.** The baseline's joint accuracy on the 26 scored
+development fixtures is 34.6% with a 95% Wilson interval of 19.4–53.8 — 34 points wide, enough to
+hide a real regression. At 60 fixtures the same accuracy would still carry an interval about 23
+points wide. Every reported metric carries its interval, and the dataset size is a tracked project
 metric.
 
 **Model non-determinism.** There is no temperature to pin — this model rejects `temperature`,
@@ -255,8 +262,11 @@ else. That result gets published, not worked around.
 - Metrics broken down by fixture provenance
 - Self-consistency rate across N samples
 - Reliability curve + ECE
-- Cost: tokens and dollars per fixture, and the projected cost of a 50-failure CI run
-- Prompt version, model ID, dataset revision, and run date for every number
+- Cost, when a model ran: tokens and dollars per fixture, and the projected cost of a 50-failure
+  CI run
+- Prompt version, model ID and dataset revision. Deliberately no timestamp: the report is
+  committed, so `git log eval/report.md` dates every set of numbers, and a clock reading in the
+  body would make every regeneration a diff
 
 ## CI gate
 
@@ -273,12 +283,12 @@ live in `eval/gate.ts`, one file, each with the reason it has the value it does.
 | Hard-quadrant accuracy lower bound below floor                      | 0.50           | M3     |
 | Cost per fixture rises sharply                                      | +50%           | M3     |
 
-**Comparisons use interval lower bounds, never point estimates.** At n=22 a point estimate moves
+**Comparisons use interval lower bounds, never point estimates.** At n=26 a point estimate moves
 several percentage points between two classifiers that are indistinguishable, so gating on it
 would fire on the dice. The lower bound fires when the evidence supports a regression.
 
 **Five of the six are targets for the agent, not descriptions of the baseline.** The baseline's
-joint accuracy lower bound is 0.197 against a floor of 0.65; its hard-quadrant lower bound is 0.097
+joint accuracy lower bound is 0.194 against a floor of 0.65; its hard-quadrant lower bound is 0.071
 against 0.50. Enabling those today would make `main` permanently red on facts everybody already
 knows, and a permanently red gate is one people learn to merge past. They are implemented, printed
 in every run with the current distance to the target, and each names the condition that switches it
@@ -296,28 +306,30 @@ is not a gate.
 The gate is a required status check. A required check that skips leaves a pull request waiting
 forever for a status that never arrives, so the job runs on every PR regardless of what changed.
 Whether anything under `agents/`, `eval/` or `prompts/` changed is detected and exported as
-`SENTRA_EVAL_SCOPE_CHANGED`; today the whole evaluation is free — no model, no network — so it runs
-either way. From M3 that flag is what stops a documentation-only change from paying for a model
-run.
+`SENTRA_EVAL_SCOPE_CHANGED`. Nothing reads it yet: today the whole evaluation is free — no model, no
+network — so it runs either way. Once the gate scores the model (#38), that flag is what will stop
+a documentation-only change from paying for a model run.
 
 ## Ablation study
 
-`npm run eval:ablation` re-runs the dataset with parts of the context removed:
+Not built yet. `npm run eval:ablation` is a 🚧 placeholder (#78); when it lands it will re-run the
+dataset with parts of the context removed:
 
-| Variant                  | Question it answers                              |
-| ------------------------ | ------------------------------------------------ |
-| Full context             | Reference                                        |
-| No history               | How much does the flakiness signal contribute?   |
-| No diff                  | How much does git context contribute?            |
-| No test source           | Does reading the test matter?                    |
-| Error message only       | How far does the trivial input get?              |
-| Baseline heuristic       | Is the LLM needed at all?                        |
-| Multi-step agent variant | Does a loop beat one call? (see agent-design.md) |
-| Smaller model            | What does the capability tier buy?               |
+| Variant                  | Question it answers                                   |
+| ------------------------ | ----------------------------------------------------- |
+| Full context             | Reference                                             |
+| No history               | How much does the flakiness signal contribute? (#79)  |
+| No diff                  | How much does git context contribute?                 |
+| No test source           | Does reading the test matter?                         |
+| Error message only       | How far does the trivial input get?                   |
+| Baseline heuristic       | Is the LLM needed at all?                             |
+| Multi-step agent variant | Does a loop beat one call? (#80, see agent-design.md) |
+| Smaller model            | What does the capability tier buy? (#81)              |
 
-Results go to `eval/ablation.md`. This is the section that turns "I built an AI classifier" into
-"I measured which parts of it work" — and it is also how the context bundle gets pruned, since a
-field that contributes nothing is cost with no return.
+Results will go to `eval/ablation.md`. This is the section that turns "I built an AI classifier"
+into "I measured which parts of it work" — and it is also how the context bundle gets pruned, since
+a field that contributes nothing is cost with no return. Every variant but the baseline needs live
+model calls.
 
 ## Development and held-out slices
 

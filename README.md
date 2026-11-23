@@ -3,7 +3,6 @@
 **An AI triage layer for CI test failures — packaged as a pipeline step, not a service.**
 
 [![CI](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/ci.yml)
-[![Milestones](https://img.shields.io/github/milestones/progress-percent/AKogut/ai-flaky-test-triage/3?label=M2)](https://github.com/AKogut/ai-flaky-test-triage/milestones)
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.13-brightgreen)](package.json)
@@ -32,8 +31,9 @@ ends up rerun-until-green.
 
 Sentra automates the **decision layer**, not the detection layer. It runs once, right after
 the test step, reads what already exists in the CI checkout (test report, run history, git
-diff), classifies every failure, hypothesises a root cause for the ones that look real, and
-writes a single markdown report that gets posted as one PR comment.
+diff), classifies every failure, and writes a single markdown report that gets posted as one PR
+comment. Agents that hypothesise a root cause and suggest a fix are built too, and stay switched
+off until the classifier's confidence is calibrated well enough to say which failures deserve one.
 
 ## What this is
 
@@ -41,9 +41,11 @@ writes a single markdown report that gets posted as one PR comment.
   the AI pipeline that analyses the results.
 - A **one-shot CLI pipeline**. Every part is `npm run <script>`. Nothing stays running.
 - An **evaluated** system: the classifier is measured against a hand-labelled golden dataset,
-  compared against a non-LLM baseline, and gated in CI.
-- **Reproducible without credentials**: a recorded-response replay mode lets anyone clone the
-  repo and run the whole pipeline end to end with no API key.
+  compared against a non-LLM baseline, and gated in CI. Today only the baseline has a number —
+  see [Evaluation, honestly](#evaluation-honestly).
+- **Reproducible without credentials**: anyone can clone the repo and run the whole pipeline end
+  to end with no API key. A recorded-response replay mode is built for the model calls; until
+  responses are recorded, the credential-free run uses the baseline and says so.
 
 ## What this is not
 
@@ -65,12 +67,12 @@ flowchart TB
         direction TB
         BUILD["Build TaskFlow"] --> TEST["Run tests<br/>Vitest + Playwright"]
         TEST -->|"results.json"| FM["flakemetry-lib<br/>analyze()"]
-        HIST[("history.json<br/>cache / orphan branch")] <--> FM
+        HIST[("history.json<br/>actions/cache")] <--> FM
         FM -->|"analysis.json"| ORCH["agents/run.ts"]
 
         subgraph agents["Agents (one-shot, structured output)"]
             direction LR
-            T["Triage"] --> RC["Root Cause"] --> FIX["Fix Suggestion"]
+            T["Triage<br/>model, or baseline without a key"] -.->|"off until calibrated"| RC["Root Cause"] -.-> FIX["Fix Suggestion"]
         end
 
         ORCH --> agents
@@ -91,7 +93,7 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
 
 ## Classification taxonomy
 
-A single flat label list (`real_bug | flaky | stale | race_condition`) collapses under its own
+A single flat label list (`real_bug | flaky_infra | stale_test | race_condition`) collapses under its own
 weight — a race condition in application code _is_ a real bug, so the labels overlap and the
 ground truth stops being reproducible. Sentra classifies on **two orthogonal axes** instead:
 
@@ -129,13 +131,19 @@ Replay proves the plumbing — context assembly, the fences around untrusted tex
 schema, the report — never the model's behaviour today; that is measured separately in
 [`eval/report.md`](eval/report.md).
 
-**Run against live models:**
+**Run the pipeline's stages yourself:**
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-npm test                # unit + e2e, produces results.json and results-unit.json
-npm run analyze         # 🚧 M8 — flakemetry + agents, produces report.md
+npm test                     # unit + e2e, produces results.json and results-unit.json
+npm run flakemetry:analyze   # test reports + history → analysis.json
+npm run agents:analyze       # analysis.json → report.md
+npm run analyze              # 🚧 M8 — the two stages above as one command
 ```
+
+`agents:analyze` calls the triage agent when `ANTHROPIC_API_KEY` is set, and runs the baseline
+heuristic when it is not, naming which in the report. CI runs the two stages as separate jobs, so
+the one-command wrapper was never written; its placeholder still names #71, which closed without
+it.
 
 **Run TaskFlow locally:**
 
@@ -153,7 +161,7 @@ SENTRA_CHAOS=284549 npm run dev     # seeded latency, off unless you ask
 ```
 
 TaskFlow's optimistic reorder applies responses in the order they _arrive_ and never checks that an
-arriving response is the newest one. Drag two tasks less than about 350ms apart and the second drag
+arriving response is the newest one. Drag two tasks less than about 200ms apart and the second drag
 is visibly undone — then refresh, and it comes back, because the server had it all along.
 
 That is `app_code` + `intermittent`, the hard quadrant, and it is the failure this project exists to
@@ -162,8 +170,12 @@ classify. It is left in on purpose and
 hidden: the point is that the _classifier_ has to work it out from a trace.
 
 `SENTRA_CHAOS=<seed>` delays API responses on a seeded schedule — the same seed always produces the
-same interleaving, so a failure can be got back. Seed 37 delays the first reorder by 399ms and the
-second by 11ms. Off by default, and a test asserts it.
+same interleaving, so a failure can be got back. The generator advances once per delayed request,
+board loads included, so which delays a pair of drags receives depends on how many requests came
+first. Under `npm run dev`, which loads the board twice, seed 284549 delays the first reorder by
+199ms and the second by 1ms; a production build loads it once and gets 397ms then 199ms. Either way
+the responses cross for drags less than about 198ms apart. The seed was measured in a browser, not
+chosen, and a test pins both sequences. Off by default, and a test asserts that too.
 
 **Check the classifier's accuracy yourself:**
 
@@ -202,56 +214,83 @@ Everything else runs today. `npm run help` prints this table from the terminal.
 .
 ├── .github/
 │   ├── workflows/ci.yml         # the entire pipeline, one workflow
-│   ├── ISSUE_TEMPLATE/          # task / bug / experiment / ADR forms
+│   ├── ISSUE_TEMPLATE/          # task / bug / experiment / dataset fixture / ADR forms
 │   └── CODEOWNERS
 ├── contracts/                   # Zod schemas + inferred types for every artifact
 │                                #   the pipeline reads or writes
 ├── prompts/                     # versioned prompt files + the rubric they share
 │                                #   with docs/taxonomy.md, and the loader
-├── demo/                        # the bundled run `npm run demo` classifies
 ├── app/                         # TaskFlow — the system under test
 │   ├── client/                  # React + TypeScript
-│   └── server/                  # Express + SQLite
+│   └── server/                  # Express + SQLite, and the SENTRA_CHAOS layer
 ├── tests/
-│   ├── unit/                    # Vitest
-│   └── e2e/                     # Playwright, incl. genuinely flaky specs
+│   ├── unit/                    # Vitest — scripts, workflow and guardrails; package
+│   │                            #   tests sit beside their code
+│   ├── e2e/                     # Playwright, incl. genuinely flaky specs
+│   └── fixtures/                # pipeline inputs and real reporter output
 ├── flakemetry-lib/              # flakemetry consumed as a library
 │   ├── analyze.ts               # report + history → flakiness signal
-│   └── history.ts               # local history file I/O
-├── agents/
-│   ├── triage/                  # two-axis classification
-│   ├── root-cause/              # hypothesis generation
-│   ├── fix-suggestion/          # text-only suggestions
-│   ├── replay/                  # cassette record/replay for LLM calls
-│   └── run.ts                   # orchestrator → report.md
+│   └── history.ts               # history file I/O: merge, cap, atomic write
+├── agents/                      # one flat package
+│   ├── triage.ts                # two-axis classification
+│   ├── root-cause.ts            # hypothesis generation — off until calibrated
+│   ├── fix-suggestion.ts        # text-only suggestions — off with root cause
+│   ├── baseline.ts              # the non-LLM heuristic control
+│   ├── context.ts               # the evidence bundle; sanitise.ts fences and caps it
+│   ├── git.ts                   # read-only git access, the only simple-git import
+│   ├── cassettes.ts             # record/replay for model calls
+│   ├── replay/cassettes/        # recorded responses — none yet (#38)
+│   ├── pipeline.ts              # fan-out, concurrency, budget, per-test isolation
+│   ├── report.ts                # report.md, escaped and size-capped
+│   └── run.ts                   # npm run agents:analyze
 ├── eval/
 │   ├── golden-dataset/          # hand-labelled fixtures + ground truth
-│   ├── baseline.ts              # non-LLM heuristic control
-│   ├── metrics.ts               # accuracy, per-axis F1, calibration
-│   └── run-eval.ts
+│   ├── metrics.ts               # accuracy, intervals, per-class F1
+│   ├── calibration.ts           # reliability curve, ECE, threshold derivation
+│   ├── gate.ts                  # the CI thresholds
+│   ├── run-eval.ts              # npm run eval
+│   └── report.md                # the committed result, with metrics.json
+├── scripts/                     # CLI entry points — demo, dev, capture, cassettes,
+│                                #   status banner, changelog, help
+├── demo/                        # the bundled run `npm run demo` classifies
 ├── docs/                        # architecture, taxonomy, methodology, ADRs
-└── .flakemetry/history.json     # run history, carried between CI runs
+└── wiki/                        # source of the GitHub wiki, published by script
 ```
+
+Run history, `.flakemetry/history.json`, is deliberately not in the tree: CI restores it from the
+Actions cache and only `main` writes it back ([ADR-0004](docs/adr/0004-history-persistence-via-ci-cache.md)).
 
 ---
 
 ## Evaluation, honestly
 
+**No model has been run or scored yet.** There is no `ANTHROPIC_API_KEY` on this repository and no
+budget allocated for one, so `agents/replay/cassettes/` holds only a README. `npm run demo`,
+`npm run eval` and the CI triage job all run the baseline heuristic, and every accuracy figure in
+this repository is the baseline's. Scoring the agent against it (#38) waits for a key. When it
+runs, the commitment stands: if the baseline wins, this README says so.
+
 An AI classifier that reports its own accuracy on data its author wrote is measuring nothing.
 Three things keep the numbers meaningful:
 
-**A non-LLM baseline.** A ~30-line heuristic (flakiness score, failure streak, whether the diff
-touches the file under test) classifies the same dataset. The agent's number is only
-interesting relative to that. If the heuristic wins, that goes in the README.
+**A non-LLM baseline.** [`agents/baseline.ts`](agents/baseline.ts), about ninety lines of rules. An
+infrastructure error in the failure message means `environment`; otherwise any changed non-test
+source file in the diff means `app_code`; otherwise a failure that names a selector or a wait means
+`test_code`; otherwise `app_code`. An unbroken failure streak of two or more, with no pass on
+retry, means `deterministic`, and anything else `intermittent`. On the development slice it scores
+34.6% joint accuracy [19.4–53.8] over 26 fixtures ([`eval/report.md`](eval/report.md)). The
+agent's number is only interesting relative to that.
 
 **Adversarial fixtures.** The golden dataset deliberately over-weights the hard quadrants: real
 races that look like flakes, environment noise that looks like a regression, stale tests that
-look like bugs. Obvious cases are the minority.
+look like bugs. Obvious cases are the minority. It holds 39 fixtures — 27 for development, 12 held
+out — against a target of 60.
 
-**Reported uncertainty.** Accuracy on 15 fixtures carries a ±20pp confidence interval, and LLM
-output is non-deterministic, and this model exposes no sampling controls to pretend otherwise — so the evaluator runs N samples per fixture
-and reports mean, variance, and confidence intervals. The CI gate fires on the lower bound, not
-the point estimate.
+**Reported uncertainty.** At n=26 that 95% interval is 34 points wide, and LLM output is
+non-deterministic, and this model exposes no sampling controls to pretend otherwise — so the
+evaluator runs N samples per fixture (five for the agent, one for the deterministic baseline) and
+reports mean, variance, and confidence intervals. The CI gate fires on the lower bound, not the
+point estimate.
 
 There is a pleasing irony in a flaky-test triage tool having a flaky test suite of its own. It
 is documented rather than hidden: [`docs/eval-methodology.md`](docs/eval-methodology.md).
@@ -265,17 +304,23 @@ is documented rather than hidden: [`docs/eval-methodology.md`](docs/eval-methodo
   a string in a markdown file.
 - **No auto-merge, no auto-fix, no approving reviews.** Sentra's output is a comment. Every
   decision stays with a human.
-- **Fork PRs do not get secrets.** GitHub does not expose `ANTHROPIC_API_KEY` to workflows
-  triggered from a fork, and `pull_request_target` is not used because it would run untrusted
-  code with write-scoped credentials. On fork PRs the pipeline degrades to
-  baseline-heuristic-only output and says so in the comment.
-- **The classifier is wrong sometimes.** Measured accuracy and the confusion matrix are
-  published in `eval/report.md`. Treat output as a prioritisation hint, not a verdict.
+- **Fork PRs do not get secrets.** GitHub gives a `pull_request` workflow from a fork no secrets
+  and a read-only `GITHUB_TOKEN`, and `pull_request_target` is not used because it would run
+  untrusted code with write-scoped credentials. On a fork PR the pipeline still produces a
+  baseline report that says why the model did not run, and uploads it as the `triage-report`
+  artifact; the comment step cannot post with a read-only token. Not yet tried with a real fork.
+- **The classifier is wrong sometimes.** Measured accuracy and the confusion matrices — the
+  baseline's, today — are published in `eval/report.md`, and every report quotes the measured
+  accuracy of the classifier that produced it. Treat output as a prioritisation hint, not a verdict.
 - **Prompt injection surface.** Test names, assertion messages, and diff content flow into
   prompts. They are wrapped, escaped, and length-capped, and the agent's output is
   schema-validated so a hostile string cannot change what the pipeline does.
-- **Cost is bounded per run.** A token budget cap aborts the agent stage rather than fanning
-  out over a 300-failure run.
+- **Source leaves the repository once a key is set.** With an API key configured, source snippets
+  and diff hunks from the checkout go to the Anthropic API after a best-effort secret scrub. No key
+  is configured here, so nothing has been sent.
+- **Cost is bounded per run.** One token budget covers the whole run and is checked before each
+  call. Once it refuses one, the orchestrator stops dispatching rather than fanning out over a
+  300-failure run, and lists every test it never reached as unclassified.
 
 Full write-up: [`docs/limitations-and-guardrails.md`](docs/limitations-and-guardrails.md).
 
@@ -302,6 +347,24 @@ UI.
 | **M10**   | Documentation, wiki & v1.0              |
 
 [Browse the milestones →](https://github.com/AKogut/ai-flaky-test-triage/milestones)
+
+## Definition of Done
+
+`v1.0.0` ships when every line below holds on a clean clone ([ROADMAP](ROADMAP.md), M10). Each is
+a command to run or a thing to look at, and #85 runs them in a fresh container before the tag.
+
+1. `git clone` → `npm install` → `npm run demo` writes `report.md` with no API key and no other
+   setup, on Linux and macOS, and the time from clone to output is measured and stated here.
+2. `npm test` and `npm run eval` run to completion without an API key. `npm test` may be red — the
+   suite carries specs that fail on purpose — but it writes `results.json` and `results-unit.json`.
+3. A pull request that touches a flaky spec gets exactly one comment, and pushing again updates it
+   rather than adding another (#75).
+4. `eval/report.md` scores the triage agent and the baseline on the same fixtures, with intervals —
+   and if the baseline wins, this README says so (#38).
+5. `v1.0.0` is tagged with the `eval/report.md` headline numbers in its release notes (#87).
+
+Not met yet. CI exercises 1 and 2 on every run, but not on a clean machine; 3 is wired and waits
+for its verification pull request; 4 waits for an API key.
 
 ---
 
