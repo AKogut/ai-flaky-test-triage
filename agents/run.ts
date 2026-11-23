@@ -11,18 +11,20 @@ import { CassetteTransport, listCassettes, resolveMode } from './cassettes.js'
 import { classifyWithBaseline } from './baseline.js'
 import { runContextFor } from './context.js'
 import { TokenBudget } from './model-client.js'
-import { hasWork } from './orchestrate.js'
+import { hasWork, workList } from './orchestrate.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
 import { DEGRADATIONS, renderReport } from './report.js'
+import { RunSpans, SPANS_FILE, type IdGenerator } from './spans.js'
 import { AnthropicTransport, type Transport } from './transport.js'
 
 /**
  * `npm run agents:analyze` — `analysis.json` in, `report.md` out.
  *
- * The one module in `agents/` that reads and writes, and it writes exactly one
- * file. That is a guardrail rather than a coincidence: `docs/limitations-and-guardrails.md`
- * promises the pipeline never modifies the working tree, and #69 asserts the
- * whole-run version of that claim.
+ * The one module in `agents/` that reads and writes, and it writes exactly two
+ * files: the report, and `otel-spans.json` beside it recording how the report
+ * was produced (`agents/spans.ts`). That is a guardrail rather than a
+ * coincidence: `docs/limitations-and-guardrails.md` promises the pipeline never
+ * modifies the working tree, and #69 asserts the whole-run version of that claim.
  *
  * **It exits 0 whenever the pipeline itself worked**, whatever the classifier
  * managed. A run where every model call rate-limited still produced a correct
@@ -50,11 +52,16 @@ export interface RunDeps {
   transport?: Transport
   /** Injected so a test can drive a whole run without a clock or a network. */
   cassetteCount?: () => number
+  /** Epoch milliseconds for the run's span. Injected for the same reason. */
+  now?: () => number
+  /** Trace and span ids. Injected so a test can pin them; random otherwise. */
+  spanIds?: IdGenerator
 }
 
 export interface RunOptions {
   analysis: string
   out: string
+  spans: string
   budget: number
   concurrency?: number
 }
@@ -62,6 +69,7 @@ export interface RunOptions {
 export function parseArgs(argv: string[]): RunOptions {
   let analysis = ANALYSIS
   let out = REPORT
+  let spans = SPANS_FILE
   let budget = DEFAULT_BUDGET
   let concurrency: number | undefined
 
@@ -71,13 +79,14 @@ export function parseArgs(argv: string[]): RunOptions {
     if (value === undefined) continue
     if (flag === '--analysis') analysis = value
     else if (flag === '--out') out = value
+    else if (flag === '--spans') spans = value
     else if (flag === '--budget') budget = Number(value)
     else if (flag === '--concurrency') concurrency = Number(value)
     else continue
     i += 1
   }
 
-  return { analysis, out, budget, ...(concurrency === undefined ? {} : { concurrency }) }
+  return { analysis, out, spans, budget, ...(concurrency === undefined ? {} : { concurrency }) }
 }
 
 /**
@@ -167,7 +176,24 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
 
   const triagePrompt = loadPrompt(CURRENT_PROMPT.triage)
 
-  return await renderAndWrite()
+  // Opened only once there is work: a run with nothing to triage writes
+  // nothing, spans included.
+  const spans = new RunSpans(analysis, {
+    path: options.spans,
+    budgetLimit: options.budget,
+    ...(deps.write === undefined ? {} : { write: deps.write }),
+    ...(deps.now === undefined ? {} : { now: deps.now }),
+    ...(deps.spanIds === undefined ? {} : { idGenerator: deps.spanIds }),
+    ...(deps.transport === undefined ? { cassetteMode: resolveMode(env) } : {}),
+  })
+
+  try {
+    return await renderAndWrite()
+  } finally {
+    // Whatever happened to the report. `close` never throws, so a failure to
+    // write spans cannot replace the pipeline's exit code or its exception.
+    await spans.close(log)
+  }
 
   async function renderAndWrite(): Promise<number> {
     /**
@@ -199,6 +225,15 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
         }),
       )
       log(`  wrote ${options.out} (degraded: ${String(notices.length)} notice(s))`)
+      const considered = workList(analysis).length
+      spans.complete({
+        classifier: 'baseline',
+        degraded: true,
+        notices: notices.length,
+        considered,
+        classified: considered,
+        budgetUsed: 0,
+      })
       return 0
     }
 
@@ -228,6 +263,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
       budget: new TokenBudget(options.budget),
       inputFor: (test): ClassificationInput => inputFor(test),
       ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }),
+      onCall: spans.onCall,
     }
 
     const result = await runPipeline(analysis, pipelineDeps)
@@ -252,6 +288,14 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
     log(
       `  wrote ${options.out} (${String(result.triaged.length)} tests, degraded: ${String(result.degraded)})`,
     )
+    spans.complete({
+      classifier: 'model',
+      degraded: result.degraded || notices.length > 0,
+      notices: notices.length,
+      considered: result.triaged.length,
+      classified: result.triaged.filter((row) => row.classification !== undefined).length,
+      budgetUsed: pipelineDeps.budget.spent,
+    })
   }
 
   function inputFor(test: AnalysedTest): ClassificationInput {
