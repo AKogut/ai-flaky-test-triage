@@ -14,6 +14,7 @@ import {
   callModel,
   type CallDeps,
   type CallOptions,
+  type CallRecord,
   type CallTelemetry,
   type ModelConfig,
   type TokenBudget,
@@ -52,6 +53,8 @@ export interface FixSuggestionDeps {
   budget?: TokenBudget
   context?: ContextOptions
   onTelemetry?: (telemetry: CallTelemetry) => void
+  /** Every call, however it ended. See `CallDeps.onCall`. */
+  onCall?: (call: CallRecord) => void
   label?: string
 }
 
@@ -96,6 +99,7 @@ export async function suggestFix(
     ...(deps.config !== undefined && { config: deps.config }),
     ...(deps.budget !== undefined && { budget: deps.budget }),
     ...(deps.onTelemetry !== undefined && { onTelemetry: deps.onTelemetry }),
+    ...(deps.onCall !== undefined && { onCall: deps.onCall }),
   }
 
   const { value, telemetry } = await callModel(options, call)

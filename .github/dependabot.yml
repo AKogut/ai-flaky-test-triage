@@ -75,6 +75,13 @@ updates:
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
 
+      # The OpenTelemetry SDK's 3.x line requires Node >=22.15 and @opentelemetry/api
+      # 1.10, both above what engines.node promises. Same reasoning as jsdom: tracing
+      # should not set the runtime floor. Held until the repository moves to Node 24;
+      # minor and patch releases of the 2.x SDK still arrive through the otel group.
+      - dependency-name: '@opentelemetry/*'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: github-actions
     directory: '/'
     schedule:

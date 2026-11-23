@@ -13,6 +13,7 @@ import {
   callModel,
   type CallDeps,
   type CallOptions,
+  type CallRecord,
   type CallTelemetry,
   type ModelConfig,
   type TokenBudget,
@@ -49,7 +50,13 @@ export interface TriageDeps {
   budget?: TokenBudget
   context?: ContextOptions
   onTelemetry?: (telemetry: CallTelemetry) => void
-  /** Names the call site in errors and spans; defaults to the test under triage. */
+  /** Every call, however it ended. See `CallDeps.onCall`. */
+  onCall?: (call: CallRecord) => void
+  /**
+   * Names the call site in errors and telemetry; defaults to the test under
+   * triage. Never copied into a span, for that reason — a test title is text a
+   * contributor wrote.
+   */
   label?: string
   /**
    * Which of N self-consistency samples this is.
@@ -113,6 +120,7 @@ export async function triage(input: ClassificationInput, deps: TriageDeps): Prom
     ...(deps.config !== undefined && { config: deps.config }),
     ...(deps.budget !== undefined && { budget: deps.budget }),
     ...(deps.onTelemetry !== undefined && { onTelemetry: deps.onTelemetry }),
+    ...(deps.onCall !== undefined && { onCall: deps.onCall }),
   }
 
   const { value, telemetry } = await callModel(options, call)

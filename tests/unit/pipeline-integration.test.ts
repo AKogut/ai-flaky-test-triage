@@ -140,8 +140,8 @@ describe('a run with one failure', () => {
     expect((await run('one-failure')).report).toContain('**app_code+intermittent** 1')
   })
 
-  it('writes exactly one file', async () => {
-    expect((await run('one-failure')).files).toEqual(['report.md'])
+  it('writes exactly its two outputs', async () => {
+    expect((await run('one-failure')).files.sort()).toEqual(['otel-spans.json', 'report.md'])
   })
 
   it('carries the header, the table and the footer', async () => {
@@ -239,7 +239,7 @@ describe('no network, by construction', () => {
     const refusing = scripted(CLASSIFICATION, () => new Error('no network in this test'))
     const result = await run('many-failures', { transport: refusing })
     expect(result.code).toBe(0)
-    expect(result.files).toEqual(['report.md'])
+    expect(result.files.sort()).toEqual(['otel-spans.json', 'report.md'])
     expect(result.report).toContain('no network in this test')
   })
 })

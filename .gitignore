@@ -19,6 +19,8 @@ coverage/
 /analysis.json
 /report.md
 /otel-spans.json
+# The temp file agents/spans.ts renames from, left behind only by a killed run.
+/otel-spans.json.*.tmp
 playwright-report/
 test-results/
 blob-report/
