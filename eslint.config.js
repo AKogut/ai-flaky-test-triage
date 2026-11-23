@@ -195,6 +195,9 @@ export default tseslint.config(
       'agents/sanitise.ts',
       'agents/redact.ts',
       'agents/triage.ts',
+      'agents/root-cause.ts',
+      'agents/fix-suggestion.ts',
+      'agents/baseline.ts',
     ],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
