@@ -14,7 +14,7 @@ import type { QuadrantRow } from './confusion.js'
  *
  * Three properties follow from that.
  *
- * **Comparisons use interval lower bounds, never point estimates.** At n=22 a
+ * **Comparisons use interval lower bounds, never point estimates.** At n=26 a
  * point estimate moves several percentage points between two classifiers that
  * are indistinguishable. Gating on the lower bound means the gate fires when the
  * evidence supports a regression, not when the dice do.
@@ -25,8 +25,8 @@ import type { QuadrantRow } from './confusion.js'
  * **A check that cannot mean anything yet is skipped out loud.** Several
  * thresholds in the methodology are targets for the finished agent, and the
  * baseline misses them by a wide margin — the joint-accuracy floor of 0.65
- * against a measured lower bound of 0.197, the hard-quadrant floor of 0.50
- * against 0.097. Enabling those today would make `main` permanently red, which
+ * against a measured lower bound of 0.194, the hard-quadrant floor of 0.50
+ * against 0.071. Enabling those today would make `main` permanently red, which
  * teaches everyone to merge past a red gate. They are implemented, listed in
  * every run's output, and report the condition that will switch them on.
  */
@@ -45,7 +45,7 @@ export const THRESHOLDS = {
    * How far joint accuracy's lower bound may fall below the value recorded on
    * `main` before the merge is blocked.
    *
-   * 5pp is wide. It is meant to be: at n=22 the interval itself is ±19pp, so a
+   * 5pp is wide. It is meant to be: at n=26 the interval itself is ±17pp, so a
    * tighter bound would fire on fixtures being added rather than on the
    * classifier changing. It tightens as the dataset grows towards 60.
    */
@@ -116,9 +116,9 @@ export interface MetricsSnapshot {
   owner: Interval & { macroF1: number }
   determinism: Interval & { macroF1: number }
   hardQuadrant: Interval & { support: number; correct: number }
-  /** Null until sampling exists — the baseline is deterministic (#36). */
+  /** Null for the baseline, which is deterministic; set once the agent is scored (#38). */
   selfConsistency: number | null
-  /** Null until a model is involved (#30). */
+  /** Null until a model is involved — the agent's first scored run (#38). */
   costPerFixtureUsd: number | null
 }
 
@@ -388,7 +388,7 @@ function selfConsistency({ current }: GateInput): CheckResult {
       status: 'skipped',
       detail:
         'not measured — the baseline is deterministic, so sampling means nothing until a model ' +
-        'is involved. Enforced from M3 (#36).',
+        'is involved. Enforced once the agent is scored (#38).',
     }
   }
 
@@ -409,7 +409,7 @@ function cost({ current, reference }: GateInput): CheckResult {
       id,
       metric,
       status: 'skipped',
-      detail: 'no model call, so no cost. Enforced from M3 (#30).',
+      detail: 'no model call, so no cost. Enforced once the agent is scored (#38).',
     }
   }
   if (reference?.costPerFixtureUsd == null) {

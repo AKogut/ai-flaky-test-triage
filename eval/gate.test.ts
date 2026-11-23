@@ -176,7 +176,7 @@ describe('checks waiting on a model', () => {
   it('skips self-consistency while nothing is sampled', () => {
     const result = check(runGate({ current: at(0.2), reference: null }), 'self-consistency')
     expect(result?.status).toBe('skipped')
-    expect(result?.detail).toContain('#36')
+    expect(result?.detail).toContain('#38')
   })
 
   it('fails an unstable classifier once stability is measured', () => {

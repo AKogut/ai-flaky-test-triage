@@ -101,7 +101,7 @@ everything it can be right about, and a higher bar buys accuracy by answering le
 
 The bold row is the hard quadrant — an `app_code` defect that does not reproduce on rerun.
 It is the case this project exists for, so it is reported on its own rather than averaged
-into the headline, where ten fixtures out of thirty-three would be invisible.
+into the headline, where 8 fixtures out of 26 would be invisible.
 
 ## Confusion matrices
 

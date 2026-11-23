@@ -60,7 +60,7 @@ it against is not yet a finding.
 
 The bold row is the hard quadrant — an `app_code` defect that does not reproduce on rerun.
 It is the case this project exists for, so it is reported on its own rather than averaged
-into the headline, where ten fixtures out of thirty-three would be invisible.
+into the headline, where 4 fixtures out of 11 would be invisible.
 
 ## Confusion matrices
 
