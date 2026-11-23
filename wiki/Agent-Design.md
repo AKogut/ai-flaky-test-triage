@@ -9,9 +9,13 @@
 | ------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
 | **Triage**         | every failing or newly-flaky test         | two-axis classification, confidence, quoted evidence                                         |
 | **Root cause**     | `app_code` above the calibrated threshold | a hypothesis, implicated files and symbols, a mechanism, a mandatory alternative when unsure |
-| **Fix suggestion** | root causes above threshold               | prose approach, an illustrative patch, **risks**, and the missing test                       |
+| **Fix suggestion** | root causes above threshold               | prose approach, an illustrative patch, **risks**, and the missing test where there is one    |
 
 No loops. No scratchpads. No self-critique passes. No tools beyond the structured-output schema.
+
+All three are implemented. Only triage runs today: the threshold the other two wait for is read
+off a calibration curve, and no model has been scored to draw one, so `agents:analyze` leaves it
+unset and they stay off.
 
 ## Why there is no agent loop
 
@@ -24,9 +28,10 @@ state to query, no sub-goal to decompose. A loop would mostly re-read text the m
 in exchange for latency, cost, and non-determinism in a step whose evaluation is already fighting
 variance.
 
-The honest part: this is a claim, not an axiom. The ablation study runs a bounded multi-step variant
-against the same dataset. If it wins on the hard quadrant by a margin that survives its confidence
-interval and justifies the cost, that becomes a superseding ADR and the architecture changes.
+The honest part: this is a claim, not an axiom. The ablation study will run a bounded multi-step
+variant against the same dataset (🚧 M9, #78). If it wins on the hard quadrant by a margin that
+survives its confidence interval and justifies the cost, that becomes a superseding ADR and the
+architecture changes.
 
 [ADR-0006](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0006-single-shot-agents-no-loop.md) ·
 [the experiment](https://github.com/AKogut/ai-flaky-test-triage/issues/80)
@@ -40,9 +45,13 @@ structural rather than aspirational:
   the validation error appended. The model cannot return prose where an enum is expected.
 - **Sanitisation.** Test titles, error messages, source, and diff hunks are attacker-influenced on a
   fork PR. They are length-capped, delimited, escaped, and introduced as data.
-- **Replay.** Cassettes make the demo credential-free and the integration tests free and
-  deterministic. A cassette miss is a loud error, never a silent fall-through to a live call.
-- **Telemetry.** One span per call carrying model, tokens, latency, cost, retries, cassette hit.
+- **Replay.** Cassettes are what will let the demo replay the agent with no key. None are recorded
+  yet — recording needs a key the project does not have (#38) — so the demo runs the baseline and
+  says so, and the integration tests drive the agents through a scripted transport instead. A
+  cassette miss is a loud error, never a silent fall-through to a live call.
+- **Telemetry.** OpenTelemetry spans written to `otel-spans.json` by a file exporter: one root span
+  per run and one per model call, carrying identifiers, counts, tokens and cost — never the
+  untrusted text itself. CI uploads the file in the `triage-report` artifact.
 - **Budget.** A per-run token ceiling. When hit, the orchestrator stops dispatching and the report
   says how many failures went unclassified — rather than truncating silently.
 
@@ -64,8 +73,9 @@ explanation is the most dangerous output this system can produce, because it red
 developer's attention with more authority than it has earned. Forcing a stated alternative puts the
 uncertainty in front of the reader.
 
-**`risks` and `testGap` are required on every fix suggestion.** A suggestion without stated risks
-reads as more authoritative than it deserves to. And for a flaky-test system, the most valuable
+**`risks` is required on every fix suggestion, and the missing test has a field of its own.** A
+suggestion without stated risks reads as more authoritative than it deserves to. `testGap` is
+optional, because not every failure has one — but for a flaky-test system, the most valuable
 output is often "the real problem is that nothing tests this path".
 
 ## Orchestration

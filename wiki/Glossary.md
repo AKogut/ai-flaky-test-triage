@@ -15,8 +15,8 @@ breaking change.
 **`app_code`** — value on the `owner` axis. The product is wrong and the test correctly caught it.
 
 **Baseline** — the deliberately simple, model-free heuristic classifier that every agent number is
-reported against. It is the control, and it is also the only classifier available on fork pull
-requests.
+reported against. It is the control, it is the only classifier available on fork pull requests,
+and until the project has an API key it is the only classifier that has run at all.
 
 **Budget** — the per-run token ceiling. When it is hit the orchestrator stops dispatching and the
 report says how many failures went unclassified, rather than truncating silently.
@@ -28,16 +28,18 @@ cases.
 **Captured** — fixture provenance: taken from a real CI run and labelled after the fact. Contrast
 `synthetic` and `mutated`.
 
-**Cassette** — a recorded model request/response pair, committed to the repository. Makes the demo
-credential-free and the integration tests free and deterministic.
+**Cassette** — a recorded model request/response pair, committed to the repository so the agent
+can be replayed with no key and no network. None are recorded yet: recording needs an API key
+(#38), so the demo runs the baseline meanwhile and the integration tests use a scripted transport.
 
 **Chaos (`SENTRA_CHAOS`)** — seeded latency injection in the demo app's API, used to reproduce a
 specific race interleaving on demand. Off by default. Seeded rather than random so failures are
 reproducible.
 
 **Context bundle** — everything the triage agent sees for one failure: error, stack, snippet,
-flakiness history, diff, whether the diff touches the file under test, and the test's own source.
-Because the agents have no tools, the ceiling on accuracy is set here rather than in the prompt.
+flakiness history, diff, whether the diff touches the file under test, the test's own source, and
+the tests that ran before it on the same worker. Because the agents have no tools, the ceiling on
+accuracy is set here rather than in the prompt.
 
 **`determinism`** — the second classification axis: `deterministic` or `intermittent`. Answers "will
 rerunning help?".
@@ -69,8 +71,8 @@ by accident.
 test. Indistinguishable from a flaky test by simple signals, and the one case where rerun-until-green
 causes real harm. The project exists for it.
 
-**Held-out slice** — the ~20% of the dataset not consulted during prompt iteration, reported
-separately. Without it, twenty rounds of prompt tuning produce a number that measures effort rather
+**Held-out slice** — the part of the dataset, about a fifth by design, not consulted during prompt
+iteration and reported separately. Without it, twenty rounds of prompt tuning produce a number that measures effort rather
 than generalisation.
 
 **`isNew`** — flag meaning the test appears for the first time in the available history. Often means
@@ -117,6 +119,6 @@ synchronised.
 Playwright's or Vitest's reporter output. Everything downstream is reporter-agnostic.
 
 **Wilson interval** — the confidence interval used for every reported proportion. Chosen over the
-normal approximation because at n≈60 and p≈0.9 the normal interval is visibly wrong and can extend
-past 1.0 — publishing a broken interval in a document about statistical honesty would be
+normal approximation because at this dataset's size and a high accuracy the normal interval is
+visibly wrong and can extend past 1.0 — publishing a broken interval in a document about statistical honesty would be
 self-defeating.

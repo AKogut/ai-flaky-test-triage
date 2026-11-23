@@ -1,6 +1,6 @@
 # Decision Records
 
-Seven decisions that were not obvious, cost something to reverse, or would otherwise have to be
+Eight decisions that were not obvious, cost something to reverse, or would otherwise have to be
 reconstructed from the code. Full text in
 [`docs/adr/`](https://github.com/AKogut/ai-flaky-test-triage/tree/main/docs/adr).
 
@@ -29,7 +29,7 @@ built on it would have inherited the noise. Replaced by two orthogonal axes.
 ### [ADR-0003](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0003-dataset-first-milestone-ordering.md) — Dataset-first milestone ordering
 
 App-first ordering follows the data flow and feels natural, but it defers the only question that can
-invalidate the project — can a model beat a thirty-line heuristic? — until after a week of React
+invalidate the project — can a model beat a simple heuristic? — until after a week of React
 work. The eval harness and a measurable classifier land first; the app arrives later and extends the
 dataset with captured runs.
 
@@ -51,11 +51,15 @@ deterministic integration tests, and readable committed fixtures.
 
 **Accepted cost:** cassettes go stale when prompts change, so CI checks for it.
 
+None are recorded yet: recording needs an API key the project does not have (#38). Until then the
+demo keeps its credential-free promise by running the baseline heuristic, and says so.
+
 ### [ADR-0006](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0006-single-shot-agents-no-loop.md) — Single-shot agents, no loop
 
 Triage is a single decision over a fixed, complete input. There is nothing to discover, so a loop
 would add latency, cost, and non-determinism in exchange for re-reading text the model already has.
-Stated as a testable claim, not an axiom — the ablation study runs a multi-step variant.
+Stated as a testable claim, not an axiom — the ablation study will run a multi-step variant
+(🚧 M9, #80).
 
 **Revisit if** the loop beats single-shot on the hard quadrant by a margin that survives its
 interval.
@@ -68,8 +72,6 @@ and secrets in the environment. The project degrades instead of escalating.
 
 **Side benefit:** it forces the baseline heuristic to be genuinely useful standalone, which is also
 what makes it a fair evaluation control.
-
----
 
 ### [ADR-0008](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0008-run-level-context-is-the-worker-sequence.md) — Run-level context is the worker sequence
 

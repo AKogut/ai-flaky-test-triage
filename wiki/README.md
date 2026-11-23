@@ -40,8 +40,11 @@ no API for creating that first page. Once, manually:
 | [`docs/`](../docs) | Normative specs: schemas, contracts, labelling rules, ADRs                             | Versioned with the code and must match it exactly |
 | `wiki/`            | Orientation and narrative: how things fit, why decisions were made, what to read first | Free to be discursive; nothing here is a contract |
 
-Nothing is duplicated. Wiki pages link into `docs/` rather than restating it — two copies of a
-specification means one of them is wrong, and it is never obvious which.
+Wiki pages link into `docs/` rather than copying specifications — two copies of a specification
+means one of them is wrong, and it is never obvious which. A summary still restates some facts, a
+guardrail's status or a milestone's, so a change that moves one of those updates the page in the
+same pull request; where the two disagree, `docs/` and the code win. Measured figures are never
+restated — they live in `eval/report.md`.
 
 Because wiki pages render outside the repository, links to repository files must be absolute
 (`https://github.com/AKogut/ai-flaky-test-triage/blob/main/...`). Links between wiki pages use the

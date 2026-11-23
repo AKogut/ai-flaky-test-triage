@@ -32,30 +32,28 @@ still being built.
 ### What runs today
 
 ```bash
+npm run demo          # classifies the bundled run in demo/, writes report.md
 npm run test:unit     # the full suite, including the dataset's own tests
 npm run eval:lint     # golden-dataset composition and label-leakage check
 npm run typecheck
 ```
 
-### What does not, and why it is described anyway
+`npm run demo` classifies the bundled CI run in `demo/` with no network call, no credentials and no
+configuration, and writes `report.md`. Today it does that with the **baseline heuristic**, and both
+its banner and the report say so: replay needs recorded model responses, and none are recorded
+until the project has an API key to record them with (#38). CI runs it from a clean checkout on
+every build, so a change that breaks it fails the build.
 
-```bash
-npm run demo          # writes report.md
-```
-
-The intent: run the entire pipeline — flakiness analysis, triage, root cause, fix suggestion,
-report generation — against a bundled fixture run, using **recorded model responses**, with no
-network call and no credentials.
-
-That is the claim the Definition of Done rests on, which is why it is written down before it is
-built rather than after. Running it today prints the milestone it arrives in and exits.
+That is the claim the Definition of Done rests on, which is why it was written down before it was
+built rather than after.
 
 #### What replay mode will and will not prove
 
-It will prove the pipeline works end to end: parsing, analysis, orchestration, schema validation,
-report assembly. It will **not** prove what the model would say today, because the responses were
-recorded earlier. The demo says so in its own output rather than implying a live classification
-just happened.
+Once cassettes are recorded, the same command replays the triage agent's responses instead of
+running the baseline. That will prove the pipeline works end to end: context assembly, the fences
+around untrusted text, schema validation, report assembly. It will **not** prove what the model
+would say today, because the responses were recorded earlier. The demo says so in its own output
+rather than implying a live classification just happened.
 
 Rationale: [ADR-0005](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0005-replay-cassettes-for-credential-free-demo.md).
 
@@ -68,8 +66,9 @@ cat eval/report.md
 
 Today this scores the **non-LLM baseline heuristic** against the hand-labelled golden dataset,
 with confidence intervals on every proportion. The agent column in the report is deliberately
-present and empty: the result this project reports is the delta between the two, and the agent
-arrives in M3.
+present and empty: the result this project reports is the delta between the two. The agent itself
+exists — `eval/classifier.ts` runs it with `--classifier=agent` — but scoring it needs an API key,
+or cassettes recorded with one, and the project has neither yet (#38).
 
 The report is committed to the repository, so you can also just
 [read the current one](https://github.com/AKogut/ai-flaky-test-triage/blob/main/eval/report.md)
@@ -82,9 +81,16 @@ suspicious outcome.
 ```bash
 cp .env.example .env
 # add ANTHROPIC_API_KEY
-npm test          # runs the suite, writes results.json and results-unit.json
-npm run analyze   # 🚧 M8 · #71 — flakemetry + agents, writes report.md
+npm test                     # runs the suite, writes results.json and results-unit.json
+npm run flakemetry:analyze   # test reports + history → analysis.json
+npm run agents:analyze       # analysis.json → report.md
 ```
+
+`npm run analyze` will run the last two in one step; it is still a stub (🚧 M8 · #71), and CI
+runs the two stages as separate jobs. With a key, `agents:analyze` calls the triage agent live;
+without one it runs the baseline heuristic and the report says so. Root cause and fix suggestion
+stay off either way until a calibration threshold exists — see
+[Architecture Overview](Architecture-Overview#stage-by-stage-and-why-each-exists).
 
 `npm test` deliberately includes tests that fail intermittently. That is the point — they are the
 input the pipeline exists to interpret. See [Architecture Overview](Architecture-Overview) for what
@@ -115,21 +121,23 @@ optimistic-update race is captured for the dataset rather than waited for.
 
 ## Where things end up
 
-| File                       | Written by                  | Committed?                                |
-| -------------------------- | --------------------------- | ----------------------------------------- |
-| `results.json`             | `npm run test:e2e`          | no                                        |
-| `results-unit.json`        | `npm run test:unit`         | no                                        |
-| `analysis.json`            | `flakemetry:analyze`        | no                                        |
-| `report.md`                | `agents:analyze`            | no                                        |
-| `otel-spans.json`          | the agents' instrumentation | no                                        |
-| `eval/report.md`           | `npm run eval`              | **yes** — a regression shows up as a diff |
-| `.flakemetry/history.json` | CI, on `main` only          | no — lives in the CI cache                |
+| File                       | Written by                                           | Committed?                                         |
+| -------------------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| `results.json`             | `npm run test:e2e`                                   | no                                                 |
+| `results-unit.json`        | `npm run test:unit`                                  | no                                                 |
+| `analysis.json`            | `flakemetry:analyze`                                 | no                                                 |
+| `report.md`                | `agents:analyze`, or `npm run demo`                  | no                                                 |
+| `otel-spans.json`          | `agents:analyze`, via an OpenTelemetry file exporter | no — CI uploads it in the `triage-report` artifact |
+| `eval/report.md`           | `npm run eval`                                       | **yes** — a regression shows up as a diff          |
+| `.flakemetry/history.json` | CI, on `main` only                                   | no — lives in the CI cache                         |
 
 ## Common questions
 
 **Why did nothing get posted on my pull request?** Either the run had no failures — the agent stage
-short-circuits and posts nothing — or the PR is from a fork, in which case there is no API key and
-the pipeline degrades to baseline-heuristic output. Both cases are stated in the run log.
+short-circuits and writes no report — or the PR is from a fork. A fork's workflow gets no secrets
+and a read-only token, so the baseline report is still produced and uploaded as the
+`triage-report` artifact, but the comment cannot be posted. That path has not yet been exercised by
+a real fork pull request.
 
 **Why is the classification wrong?** Sometimes it will be. The error rate is measured and
 published. See [Limitations and Guardrails](Limitations-and-Guardrails).
