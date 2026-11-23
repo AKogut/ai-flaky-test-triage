@@ -59,21 +59,33 @@ jobs:
           flag has-flakemetry scripts/analyze.ts
           flag has-agents agents/run.ts
 
+      # Parsed with the `yaml` package the lockfile pins, not a `pip install` of
+      # whatever PyYAML was newest: that was the one dependency anywhere in CI
+      # not fixed by version or hash, in the job that guards the rest. This
+      # parser is also stricter — a duplicated key is an error here, where
+      # PyYAML kept the last value and said nothing.
       - name: Validate workflow and issue-template YAML
         run: |
-          python3 -m pip install --quiet --disable-pip-version-check pyyaml
-          python3 - <<'PY'
-          import sys, pathlib, yaml
-          bad = []
-          for p in list(pathlib.Path('.github').rglob('*.yml')) + list(pathlib.Path('.github').rglob('*.yaml')):
-              try:
-                  yaml.safe_load(p.read_text())
-              except Exception as e:
-                  bad.append(f"{p}: {e}")
-          if bad:
-              print("\n".join(bad)); sys.exit(1)
-          print("all .github YAML parses")
-          PY
+          npm ci --silent
+          node --input-type=module <<'JS'
+          import { readdirSync, readFileSync } from 'node:fs'
+          import { join } from 'node:path'
+          import { parseAllDocuments } from 'yaml'
+          const files = readdirSync('.github', { recursive: true })
+            .filter((f) => /\.ya?ml$/.test(f))
+            .map((f) => join('.github', f))
+          const bad = []
+          for (const file of files) {
+            for (const doc of parseAllDocuments(readFileSync(file, 'utf8'))) {
+              for (const error of doc.errors) bad.push(`${file}: ${error.message}`)
+            }
+          }
+          if (bad.length > 0) {
+            console.log(bad.join('\n'))
+            process.exit(1)
+          }
+          console.log(`all .github YAML parses (${files.length} files)`)
+          JS
 
       - name: Required documentation is present
         run: |
@@ -103,9 +115,7 @@ jobs:
 
       - name: README status banner matches ROADMAP.md
         if: steps.detect.outputs.has-code == 'true'
-        run: |
-          npm ci --silent
-          npm run docs:status:check
+        run: npm run docs:status:check
 
       # The rubric the model is sent and the rubric the dataset was labelled by
       # are one file; docs/taxonomy.md carries a generated copy. Drift between
