@@ -79,6 +79,10 @@ export const DEGRADATIONS = {
   unreadableHistory:
     'The run history existed and could not be read, so every test reads as new. That is a ' +
     'stronger signal than a cache miss: something is writing that file wrongly.',
+  noDiff:
+    'The diff could not be read from git, so every verdict below was reached without knowing ' +
+    'what this change touched. A product change is unproven here, not ruled out. The job log ' +
+    'names the git error.',
   budget:
     'The run reached its token budget. Tests it never reached are listed as unclassified rather ' +
     'than omitted — a missing row would read as "nothing was wrong with this test".',
