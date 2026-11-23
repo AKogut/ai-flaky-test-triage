@@ -54,21 +54,6 @@ updates:
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
 
-      # lint-staged 17 requires Node >=22.22.1, which the 24.15 floor clears, so the
-      # runtime is no longer the reason. What decides it now is the hook: 17 re-stages
-      # fixed files with `git update-index --again` instead of `git add`, and that is
-      # checked with a commit made through the hook, in a PR of its own.
-      - dependency-name: 'lint-staged'
-        update-types: ['version-update:semver-major']
-
-      # jsdom 30 and 31 accept `^22.22.2 || ^24.15.0 || >=26.0.0` — the range that set
-      # the floor at 24.15, so the runtime is no longer the reason. What decides it now
-      # is the client suite: both majors rewrite CSS parsing and computed styles, and
-      # the tests that run in that DOM have to hold on it. Closed in #180; the upgrade
-      # follows in a PR of its own.
-      - dependency-name: 'jsdom'
-        update-types: ['version-update:semver-major']
-
       # @types/node is versioned by Node major, so its major has to track
       # engines.node rather than the newest release. @types/node@26 declares
       # node:ffi and node:quic, which Node 24 does not have — importing them
