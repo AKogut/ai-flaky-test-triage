@@ -2,7 +2,8 @@
 
 > Machine-readable version with exit criteria:
 > [`ROADMAP.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/ROADMAP.md) ·
-> Live status: [Milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones)
+> Live status: [Milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones) ·
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage)
 
 ## The ordering decision
 

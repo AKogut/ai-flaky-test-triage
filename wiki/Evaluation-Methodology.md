@@ -2,6 +2,7 @@
 
 > Normative version, with thresholds, bucket shares, and the full metric list:
 > [`docs/eval-methodology.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 ## The trap this is designed to avoid
 

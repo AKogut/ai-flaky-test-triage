@@ -1,0 +1,54 @@
+name: Wiki
+
+# wiki/ is the source of the GitHub wiki, and this is what publishes it: on a
+# push to main that changes it, and on demand. It runs the script a maintainer
+# would run by hand, `npm run wiki:publish`, so there is one way the wiki gets
+# written and wiki/README.md describes both.
+#
+# The wiki is a second git repository, <repository>.wiki.git, and the token
+# that writes to it is this workflow's own GITHUB_TOKEN. It is granted
+# `contents: write` on the one job that publishes, not on the workflow, and
+# reaches git only inside the push itself: the checkout keeps no credentials.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wiki/**'
+      - 'scripts/publish-wiki.sh'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publish at a time, and none cancelled halfway. Two pushes racing would
+# fail the second on a non-fast-forward; queued instead, the later run mirrors
+# the newer main.
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the wiki
+    # A manual run can be started from any branch. Only main is published, so
+    # the wiki never shows a page that has not been through review.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No commit when the wiki already matches wiki/: the script says so and
+      # exits 0, so re-running this is always safe.
+      - name: Mirror wiki/ into the wiki repository
+        env:
+          WIKI_REPO_SLUG: ${{ github.repository }}
+          WIKI_REMOTE: ${{ github.server_url }}/${{ github.repository }}.wiki.git
+          WIKI_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/publish-wiki.sh

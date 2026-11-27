@@ -2,6 +2,7 @@
 
 > Normative version, including the full scope list and commit examples:
 > [`docs/branching-strategy.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/branching-strategy.md).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 ## Model
 

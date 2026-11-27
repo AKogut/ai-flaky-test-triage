@@ -1,5 +1,7 @@
 # Decision Records
 
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
+
 Eight decisions that were not obvious, cost something to reverse, or would otherwise have to be
 reconstructed from the code. Full text in
 [`docs/adr/`](https://github.com/AKogut/ai-flaky-test-triage/tree/main/docs/adr).

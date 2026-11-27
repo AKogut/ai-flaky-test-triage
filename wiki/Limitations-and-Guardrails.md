@@ -2,6 +2,7 @@
 
 > Normative version, with the enforcement mechanism for each guarantee:
 > [`docs/limitations-and-guardrails.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/limitations-and-guardrails.md).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 This is a deliverable, not a disclaimer. A tool that reports on other people's failures should be
 unusually clear about its own.
@@ -79,7 +80,7 @@ a private fork should understand that before doing so.
 
 **Automation bias.** A confident wrong classification is worse than no classification, because it
 redirects attention with unearned authority. That is why `alternativeHypothesis` is mandatory below
-the confidence threshold, why `risks` is a required field, and why every report states the
+0.7 confidence, why `risks` is a required field, and why every report states the
 measured accuracy of whichever classifier produced it, inline.
 
 **Making flakiness comfortable.** A tool that makes flaky tests pleasant to live with can entrench

@@ -1,5 +1,7 @@
 # FAQ
 
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
+
 ## Is this just an LLM wrapper?
 
 Partly, and the interesting question is how much value the LLM part adds — which is why the project

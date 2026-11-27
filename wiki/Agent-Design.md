@@ -2,6 +2,7 @@
 
 > Normative version, with prompt structure and full schemas:
 > [`docs/agent-design.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/agent-design.md).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 ## Three agents, three single calls
 

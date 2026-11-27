@@ -2,6 +2,7 @@
 
 > Full guide, including setup and the prompt-iteration rules:
 > [`CONTRIBUTING.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/CONTRIBUTING.md).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 ## Ground rules
 

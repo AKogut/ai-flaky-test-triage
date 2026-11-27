@@ -1,5 +1,9 @@
 # Getting Started
 
+> The short version is the README's
+> [Quickstart](https://github.com/AKogut/ai-flaky-test-triage/blob/main/README.md#quickstart).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
+
 <!-- status:start -->
 
 > **Project status: M3 — Triage agent & replay mode.**
