@@ -48,7 +48,8 @@
 
 - **Read next:** [what it posts today](#what-it-posts-today) ·
   [`eval/report.md`](eval/report.md) · [architecture](docs/architecture.md) ·
-  [decision records](docs/adr/README.md)
+  [decision records](docs/adr/README.md) ·
+  [this tour as a website](https://akogut.github.io/ai-flaky-test-triage/), with the eval reports and a demo report, rebuilt by CI when they change
 
 ---
 

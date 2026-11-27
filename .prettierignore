@@ -12,6 +12,7 @@ results-unit.json
 analysis.json
 report.md
 otel-spans.json
+_site/
 
 # Recorded model responses. Reformatting them would change their content hash
 # and invalidate every cassette.
