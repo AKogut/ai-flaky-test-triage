@@ -1,6 +1,6 @@
 {
   "name": "@sentra/taskflow-client",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "TaskFlow UI \u2014 the system under test. React and TypeScript, deliberately plain.",
   "license": "MIT",
