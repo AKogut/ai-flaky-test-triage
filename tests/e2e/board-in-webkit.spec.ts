@@ -52,7 +52,7 @@ import { expect, test } from './fixtures.js'
  * ## Why `deterministic`
  *
  * Because no retry downloads a browser. Every attempt of every run fails the
- * same way at the same point. Measured: **9 failures in 9 runs** locally, with
+ * same way at the same point. Measured: **20 failures in 20 runs** locally, with
  * Playwright 1.65.1 and no `webkit-2388`. On a machine where somebody ran
  * `npx playwright install` with no arguments it passes — which is exactly why
  * it reads as somebody else's problem. Under the same conditions it fails every

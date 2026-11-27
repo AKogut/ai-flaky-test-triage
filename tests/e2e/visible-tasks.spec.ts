@@ -34,6 +34,11 @@ import { expect, test } from './fixtures.js'
  * is what "intermittent" means here, and it is nothing to do with time inside
  * any one test.
  *
+ * Re-measured over twenty runs once five more spec files joined the suite:
+ * **four failures**. One of those files first sorted just ahead of
+ * `quarterly-pack.spec.ts` and took the rate to none in nine, which is the same
+ * mechanism seen from the other side; `back-and-forth.spec.ts` says why it moved.
+ *
  * ## Why the fault is in the tests and not the product
  *
  * The application did exactly what it was asked. A row was created, a row was

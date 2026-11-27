@@ -44,7 +44,7 @@ import { expect, stored, test } from './fixtures.js'
  * delays each response by a seeded draw — up to 250 ms for a completion and up
  * to 150 ms for an ordinary update — and the seed changes every run. The
  * completion's answer arrives last only when its delay exceeds the update's by
- * more than the gap between the two clicks. Measured: **6 failures in 9 full runs**.
+ * more than the gap between the two clicks. Measured: **13 failures in 20 full runs**.
  *
  * ## Why the label is `app_code` and not `test_code`
  *

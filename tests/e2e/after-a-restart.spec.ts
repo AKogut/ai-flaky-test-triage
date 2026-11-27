@@ -53,8 +53,8 @@ import { BASE_PORT, BUNDLE, databaseFor, WORKERS } from './harness.js'
  * ```
  *
  * in its fixture, before the test body runs. Which test asks first is decided
- * by which worker process finished starting up first, and nothing in the suite
- * controls that.
+ * by which worker reaches that call first — a matter of process start-up that
+ * nothing in the suite controls.
  *
  * ## Why `environment`, and why not `test_code`
  *
@@ -70,12 +70,12 @@ import { BASE_PORT, BUNDLE, databaseFor, WORKERS } from './harness.js'
  * ## Why `intermittent`
  *
  * Because each test, taken alone, fails on some runs and passes on others, and
- * rerunning is exactly what makes a failing one pass — the quadrant's own
- * advice. The tests are correct, the application is correct, and the loser is
+ * a rerun is about as likely as not to pass — the quadrant's own advice,
+ * "rerun, then track frequency", is the right response. The tests are correct, the application is correct, and the loser is
  * whichever lost a race for a resource they share.
  *
- * Measured over nine full runs of the suite: exactly one of the two failed on
- * every run — the first test six times, the second three.
+ * Measured over twenty full runs of the suite: exactly one of the two failed on
+ * every run — the first test **9 times in 20**, the second 11.
  *
  * ## The correct fix, deliberately not applied
  *

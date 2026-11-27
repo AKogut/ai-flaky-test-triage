@@ -49,7 +49,7 @@ import { expect, test } from './fixtures.js'
  *
  * Nothing in it varies. The database is reseeded before the test, the calm
  * instance adds no latency, and the board it renders is the same six rows in the
- * same order every time. Measured: **9 failures in 9 runs**, all with the same
+ * same order every time. Measured: **20 failures in 20 runs**, all with the same
  * one-row difference.
  *
  * ## Do not fix this by updating the list

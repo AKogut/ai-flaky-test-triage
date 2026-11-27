@@ -61,7 +61,7 @@ import { expect, stored, test } from './fixtures.js'
  *
  * Arithmetic. No clock, no scheduler and no injected latency reaches it: the calm
  * instance, a freshly seeded database, and the same sequence of midpoints on
- * every run. Measured: **9 failures in 9 runs**, every one of them at move 55.
+ * every run. Measured: **20 failures in 20 runs**, every one of them at move 55.
  *
  * ## Why the file is called what it is
  *

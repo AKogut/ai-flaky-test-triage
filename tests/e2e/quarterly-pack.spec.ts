@@ -40,7 +40,8 @@ import { expect, stored, test } from './fixtures.js'
  * queue, so the row survives to it only when both of those went to the other
  * worker — which depends on how long every file before them took.
  *
- * Measured over twelve full runs: four failures in the other file. It fails less
+ * Measured over twelve full runs: four failures in the other file, and four in
+ * twenty after five more spec files joined the suite. It fails less
  * often on runs where the deliberately racy reorder spec fails, because that
  * spec's ten-second timeout keeps a worker busy and changes who picks up what.
  *
