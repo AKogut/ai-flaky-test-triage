@@ -25,7 +25,8 @@ with real captured runs rather than to bootstrap it.
 ## Milestones
 
 Each has one exit criterion. A milestone is not done because its issues are closed; it is done when
-the criterion holds. M5 and M7 are the proof: every issue in both is closed, and neither is done.
+the criterion holds. M7 is the proof: every issue in it is closed, and it is not done. M5 was the
+same until its tenth fixture captured from CI landed.
 
 |         | Theme                              | Status                                                  | Exit criterion                                                                                                                                        |
 | ------- | ---------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,7 +35,7 @@ the criterion holds. M5 and M7 are the proof: every issue in both is closed, and
 | **M2**  | Golden dataset, baseline & eval    | done                                                    | `npm run eval` scores the baseline on ≥30 labelled fixtures with intervals and confusion matrices — **no model involved**                             |
 | **M3**  | Triage agent & replay mode         | in progress — the agent waits on an API key (#38)       | The agent beats the baseline by a margin surviving its interval — or the finding that it does not is in the README. `npm run demo` works with no key. |
 | **M4**  | TaskFlow application               | done                                                    | `npm run dev` serves a task board; `SENTRA_CHAOS=<seed>` reproduces a specific race interleaving                                                      |
-| **M5**  | Test suite & emergent flakiness    | in progress — needs more captured runs (#171)           | ≥10 `captured` fixtures from real CI runs; metrics broken down by provenance                                                                          |
+| **M5**  | Test suite & emergent flakiness    | done                                                    | ≥10 `captured` fixtures from real CI runs; metrics broken down by provenance                                                                          |
 | **M6**  | flakemetry-lib integration         | done                                                    | History survives across runs on `main`; a cache miss degrades gracefully; both tested                                                                 |
 | **M7**  | Root-cause & fix-suggestion agents | in progress — replay cassettes wait on an API key       | `npm run agents:analyze` turns a fixture into a report, asserted by an integration test in replay mode                                                |
 | **M8**  | End-to-end CI & PR comment         | in progress — the verification pull request (#75)       | A PR touching a flaky spec produces exactly one comment; pushing again updates it                                                                     |
@@ -43,9 +44,7 @@ the criterion holds. M5 and M7 are the proof: every issue in both is closed, and
 
 M3 and M7 are short of their criteria for the same reason: nothing here has an `ANTHROPIC_API_KEY`.
 The agent, its prompt and the harness exist, and `npm run demo` works with no key — but scoring the
-agent and recording the cassettes replay needs both cost money, and nothing has been spent. M5 is
-short because the suite's few failing specs have not yet produced ten genuinely different captured
-runs, and capturing the same failure twice would narrow intervals without adding information.
+agent and recording the cassettes replay needs both cost money, and nothing has been spent.
 
 ## The milestone that decides the project
 

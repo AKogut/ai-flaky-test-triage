@@ -12,7 +12,7 @@
 <!-- status:start -->
 
 > **Project status: M3 — Triage agent & replay mode.**
-> 5 of 11 milestones complete.
+> 6 of 11 milestones complete.
 > Current exit criterion: the triage agent beats the baseline on joint accuracy by a margin that survives its confidence interval — or the finding that it does not is documented in the README. Either way, `npm run demo` runs the classifier end to end with no API key.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
@@ -32,7 +32,7 @@
   the test fail the same way and need opposite responses. This repository ships both on purpose,
   and the classifier has to tell them apart from a trace.
 - **How it stays honest.** Every classifier is scored on a hand-labelled golden dataset
-  (39 fixtures, 12 held out), against a non-LLM baseline, with confidence intervals, and gated in
+  (44 fixtures, 12 held out), against a non-LLM baseline, with confidence intervals, and gated in
   CI. Today only the baseline has been scored: the model's row is empty until
   [#38](https://github.com/AKogut/ai-flaky-test-triage/issues/38) runs, and the comment says so.
 - **What it will not do.** Agents cannot edit code or push; their only output is the report. Untrusted text — test
@@ -108,9 +108,9 @@ bugs. The pull request touched `agents/`, so the baseline blamed them on the cha
 `find-by-name` deterministic as well. Telling the race in the product from the race in the test is
 the job the model is measured on.
 
-| Classifier                      | Joint accuracy, dev slice (n = 26) | Hard quadrant, `app_code` + `intermittent` (n = 8) |
+| Classifier                      | Joint accuracy, dev slice (n = 31) | Hard quadrant, `app_code` + `intermittent` (n = 9) |
 | ------------------------------- | ---------------------------------: | -------------------------------------------------: |
-| Baseline heuristic              |                  34.6% [19.4–53.8] |                                   25.0% [7.1–59.1] |
+| Baseline heuristic              |                  35.5% [21.1–53.1] |                                   22.2% [6.3–54.7] |
 | Triage agent, `claude-opus-5-5` |        not scored yet — [#38][i38] |                                                  — |
 
 95% Wilson intervals, from [`eval/report.md`](eval/report.md). The agent row stays empty until a run
@@ -347,15 +347,15 @@ infrastructure error in the failure message means `environment`; otherwise any c
 source file in the diff means `app_code`; otherwise a failure that names a selector or a wait means
 `test_code`; otherwise `app_code`. An unbroken failure streak of two or more, with no pass on
 retry, means `deterministic`, and anything else `intermittent`. On the development slice it scores
-34.6% joint accuracy [19.4–53.8] over 26 fixtures ([`eval/report.md`](eval/report.md)). The
+35.5% joint accuracy [21.1–53.1] over 31 fixtures ([`eval/report.md`](eval/report.md)). The
 agent's number is only interesting relative to that.
 
 **Adversarial fixtures.** The golden dataset deliberately over-weights the hard quadrants: real
 races that look like flakes, environment noise that looks like a regression, stale tests that
-look like bugs. Obvious cases are the minority. It holds 39 fixtures — 27 for development, 12 held
+look like bugs. Obvious cases are the minority. It holds 44 fixtures — 32 for development, 12 held
 out — against a target of 60.
 
-**Reported uncertainty.** At n=26 that 95% interval is 34 points wide, and LLM output is
+**Reported uncertainty.** At n=31 that 95% interval is 32 points wide, and LLM output is
 non-deterministic, and this model exposes no sampling controls to pretend otherwise — so the
 evaluator runs N samples per fixture (five for the agent, one for the deterministic baseline) and
 reports mean, variance, and confidence intervals. The CI gate fires on the lower bound, not the

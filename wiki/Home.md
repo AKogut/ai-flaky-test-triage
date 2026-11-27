@@ -5,7 +5,7 @@
 <!-- status:start -->
 
 > **Project status: M3 — Triage agent & replay mode.**
-> 5 of 11 milestones complete.
+> 6 of 11 milestones complete.
 > Current exit criterion: the triage agent beats the baseline on joint accuracy by a margin that survives its confidence interval — or the finding that it does not is documented in the README. Either way, `npm run demo` runs the classifier end to end with no API key.
 >
 > Progress is tracked as [milestones](https://github.com/AKogut/ai-flaky-test-triage/milestones), not dates.
@@ -88,7 +88,7 @@ Three things, all of which are measured rather than claimed:
 2. **An adversarial dataset.** The fixtures deliberately over-weight cases designed to defeat the
    obvious shortcuts — real races that look like flakes, environment noise inside a suspicious
    diff, tests that have been flaky for months and today fail for a new reason.
-3. **Reported uncertainty.** The dataset is 39 fixtures, heading for 60, and even at 60 the lower
+3. **Reported uncertainty.** The dataset is 44 fixtures, heading for 60, and even at 60 the lower
    bound of a 95% interval around 90% accuracy sits ten points below it. Model output is
    non-deterministic, with no sampling controls to pretend otherwise. Every metric ships with its confidence interval, and
    the CI gate fires on the lower bound.
