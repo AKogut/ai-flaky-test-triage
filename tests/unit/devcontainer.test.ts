@@ -50,10 +50,12 @@ describe('the dev container image', () => {
   })
 
   it('is pinned by digest, under the tag for the Node major engines.node names', () => {
-    const match = new RegExp(
-      `^FROM ${IMAGE.replaceAll('.', '\\.')}:(\\d+)-bookworm@sha256:[0-9a-f]{64}$`,
-    ).exec(from[0] ?? '')
-    expect(match?.[1]).toBe(floorMajor)
+    // The image name is compared as a string, not spliced into a pattern, where
+    // every `.` in the host name would have to be escaped to mean a dot.
+    const line = (from[0] ?? '').replace(/^FROM\s+/i, '')
+    const colon = line.indexOf(':')
+    expect(line.slice(0, colon)).toBe(IMAGE)
+    expect(/^(\d+)-bookworm@sha256:[0-9a-f]{64}$/.exec(line.slice(colon + 1))?.[1]).toBe(floorMajor)
   })
 
   it('is kept current by a Dependabot entry that holds its Node major', () => {
