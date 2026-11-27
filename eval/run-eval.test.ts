@@ -11,6 +11,8 @@ import {
   renderReport,
   unsupported,
   UsageError,
+  USAGE,
+  DEFAULT_SAMPLES,
   REPORT_PATHS,
   type EvaluatedFixture,
   type Evaluation,
@@ -358,5 +360,24 @@ describe('the committed report', { timeout: 30_000 }, () => {
     // report Prettier would rewrite breaks CI on every regeneration.
     const committed = readFileSync('eval/report.md', 'utf8')
     expect(await format(committed, { parser: 'markdown' })).toBe(committed)
+  })
+})
+
+describe('the usage text', () => {
+  /**
+   * It once said `--slice` defaulted to `all` while the parser used `dev`, and
+   * `--n` to 1 while the agent got 5. Read back through the parser, so the two
+   * cannot disagree again.
+   */
+  it('states the defaults the parser actually applies', () => {
+    const baseline = parseArgs([])
+    const agent = parseArgs(['--classifier=agent'])
+    expect(USAGE).toContain(`(default: ${baseline.classifier})`)
+    expect(USAGE).toContain(`(default: ${baseline.slice})`)
+    expect(USAGE).toContain(
+      `(default: ${String(baseline.samples)} baseline, ${String(agent.samples)} agent)`,
+    )
+    expect(baseline.slice).toBe(DEFAULTS.slice)
+    expect(agent.samples).toBe(DEFAULT_SAMPLES.agent)
   })
 })
