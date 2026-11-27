@@ -104,7 +104,9 @@ what it measures.
 
 - **A file, not a collector.** Per [ADR-0001](adr/0001-single-repo-no-persistent-services.md),
   nothing stays running. The `TracerProvider` belongs to the run and is not registered globally,
-  and `agents/spans.ts` is the only module that imports the OpenTelemetry SDK.
+  and `agents/spans.ts` is the only module that imports the OpenTelemetry SDK. A collector can be
+  added beside the file, never instead of it — see
+  [Optional: view spans in Jaeger](#optional-view-spans-in-jaeger).
 - **Exporting never fails the run.** Spans open only once there is work and close in a `finally`.
   The file is written once, at the end, through a temp file and a rename, so a killed run leaves
   the previous file or none. A failed write is logged and the exit code is unchanged. A run that
@@ -166,6 +168,51 @@ The evaluation's cost threshold is enforced whenever a model ran. It compares co
 with the figure recorded on `main` and fails a rise of more than half; it fails outright when a
 model in the run has no price, because a cost with a missing share is a floor, not a figure. With
 the baseline, which calls nothing, every one of these figures says no model call and $0.
+
+### Optional: view spans in Jaeger
+
+> **Optional.** Nothing in the pipeline, the demo, the tests or CI needs this. `otel-spans.json` is
+> written on every run whether or not a collector exists, and it is the record CI uploads.
+
+For reading spans in a UI rather than with `jq`, `observability/docker-compose.yml` runs Jaeger's
+all-in-one image locally, with an OTLP receiver and in-memory storage, both bound to loopback.
+`SENTRA_OTLP_ENDPOINT` sends a run's spans there as well:
+
+```bash
+docker compose -f observability/docker-compose.yml up -d
+SENTRA_OTLP_ENDPOINT=http://localhost:4318 npm run agents:analyze
+open http://localhost:16686        # service: sentra
+docker compose -f observability/docker-compose.yml down
+```
+
+The run logs `sent 1 span(s) to http://localhost:4318/v1/traces` after the line for the file (two
+spans, or more, once a model is called). The spans are the ones in the file, ids included, so a
+trace in the UI and the file it came from share a `traceId`. Jaeger 2.x serves its HTTP API under
+`/api/v3`; the older `/api/traces` answers 404:
+
+```bash
+curl -s http://localhost:16686/api/v3/services        # {"services":["jaeger","sentra"]}
+curl -s "http://localhost:16686/api/v3/traces/$(jq -r '.spans[0].traceId' otel-spans.json)" \
+  | jq '.result.resourceSpans[].scopeSpans[].spans[].name'
+```
+
+It is held to the file's rule, and to two of its own:
+
+- **Off unless asked for.** With `SENTRA_OTLP_ENDPOINT` unset (the default, and every CI run) the
+  OTLP exporter is not even loaded. The variable is this project's own, not
+  `OTEL_EXPORTER_OTLP_ENDPOINT`, so a shell that exports the standard one for something else does
+  not opt this project in. `tests/unit/optional-jaeger.test.ts` fails if a workflow sets either,
+  starts a service container, or mentions the compose file.
+- **After the file, never instead of it.** The file is written first. The collector then gets the
+  same spans, even when the file could not be written.
+- **Never fails the run, never holds it up.** A collector that is missing, refuses, or takes the
+  connection and never answers costs one line —
+  `could not send spans to http://localhost:4318/v1/traces: ECONNREFUSED — the run is unaffected`
+  — and at most two seconds (`COLLECTOR_TIMEOUT_MS`), covering the exporter's own retries and its
+  shutdown. The exit code is the pipeline's, as it is for a failed file write.
+
+Exported as OTLP over HTTP/JSON with `@opentelemetry/exporter-trace-otlp-http`, which joins the
+`otel` Dependabot group with the rest of the SDK. Jaeger's image is pinned by version and digest.
 
 ## 1. Triage agent
 

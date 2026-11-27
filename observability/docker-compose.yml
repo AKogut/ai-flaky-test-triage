@@ -1,0 +1,34 @@
+# Optional. Nothing in this repository needs it, and CI never starts it.
+#
+# `npm run agents:analyze` writes otel-spans.json whether or not this is
+# running. This is a local Jaeger for anyone who would rather read a run's spans
+# in a UI than in JSON:
+#
+#   docker compose -f observability/docker-compose.yml up -d
+#   SENTRA_OTLP_ENDPOINT=http://localhost:4318 npm run agents:analyze
+#   open http://localhost:16686            # service: sentra
+#   docker compose -f observability/docker-compose.yml down
+#
+# With SENTRA_OTLP_ENDPOINT unset, agents/spans.ts never loads an OTLP exporter.
+# With it set and this not running, the run logs one line, waits at most two
+# seconds, and exits as it would have. ADR-0001 rules out anything that has to
+# be running, and this is kept from becoming one: see docs/agent-design.md,
+# "Optional: view spans in Jaeger".
+
+name: sentra-observability
+
+services:
+  jaeger:
+    # Jaeger v2, the all-in-one image: an OTLP receiver, in-memory storage and
+    # the UI in one process. Pinned by version and digest, as the actions in
+    # .github/workflows are. 2.23.0 was the newest release at least two weeks
+    # old when this was written.
+    image: jaegertracing/jaeger:2.23.0@sha256:3823829974ccfc2485d2e48b165579091f32295022ae80ca49704e2f4834116e
+    ports:
+      # Loopback only. A collector that accepts spans from the whole network
+      # is not what a laptop needs.
+      - '127.0.0.1:4318:4318' # OTLP over HTTP — what agents/spans.ts sends
+      - '127.0.0.1:16686:16686' # the UI, and the HTTP API behind it
+    # Traces are held in memory and go with the container. Nothing here is
+    # state, and nothing restarts it.
+    restart: 'no'

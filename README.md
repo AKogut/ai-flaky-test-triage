@@ -268,6 +268,12 @@ cat eval/report.md
 🚧 marks a script that is not implemented yet; running it says so and names its issue.
 Everything else runs today. `npm run help` prints this table from the terminal.
 
+**Spans.** Every `agents:analyze` run writes `otel-spans.json` beside `report.md`, and `jq` reads
+it; there is nothing to install or start. To browse spans in a UI instead, there is an optional
+local Jaeger: one `docker compose` command, and `SENTRA_OTLP_ENDPOINT` set for the runs you want
+sent there. See [Optional: view spans in Jaeger](docs/agent-design.md#optional-view-spans-in-jaeger).
+Nothing needs it, and CI never starts it.
+
 ---
 
 ## Repository layout
@@ -315,6 +321,7 @@ Everything else runs today. `npm run help` prints this table from the terminal.
 ├── scripts/                     # CLI entry points — demo, dev, capture, cassettes,
 │                                #   status banner, changelog, help
 ├── demo/                        # the bundled run `npm run demo` classifies
+├── observability/               # optional: a local Jaeger for spans (docker-compose.yml)
 ├── docs/                        # architecture, taxonomy, methodology, ADRs
 └── wiki/                        # source of the GitHub wiki, published by script
 ```

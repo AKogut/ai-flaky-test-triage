@@ -18,7 +18,13 @@ import { TokenBudget } from './model-client.js'
 import { hasWork, workList } from './orchestrate.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
 import { DEGRADATIONS, renderReport } from './report.js'
-import { RunSpans, SPANS_FILE, type IdGenerator } from './spans.js'
+import {
+  collectorFrom,
+  RunSpans,
+  SPANS_FILE,
+  type CollectorOptions,
+  type IdGenerator,
+} from './spans.js'
 import { AnthropicTransport, type Transport } from './transport.js'
 
 /**
@@ -65,6 +71,11 @@ export interface RunDeps {
   now?: () => number
   /** Trace and span ids. Injected so a test can pin them; random otherwise. */
   spanIds?: IdGenerator
+  /**
+   * Builds the exporter for `SENTRA_OTLP_ENDPOINT`. Injected so a test needs no
+   * collector; OTLP over HTTP otherwise. Never consulted when the variable is unset.
+   */
+  collectorExporter?: CollectorOptions['exporter']
 }
 
 export interface RunOptions {
@@ -201,7 +212,9 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
   const scored = accuracy === undefined ? {} : { accuracy }
 
   // Opened only once there is work: a run with nothing to triage writes
-  // nothing, spans included.
+  // nothing, spans included. A collector is opt-in and off in CI; see
+  // agents/spans.ts and observability/docker-compose.yml.
+  const collector = collectorFrom(env)
   const spans = new RunSpans(analysis, {
     path: options.spans,
     budgetLimit: options.budget,
@@ -209,6 +222,14 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
     ...(deps.now === undefined ? {} : { now: deps.now }),
     ...(deps.spanIds === undefined ? {} : { idGenerator: deps.spanIds }),
     ...(deps.transport === undefined ? { cassetteMode: resolveMode(env) } : {}),
+    ...(collector === undefined
+      ? {}
+      : {
+          collector: {
+            ...collector,
+            ...(deps.collectorExporter === undefined ? {} : { exporter: deps.collectorExporter }),
+          },
+        }),
   })
 
   try {

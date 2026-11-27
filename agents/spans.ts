@@ -43,6 +43,14 @@ export type { IdGenerator }
  * part-way leaves the previous file or none — never half of one that `jq`
  * then refuses.
  *
+ * **A collector is optional, and never instead of the file.** With
+ * `SENTRA_OTLP_ENDPOINT` set, the same spans are sent over OTLP/HTTP once the
+ * file is written — for `observability/docker-compose.yml`, a local Jaeger to
+ * read them in. Unset, which is the default and always the case in CI, the OTLP
+ * exporter is not even loaded. Set, it is held to the same rule as the file: a
+ * collector that is missing, refuses or never answers costs a logged line and
+ * at most `COLLECTOR_TIMEOUT_MS`, never the exit code. See `sendToCollector`.
+ *
  * ## What a span may carry
  *
  * Identifiers, counts, enums and numbers. Never a test title, an error message,
@@ -263,6 +271,11 @@ export class FileSpanExporter implements SpanExporter {
     return this.finished.length
   }
 
+  /** What the file holds, for a collector to be sent the same spans. */
+  get spans(): readonly ReadableSpan[] {
+    return this.finished
+  }
+
   export(spans: ReadableSpan[], done: (result: ExportResult) => void): void {
     this.finished.push(...spans)
     done({ code: ExportResultCode.SUCCESS })
@@ -340,6 +353,155 @@ export function render(spans: readonly ReadableSpan[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// An optional collector
+// ---------------------------------------------------------------------------
+
+/**
+ * The variable that sends a run's spans to an OTLP collector as well as to the file.
+ *
+ * A base URL, the form `OTEL_EXPORTER_OTLP_ENDPOINT` takes: `/v1/traces` is
+ * appended. Its own name rather than the standard one, so that a runner or a
+ * shell that happens to export the standard variable for something else does
+ * not start shipping this project's spans anywhere. Opting in is a decision
+ * about this project, made with this project's variable.
+ */
+export const COLLECTOR_VARIABLE = 'SENTRA_OTLP_ENDPOINT'
+
+/**
+ * How long a run waits for a collector, all told, before giving up on it.
+ *
+ * Long enough for a local collector on a loaded laptop; short enough that a
+ * forgotten `SENTRA_OTLP_ENDPOINT` pointing at nothing costs two seconds once
+ * per run rather than a hang.
+ */
+export const COLLECTOR_TIMEOUT_MS = 2_000
+
+export interface CollectorOptions {
+  endpoint: string
+  timeoutMillis?: number
+  /** Builds the exporter. Injected so a test needs no collector; OTLP over HTTP otherwise. */
+  exporter?: (url: string, timeoutMillis: number) => SpanExporter | Promise<SpanExporter>
+}
+
+/** The collector the environment asks for, or none. Unset and empty both mean none. */
+export function collectorFrom(env: NodeJS.ProcessEnv): CollectorOptions | undefined {
+  const endpoint = (env[COLLECTOR_VARIABLE] ?? '').trim()
+  return endpoint === '' ? undefined : { endpoint }
+}
+
+/**
+ * `http://localhost:4318` → `http://localhost:4318/v1/traces`.
+ *
+ * Null for anything that is not an http(s) URL. A value that ends in the
+ * traces path already is used as it is, so pasting a full endpoint works too.
+ */
+export function tracesUrl(endpoint: string): URL | null {
+  let url: URL
+  try {
+    url = new URL(endpoint)
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+  if (!url.pathname.endsWith('/v1/traces')) {
+    url.pathname = `${url.pathname.replace(/\/+$/, '')}/v1/traces`
+  }
+  return url
+}
+
+/** The URL as a log line may show it: no credentials, no query. */
+const shown = (url: URL): string => `${url.protocol}//${url.host}${url.pathname}`
+
+/**
+ * OTLP over HTTP, loaded only when a collector is asked for.
+ *
+ * Imported on demand rather than at the top of the file, so a default run —
+ * every CI run — pays nothing for an exporter it never uses. `architecture.md`
+ * records what loading the SDK costs, and this keeps that figure true.
+ */
+async function otlpOverHttp(url: string, timeoutMillis: number): Promise<SpanExporter> {
+  const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http')
+  return new OTLPTraceExporter({ url, timeoutMillis })
+}
+
+/**
+ * Settles with `promise`, or rejects once `ms` have passed.
+ *
+ * The loser is not left to reject unobserved, which would take the process down
+ * under Node's default, and the timer does not hold the process open by itself.
+ */
+function within<T>(ms: number, promise: Promise<T>): Promise<T> {
+  promise.catch(() => undefined)
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => {
+        reject(new Error(`no answer within ${String(ms)} ms`))
+      },
+      Math.max(0, ms),
+    )
+    timer.unref()
+  })
+  return Promise.race([promise, timeout]).finally(() => {
+    clearTimeout(timer)
+  })
+}
+
+/**
+ * Send the run's spans to a collector. Never throws, and never takes longer
+ * than the timeout.
+ *
+ * Called after the file is written, never before or instead: the file is the
+ * record CI uploads, and a collector must not be able to delay or prevent it.
+ * One deadline covers building the exporter, the export and its shutdown,
+ * because the exporter's own retries are bounded by its timeout but its
+ * shutdown waits on whatever is still in flight.
+ */
+export async function sendToCollector(
+  spans: readonly ReadableSpan[],
+  options: CollectorOptions,
+  log: (message: string) => void,
+): Promise<void> {
+  const url = tracesUrl(options.endpoint)
+  if (url === null) {
+    log(
+      `  ${COLLECTOR_VARIABLE} is not an http(s) URL, so no spans were sent to a collector — ` +
+        'the run is unaffected',
+    )
+    return
+  }
+
+  const timeout = options.timeoutMillis ?? COLLECTOR_TIMEOUT_MS
+  const deadline = Date.now() + timeout
+  const build = options.exporter ?? otlpOverHttp
+  let exporter: SpanExporter | undefined
+
+  try {
+    const result = await within(
+      timeout,
+      (async (): Promise<ExportResult> => {
+        const built = await build(url.toString(), timeout)
+        exporter = built
+        return new Promise<ExportResult>((resolve) => {
+          built.export([...spans], resolve)
+        })
+      })(),
+    )
+    log(
+      result.code === ExportResultCode.SUCCESS
+        ? `  sent ${String(spans.length)} span(s) to ${shown(url)}`
+        : `  could not send spans to ${shown(url)}: ${reason(result.error)} — the run is unaffected`,
+    )
+  } catch (error) {
+    log(`  could not send spans to ${shown(url)}: ${reason(error)} — the run is unaffected`)
+  } finally {
+    if (exporter !== undefined) {
+      await within(deadline - Date.now(), exporter.shutdown()).catch(() => undefined)
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // One run
 // ---------------------------------------------------------------------------
 
@@ -359,6 +521,8 @@ export interface RunSpansOptions {
   /** Absent when the transport is not the cassette decorator — a test stub, say. */
   cassetteMode?: Mode
   budgetLimit: number
+  /** Where to send the spans as well as the file. Absent — the default — sends them nowhere else. */
+  collector?: CollectorOptions
 }
 
 /** How the run ended. Recorded on the root span by `RunSpans.complete`. */
@@ -388,12 +552,14 @@ export class RunSpans {
   private readonly parent: Context
   private readonly now: () => number
   private readonly cassetteMode: Mode | undefined
+  private readonly collector: CollectorOptions | undefined
   private readonly totals = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, unpriced: 0 }
   private completed = false
 
   constructor(run: RunIdentity, options: RunSpansOptions) {
     this.now = options.now ?? Date.now
     this.cassetteMode = options.cassetteMode
+    this.collector = options.collector
     this.exporter = new FileSpanExporter({
       path: options.path ?? SPANS_FILE,
       ...(options.write !== undefined && { write: options.write }),
@@ -490,7 +656,8 @@ export class RunSpans {
   }
 
   /**
-   * End the run's span and write the file. Never throws.
+   * End the run's span, write the file, and send the spans to a collector if
+   * one was asked for. Never throws.
    *
    * A failure is logged and swallowed: the exit code belongs to the pipeline,
    * and `agents/run.ts` exits 0 whenever the pipeline worked.
@@ -515,8 +682,25 @@ export class RunSpans {
     } catch (error) {
       log(`  could not write ${this.exporter.path}: ${reason(error)} — the run is unaffected`)
     }
+
+    // After the file, whatever became of it: the spans are in memory either way,
+    // and a collector that fails or hangs has already been kept from the file.
+    if (this.collector !== undefined) {
+      await sendToCollector(this.exporter.spans, this.collector, log)
+    }
   }
 }
 
-/** `forceFlush` rejects with an array of errors, which `String` renders legibly enough. */
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error))
+/**
+ * Why something failed, in a few words.
+ *
+ * `forceFlush` rejects with an array of errors, which `String` renders legibly
+ * enough. A refused connection is an `AggregateError` with an empty message,
+ * so its code is the useful part.
+ */
+const reason = (error: unknown): string => {
+  if (!(error instanceof Error)) return String(error)
+  if (error.message !== '') return error.message
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' ? code : error.name
+}
