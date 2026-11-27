@@ -1,15 +1,23 @@
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { ExportResultCode, type ExportResult } from '@opentelemetry/core'
+import type { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace'
 import { afterEach, describe, expect, it } from 'vitest'
 import { CassetteMissError } from './cassettes.js'
 import { BudgetExceededError, SchemaViolationError, type CallRecord } from './model-client.js'
 import {
+  collectorFrom,
+  COLLECTOR_VARIABLE,
   FileSpanExporter,
   identifier,
   RunSpans,
+  sendToCollector,
   spanErrorType,
   SPANS_FILE,
+  tracesUrl,
   WITHHELD,
   writeFileAtomically,
   type RunSpansOptions,
@@ -408,6 +416,234 @@ describe('the file', () => {
     })
     await spans.close((m) => log.push(m))
     expect(log[0]).toContain('disk on fire')
+  })
+})
+
+describe('a collector', () => {
+  /** An exporter that keeps what it is sent and answers however it is told to. */
+  const fake = (
+    answer: (spans: ReadableSpan[]) => ExportResult | undefined = () => ({
+      code: ExportResultCode.SUCCESS,
+    }),
+  ): SpanExporter & { sent: ReadableSpan[][]; shutdowns: number } => {
+    const exporter = {
+      sent: [] as ReadableSpan[][],
+      shutdowns: 0,
+      export(spans: ReadableSpan[], done: (result: ExportResult) => void) {
+        exporter.sent.push(spans)
+        const result = answer(spans)
+        // Undefined means a collector that took the connection and never answered.
+        if (result !== undefined) done(result)
+      },
+      shutdown() {
+        exporter.shutdowns += 1
+        return Promise.resolve()
+      },
+    }
+    return exporter
+  }
+
+  const ENDPOINT = 'http://localhost:4318'
+
+  it.each([
+    [{}, undefined],
+    [{ [COLLECTOR_VARIABLE]: '' }, undefined],
+    [{ [COLLECTOR_VARIABLE]: '   ' }, undefined],
+    [{ [COLLECTOR_VARIABLE]: ENDPOINT }, { endpoint: ENDPOINT }],
+  ])('is asked for by %j as %j', (env, expected) => {
+    expect(collectorFrom(env)).toEqual(expected)
+  })
+
+  /** The standard variable is somebody else's; only this project's opts this project in. */
+  it('is not switched on by the standard OpenTelemetry variable', () => {
+    expect(collectorFrom({ OTEL_EXPORTER_OTLP_ENDPOINT: ENDPOINT })).toBeUndefined()
+  })
+
+  it.each([
+    ['http://localhost:4318', 'http://localhost:4318/v1/traces'],
+    ['http://localhost:4318/', 'http://localhost:4318/v1/traces'],
+    ['https://otel.example/base//', 'https://otel.example/base/v1/traces'],
+    ['http://localhost:4318/v1/traces', 'http://localhost:4318/v1/traces'],
+  ])('takes %s as a base and sends to %s', (endpoint, url) => {
+    expect(tracesUrl(endpoint)?.toString()).toBe(url)
+  })
+
+  it.each(['localhost:4318', 'not a url', 'ftp://localhost/', 'file:///tmp/spans'])(
+    'refuses %s',
+    (endpoint) => {
+      expect(tracesUrl(endpoint)).toBeNull()
+    },
+  )
+
+  it('is sent the spans the file holds, after the file is written', async () => {
+    const exporter = fake()
+    const { file, log } = await record([call()], {
+      collector: { endpoint: ENDPOINT, exporter: () => exporter },
+    })
+    const ids = (exporter.sent[0] ?? []).map((span) => span.spanContext().spanId).sort()
+    expect(ids).toEqual(file.spans.map((span) => span.spanId).sort())
+    expect(log).toEqual([
+      '  wrote otel-spans.json (2 span(s))',
+      '  sent 2 span(s) to http://localhost:4318/v1/traces',
+    ])
+    expect(exporter.shutdowns).toBe(1)
+  })
+
+  it('is never built when nobody asked for one', async () => {
+    const { log } = await record([call()])
+    expect(log).toEqual(['  wrote otel-spans.json (2 span(s))'])
+  })
+
+  /** A collector is a second destination, so a broken first one does not cost it. */
+  it('still gets the spans when the file could not be written', async () => {
+    const exporter = fake()
+    const log: string[] = []
+    const spans = new RunSpans(RUN, {
+      budgetLimit: 1,
+      write: () => {
+        throw new Error('EROFS: read-only file system')
+      },
+      collector: { endpoint: ENDPOINT, exporter: () => exporter },
+    })
+    await spans.close((m) => log.push(m))
+    expect(exporter.sent[0]).toHaveLength(1)
+    expect(log[1]).toBe('  sent 1 span(s) to http://localhost:4318/v1/traces')
+  })
+
+  it('that refuses costs a line in the log and nothing else', async () => {
+    const exporter = fake(() => ({ code: ExportResultCode.FAILED, error: new Error('503') }))
+    const { log } = await record([call()], {
+      collector: { endpoint: ENDPOINT, exporter: () => exporter },
+    })
+    expect(log[1]).toBe(
+      '  could not send spans to http://localhost:4318/v1/traces: 503 — the run is unaffected',
+    )
+  })
+
+  it('that cannot even be built costs the same', async () => {
+    const { log } = await record([call()], {
+      collector: {
+        endpoint: ENDPOINT,
+        exporter: () => Promise.reject(new Error('Cannot find package')),
+      },
+    })
+    expect(log[1]).toContain('could not send spans')
+    expect(log[1]).toContain('Cannot find package')
+  })
+
+  /**
+   * The case that matters: a collector that took the connection and never
+   * answered. The run waits the timeout and no longer, whatever the exporter's
+   * shutdown does.
+   */
+  it('that never answers is given up on at the timeout', async () => {
+    const exporter = fake(() => undefined)
+    exporter.shutdown = () => new Promise<void>(() => undefined)
+    const started = Date.now()
+    const log: string[] = []
+    await sendToCollector(
+      [],
+      { endpoint: ENDPOINT, timeoutMillis: 50, exporter: () => exporter },
+      (m) => log.push(m),
+    )
+    expect(Date.now() - started).toBeLessThan(1_000)
+    expect(log).toEqual([
+      '  could not send spans to http://localhost:4318/v1/traces: no answer within 50 ms — the run is unaffected',
+    ])
+  })
+
+  it('that is not a URL is reported, and nothing is built', async () => {
+    let built = 0
+    const log: string[] = []
+    await sendToCollector(
+      [],
+      {
+        endpoint: 'localhost:4318',
+        exporter: () => {
+          built += 1
+          return fake()
+        },
+      },
+      (m) => log.push(m),
+    )
+    expect(built).toBe(0)
+    expect(log[0]).toContain(`${COLLECTOR_VARIABLE} is not an http(s) URL`)
+  })
+
+  it('never puts credentials from the endpoint in the log', async () => {
+    const log: string[] = []
+    await sendToCollector(
+      [],
+      { endpoint: 'https://user:hunter2@otel.example?token=abc', exporter: () => fake() },
+      (m) => log.push(m),
+    )
+    expect(log[0]).toBe('  sent 0 span(s) to https://otel.example/v1/traces')
+  })
+})
+
+/**
+ * The OTLP exporter itself, against an HTTP server in this process — the
+ * request a local Jaeger receives, without a Jaeger.
+ */
+describe('OTLP over HTTP', { timeout: 15_000 }, () => {
+  const listening = async (
+    handle: Parameters<typeof createServer>[1] = (_, res) => {
+      res.end()
+    },
+  ): Promise<{ server: Server; port: number }> => {
+    const server = createServer(handle)
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    return { server, port: (server.address() as AddressInfo).port }
+  }
+
+  it('posts the run as OTLP/JSON to /v1/traces', async () => {
+    const received: { path: string; type: string; body: string }[] = []
+    const { server, port } = await listening((req, res) => {
+      let body = ''
+      req.on('data', (chunk: Buffer) => (body += chunk.toString()))
+      req.on('end', () => {
+        received.push({
+          path: req.url ?? '',
+          type: req.headers['content-type'] ?? '',
+          body,
+        })
+        res.writeHead(200, { 'content-type': 'application/json' })
+        res.end('{}')
+      })
+    })
+
+    try {
+      const { log } = await record([call()], {
+        collector: { endpoint: `http://127.0.0.1:${String(port)}` },
+      })
+      expect(log[1]).toBe(`  sent 2 span(s) to http://127.0.0.1:${String(port)}/v1/traces`)
+      expect(received).toHaveLength(1)
+      expect(received[0]?.path).toBe('/v1/traces')
+      expect(received[0]?.type).toContain('application/json')
+
+      const body = received[0]?.body ?? ''
+      expect(body).toContain('"service.name"')
+      expect(body).toContain('"sentra"')
+      expect(body).toContain('"sentra.run"')
+      expect(body).toContain('"chat claude-opus-5"')
+    } finally {
+      server.close()
+    }
+  })
+
+  it('gives up quickly on a port nothing listens on', async () => {
+    const { server, port } = await listening()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+
+    const started = Date.now()
+    const { log } = await record([call()], {
+      collector: { endpoint: `http://127.0.0.1:${String(port)}`, timeoutMillis: 300 },
+    })
+    expect(Date.now() - started).toBeLessThan(3_000)
+    expect(log[0]).toBe('  wrote otel-spans.json (2 span(s))')
+    expect(log[1]).toMatch(
+      /^ {2}could not send spans to http:\/\/127\.0\.0\.1:\d+\/v1\/traces: .+ — the run is unaffected$/,
+    )
   })
 })
 

@@ -294,7 +294,9 @@ the report says which classifier produced it.
 Beside the report, `agents:analyze` writes `otel-spans.json`: one span for the run and one per
 model call, described in [agent-design.md](agent-design.md#spans). `--spans <path>` moves it, as
 `--out` moves the report. CI uploads it in the `triage-report` artifact with `report.md` and
-`analysis.json`. A run with nothing to triage writes neither file.
+`analysis.json`. A run with nothing to triage writes neither file. Sending the same spans to a local
+Jaeger as well is optional and off by default; see
+[Optional: view spans in Jaeger](agent-design.md#optional-view-spans-in-jaeger).
 
 ### 5. `report.md` → PR comment
 

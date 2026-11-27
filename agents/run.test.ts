@@ -120,7 +120,7 @@ const run = async (
     transport?: Transport
     /** A path whose write throws, as a full disk or a read-only directory would. */
     failOn?: string
-    deps?: Pick<RunDeps, 'now' | 'spanIds'>
+    deps?: Pick<RunDeps, 'now' | 'spanIds' | 'collectorExporter'>
     git?: () => GitReader
   } = {},
 ): Promise<{ code: number; written: Record<string, string>; output: string }> => {
@@ -708,6 +708,82 @@ describe('what a run cost', () => {
       )
     },
   )
+})
+
+/**
+ * The opt-in collector, end to end through `main`. What it is sent and how it
+ * fails are in `spans.test.ts`; what is pinned here is the switch.
+ */
+describe('a collector', () => {
+  const exporter = (): {
+    build: NonNullable<RunDeps['collectorExporter']>
+    urls: string[]
+    sent: number[]
+  } => {
+    const urls: string[] = []
+    const sent: number[] = []
+    return {
+      urls,
+      sent,
+      build: (url) => {
+        urls.push(url)
+        return {
+          export: (spans, done) => {
+            sent.push(spans.length)
+            // 0 is ExportResultCode.SUCCESS.
+            done({ code: 0 })
+          },
+          shutdown: () => Promise.resolve(),
+        }
+      },
+    }
+  }
+
+  it('is not used unless SENTRA_OTLP_ENDPOINT asks for one', async () => {
+    const collector = exporter()
+    const result = await run([], {
+      transport: stub(),
+      deps: { collectorExporter: collector.build },
+    })
+    expect(collector.urls).toEqual([])
+    expect(result.output).not.toContain('sent ')
+  })
+
+  it('is sent the run’s spans as well as the file when it does', async () => {
+    const collector = exporter()
+    const result = await run([], {
+      env: { ANTHROPIC_API_KEY: 'test', SENTRA_OTLP_ENDPOINT: 'http://localhost:4318' },
+      transport: stub(),
+      deps: { collectorExporter: collector.build },
+    })
+    expect(result.code).toBe(0)
+    expect(Object.keys(result.written)).toEqual(['report.md', 'otel-spans.json'])
+    expect(collector.urls).toEqual(['http://localhost:4318/v1/traces'])
+    expect(collector.sent).toEqual([2])
+    expect(result.output).toContain('sent 2 span(s) to http://localhost:4318/v1/traces')
+  })
+
+  /** The degraded path is the one a fork runs, and it is the same switch. */
+  it('is sent the baseline run’s spans too', async () => {
+    const collector = exporter()
+    await run([], {
+      env: { SENTRA_OTLP_ENDPOINT: 'http://localhost:4318' },
+      deps: { collectorExporter: collector.build },
+    })
+    expect(collector.sent).toEqual([1])
+  })
+
+  it('cannot fail the run when it is missing', async () => {
+    const result = await run([], {
+      env: { ANTHROPIC_API_KEY: 'test', SENTRA_OTLP_ENDPOINT: 'http://localhost:4318' },
+      transport: stub(),
+      deps: { collectorExporter: () => Promise.reject(new Error('connect ECONNREFUSED')) },
+    })
+    expect(result.code).toBe(0)
+    expect(result.written['otel-spans.json']).toBeDefined()
+    expect(result.output).toContain('could not send spans to http://localhost:4318/v1/traces')
+    expect(result.output).toContain('the run is unaffected')
+  })
 })
 
 describe('what the spans file will never carry', () => {
