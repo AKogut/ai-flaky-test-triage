@@ -83,26 +83,37 @@ Vitest for the API and libraries, Playwright for UI flows, and a set of genuinel
 flakiness comes from real races rather than a `Math.random()` in the test. Captured runs feed the
 golden dataset.
 
-**Status:** in progress
+**Status:** done
 
 **Exit criterion:** ≥10 `captured` fixtures from real CI runs are in the dataset, and eval metrics
 are reported broken down by provenance.
 
-**All eight issues are closed and the criterion is not met, so the milestone is not done.** The
-second half holds — the report breaks metrics down by provenance and states the synthetic-versus-
-captured gap in words. The first does not: there are six captured fixtures, five of them from
-genuine CI runs.
+**Met.** Eleven `captured` fixtures are in the dataset, ten of them from real CI runs, and the
+report breaks every metric down by provenance and states the synthetic-versus-captured gap in
+words.
 
-The constraint is not tooling — `npm run capture` takes a directory of downloaded reports. It is
-that the suite contains six specs that can fail and CI had run it nine times. Reaching ten meant
-capturing the same test's failure on several commits, which would have narrowed every interval in
-`eval/report.md` without adding a single new piece of information: the specific dishonesty the
-methodology exists to prevent.
+The first six arrived with #172, five of them from CI. At that point the suite had six specs that
+could fail and CI had run it nine times, so reaching ten meant capturing the same test's failure on
+several commits — narrower intervals and no new information, the specific dishonesty the methodology
+exists to prevent. The count was left short, and the milestone, once marked done by mistake, was
+corrected during an audit.
 
-So the count was left short, #171 tracks it, and the status stays honest. This milestone was marked
-done once and corrected during an audit — the rule is that a milestone is done when its criterion
-holds, not when its issues close, and marking it done was exactly the drift the rule exists to
-catch.
+The other five came from new failures rather than more runs (#171): five specs that fail through
+real mechanisms in quadrants the captured set had nothing in — a WebKit build CI never installs, an
+expectation copied from the seed before it grew a row, midpoint positions that run out of
+floating-point precision, two tests' servers racing for one port, and an arrival-order defect in the
+completion path that nothing documented. Their failures were captured from seven runs of the E2E
+job in [run 46000694160](https://github.com/AKogut/ai-flaky-test-triage/actions/runs/46000694160).
+Captured fixtures now cover all six quadrants, and three of them are `deterministic`.
+
+Counted strictly, the ten CI fixtures come from ten different tests and nine different defects: the
+reorder reconciliation appears through two tests, as #172 recorded it. The criterion counts
+fixtures, and it holds; the stricter count is stated so nobody has to work it out.
+
+On the development slice captured fixtures score 3.0pp below synthetic ones on joint accuracy, nine
+against 22, with intervals that overlap almost entirely — at four captured the gap read 11.4pp. #171
+stays open for its own bar, twenty captured fixtures with no near-duplicates, and for the
+reweighting decision, which waits on intervals that separate.
 
 ## M6 — flakemetry-lib integration
 

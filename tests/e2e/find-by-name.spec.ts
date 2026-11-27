@@ -36,8 +36,11 @@ import { expect, test } from './fixtures.js'
  * waiting longer fixes it. Here the opposite is true: the longer the spec waits,
  * the more certainly there are two matching rows.
  *
- * Measured. As written, this test fails on about half of its runs. Adding the
- * correct synchronisation in front of the assertion —
+ * Measured. As written, this test failed on about half of its runs — and on 5
+ * of 20 once five more spec files joined the suite, because the chaotic
+ * instance's delays are drawn in request order and the files ahead of this one
+ * change how many draws come first. Adding the correct synchronisation in front
+ * of the assertion —
  *
  * ```ts
  * await expect(page.getByTestId('task-item')).toHaveCount(ACTIVE + 1)

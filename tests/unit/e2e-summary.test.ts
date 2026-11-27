@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DELIBERATELY_FLAKY, linker, main } from '../../scripts/e2e-summary.js'
+import { DELIBERATE_FAILURES, deliberately, linker, main } from '../../scripts/e2e-summary.js'
 
 /**
  * The E2E job's verdict, and the list it forgives.
@@ -13,6 +13,11 @@ import { DELIBERATELY_FLAKY, linker, main } from '../../scripts/e2e-summary.js'
  * and nothing records that it happened. If the list drifts, the same thing
  * happens more slowly: a spec somebody fixed keeps its exemption, and the next
  * real regression in it is forgiven.
+ *
+ * The specs every case below starts from are the intermittent entries and two
+ * control specs, all passing. The entries that fail on every run are left out
+ * of that starting point on purpose — a suite where they pass is a broken one —
+ * and have cases of their own.
  */
 
 const root = new URL('../..', import.meta.url).pathname
@@ -20,7 +25,8 @@ const REPORT_PATH = join(root, 'results.json')
 
 const CONTROL = 'tests/e2e/create.spec.ts'
 const OTHER_CONTROL = 'tests/e2e/reorder.spec.ts'
-const SPECS = [...DELIBERATELY_FLAKY, CONTROL, OTHER_CONTROL]
+const DETERMINISTIC = 'tests/e2e/board-on-open.spec.ts'
+const SPECS = [...deliberately('intermittent'), CONTROL, OTHER_CONTROL]
 
 type Status = 'passed' | 'failed' | 'timedOut' | 'skipped' | 'interrupted'
 
@@ -130,14 +136,14 @@ describe('a red suite made only of the deliberate failures', () => {
 
   it('says so with exactly one notice, carrying the counts, and no error or warning', () => {
     expect(result.notices).toHaveLength(1)
-    expect(result.notices[0]).toContain('6 tests: 4 passed, 2 failed, 0 flaky, 0 skipped')
+    expect(result.notices[0]).toContain('8 tests: 6 passed, 2 failed, 0 flaky, 0 skipped')
     expect(result.errors).toEqual([])
     expect(result.printed.filter((line) => line.startsWith('::warning'))).toEqual([])
   })
 
   it('writes the counts and each failing test, with its file, to the job summary', () => {
     expect(result.summary).toContain('| Passed | Failed | Flaky | Skipped |')
-    expect(result.summary).toContain('| 4 | 2 | 0 | 0 |')
+    expect(result.summary).toContain('| 6 | 2 | 0 | 0 |')
     expect(result.summary).toContain('| finds a new task | `tests/e2e/find-by-name.spec.ts` |')
     expect(result.summary).toContain(
       '| keeps both moves | `tests/e2e/reorder-quick-succession.spec.ts` | timed out, expected |',
@@ -145,7 +151,8 @@ describe('a red suite made only of the deliberate failures', () => {
   })
 
   it('says the failures are expected and where they go', () => {
-    expect(result.summary).toMatch(/fail intermittently by design/)
+    expect(result.summary).toMatch(/fail some of the time by design/)
+    expect(result.summary).toMatch(/fail on every run by design/)
     expect(result.summary).toContain('**Flakiness analysis**')
     expect(result.summary).toContain('**Agent triage**')
   })
@@ -164,6 +171,78 @@ describe('a green suite', () => {
     expect(result.notices[0]).toContain('Nothing failed.')
     expect(result.summary).toContain('**Passed.** Nothing failed.')
     expect(result.summary).not.toContain('| Failing test |')
+  })
+})
+
+describe('a spec that fails on every run by design', () => {
+  it('is forgiven when it fails, like the intermittent ones', () => {
+    const result = run({
+      report: report(
+        green(
+          { file: DETERMINISTIC, title: 'opens on the seeded tasks', results: ['failed'] },
+          { file: 'tests/e2e/find-by-name.spec.ts', title: 'finds', results: ['failed'] },
+        ),
+      ),
+      exitCode: '1',
+    })
+    expect(result.code).toBe(0)
+    expect(result.errors).toEqual([])
+    expect(result.summary).toContain(
+      `| opens on the seeded tasks | \`${DETERMINISTIC}\` | failed, expected |`,
+    )
+  })
+
+  it('is forgiven when the file also holds a test that passes', () => {
+    const result = run({
+      report: report(
+        green(
+          { file: DETERMINISTIC, title: 'opens on the seeded tasks', results: ['timedOut'] },
+          { file: DETERMINISTIC, title: 'opens on what the seed defines', results: ['passed'] },
+        ),
+      ),
+      exitCode: '1',
+    })
+    expect(result.code).toBe(0)
+  })
+
+  /**
+   * The drift this list is exposed to. Somebody fixed what the header
+   * describes, the spec went green, and from now on its entry would forgive
+   * the next real failure in it.
+   */
+  it('fails the job when nothing in it failed, naming the file and what to do', () => {
+    const result = run({
+      report: report(
+        green(
+          { file: DETERMINISTIC, title: 'opens on the seeded tasks', results: ['passed'] },
+          { file: 'tests/e2e/find-by-name.spec.ts', title: 'finds', results: ['failed'] },
+        ),
+      ),
+      exitCode: '1',
+    })
+    expect(result.code).toBe(1)
+    expect(result.notices).toEqual([])
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain(`${DETERMINISTIC} is listed as failing on every run`)
+    expect(result.errors[0]).toContain('DELIBERATE_FAILURES')
+    expect(result.summary).toContain('**Failed.**')
+  })
+
+  it('fails the job when it only failed on an attempt a retry then passed', () => {
+    const result = run({
+      report: report(green({ file: DETERMINISTIC, title: 'opens', results: ['failed', 'passed'] })),
+      exitCode: '0',
+    })
+    expect(result.code).toBe(1)
+    expect(result.errors.join('\n')).toContain('is listed as failing on every run')
+  })
+
+  it('is not held to it when it was skipped, which is the never-ran check’s business', () => {
+    const result = run({
+      report: report(green({ file: DETERMINISTIC, title: 'opens', results: [] })),
+      exitCode: '0',
+    })
+    expect(result.errors.join('\n')).not.toContain('is listed as failing on every run')
   })
 })
 
@@ -292,7 +371,13 @@ describe('the specs it expects to see', () => {
     const tracked = execSync('git ls-files "tests/e2e/*.spec.ts"', { cwd: root, encoding: 'utf8' })
       .split('\n')
       .filter((path) => path !== '')
-    const all = tracked.map((file) => ({ file, title: 'passes', results: ['passed'] as Status[] }))
+    // Every spec as it behaves on a healthy run: the ones that fail on every
+    // run fail, and everything else passes.
+    const all = tracked.map((file) => ({
+      file,
+      title: 'runs',
+      results: [DELIBERATE_FAILURES[file] === 'deterministic' ? 'failed' : 'passed'] as Status[],
+    }))
     const printed: string[] = []
     const judgeWithout = (cases: Case[]): number =>
       main([], {
@@ -356,19 +441,29 @@ const specFiles = execSync('git ls-files "tests/e2e/*.spec.ts"', { cwd: root, en
 
 /**
  * Whether a spec steps outside the environment the control group runs in, for
- * the whole file. There are two ways to, each one visible line (see
- * `tests/e2e/fixtures.ts`): the chaotic server, and a database that is not
- * reset between tests. Indented calls inside a `describe` are a block, not the
- * file, and `harness.spec.ts` uses one to prove the opt-out works.
+ * the whole file. There are three ways to, each one visible line: the chaotic
+ * server and a database that is not reset between tests (see
+ * `tests/e2e/fixtures.ts`), and tests that run in parallel inside one file,
+ * which `playwright.config.ts` otherwise rules out. Indented calls inside a
+ * `describe` are a block, not the file, and `harness.spec.ts` uses one to prove
+ * the reset opt-out works.
  */
-const fileLevel = (source: string, option: RegExp): boolean =>
-  new RegExp(`^test\\.use\\(\\{[^}]*\\b${option.source}`, 'm').test(source)
+interface Opt {
+  call: string
+  option: RegExp
+}
 
-const CHAOS = /chaos:\s*true/
-const NO_RESET = /resetDatabase:\s*false/
+const CHAOS: Opt = { call: 'test.use', option: /chaos:\s*true/ }
+const NO_RESET: Opt = { call: 'test.use', option: /resetDatabase:\s*false/ }
+const PARALLEL: Opt = { call: 'test.describe.configure', option: /mode:\s*'parallel'/ }
 
-const optedIn = (option: RegExp): string[] =>
-  specFiles.filter((spec) => fileLevel(spec.source, option)).map((spec) => spec.path)
+const stepsOut = (source: string, { call, option }: Opt): boolean =>
+  new RegExp(`^${call.replaceAll('.', '\\.')}\\(\\{[^}]*\\b${option.source}`, 'm').test(source)
+
+const optedIn = (opt: Opt): string[] =>
+  specFiles.filter((spec) => stepsOut(spec.source, opt)).map((spec) => spec.path)
+
+const listed = Object.keys(DELIBERATE_FAILURES)
 
 /**
  * The cause half of the cross-test leak. It leaves a row behind and never reads
@@ -379,44 +474,58 @@ const CAUSES: Record<string, string> = {
   'tests/e2e/quarterly-pack.spec.ts': 'tests/e2e/visible-tasks.spec.ts',
 }
 
-describe('the deliberately flaky specs', () => {
+describe('the deliberate failures', () => {
   it('are found, so the checks below are checking something', () => {
-    expect(specFiles.length).toBeGreaterThan(DELIBERATELY_FLAKY.length)
-    expect(optedIn(CHAOS).length).toBeGreaterThan(0)
-    expect(optedIn(NO_RESET).length).toBeGreaterThan(0)
+    expect(specFiles.length).toBeGreaterThan(listed.length)
+    expect(deliberately('intermittent').length).toBeGreaterThan(0)
+    expect(deliberately('deterministic').length).toBeGreaterThan(0)
+    for (const opt of [CHAOS, NO_RESET, PARALLEL]) expect(optedIn(opt).length).toBeGreaterThan(0)
   })
 
-  it('name only spec files git tracks, each once', () => {
+  it('name only spec files git tracks', () => {
     const tracked = specFiles.map((spec) => spec.path)
-    for (const file of DELIBERATELY_FLAKY) expect(tracked).toContain(file)
-    expect(new Set(DELIBERATELY_FLAKY).size).toBe(DELIBERATELY_FLAKY.length)
+    for (const file of listed) expect(tracked).toContain(file)
   })
 
   /**
-   * A listed spec that runs in the controlled environment cannot fail on
-   * purpose any more. Somebody applied the fix its header describes, and the
-   * entry is now a standing exemption for a real regression.
+   * A listed intermittent spec that runs in the controlled environment cannot
+   * fail some of the time any more. Somebody applied the fix its header
+   * describes, and the entry is now a standing exemption for a real regression.
+   *
+   * The deterministic entries are not held to this, because they fail inside
+   * the controlled environment by construction. They are held at run time
+   * instead: see "a spec that fails on every run by design" above.
    */
-  it.each(DELIBERATELY_FLAKY)('%s steps outside the controlled environment', (file) => {
-    const spec = specFiles.find((s) => s.path === file)
-    expect(fileLevel(spec?.source ?? '', CHAOS) || fileLevel(spec?.source ?? '', NO_RESET)).toBe(
-      true,
-    )
+  it.each(deliberately('intermittent'))('%s steps outside the controlled environment', (file) => {
+    const source = specFiles.find((s) => s.path === file)?.source ?? ''
+    expect([CHAOS, NO_RESET, PARALLEL].some((opt) => stepsOut(source, opt))).toBe(true)
   })
 
-  it.each(DELIBERATELY_FLAKY)('%s says in its opening comment that it fails', (file) => {
+  it.each(Object.entries(DELIBERATE_FAILURES))(
+    '%s says in its opening comment that it fails, and is %s',
+    (file, determinism) => {
+      const header = specFiles.find((s) => s.path === file)?.header ?? ''
+      expect(header).toMatch(/\bfails\b/)
+      expect(header).toMatch(new RegExp(`\\b${determinism}\\b`))
+    },
+  )
+
+  it.each(deliberately('deterministic'))('%s says that it fails on every run', (file) => {
     const header = specFiles.find((s) => s.path === file)?.header ?? ''
-    expect(header).toMatch(/\bfails\b/)
-    expect(header).toMatch(/\bintermittent\b/)
+    expect(header).toMatch(/\bfails on every run\b/)
   })
 
   /** The chaotic server exists for these specs and nothing else (`tests/e2e/harness.ts`). */
   it('include every spec that runs against the chaotic server', () => {
-    expect(DELIBERATELY_FLAKY).toEqual(expect.arrayContaining(optedIn(CHAOS)))
+    expect(deliberately('intermittent')).toEqual(expect.arrayContaining(optedIn(CHAOS)))
+  })
+
+  it('include every spec whose tests run in parallel with each other', () => {
+    expect(deliberately('intermittent')).toEqual(expect.arrayContaining(optedIn(PARALLEL)))
   })
 
   it('include every spec that keeps rows another file left, except where the rows come from', () => {
-    const unlisted = optedIn(NO_RESET).filter((file) => !DELIBERATELY_FLAKY.includes(file))
+    const unlisted = optedIn(NO_RESET).filter((file) => !listed.includes(file))
     expect(unlisted).toEqual(Object.keys(CAUSES))
   })
 
@@ -424,6 +533,6 @@ describe('the deliberately flaky specs', () => {
     const header = specFiles.find((s) => s.path === cause)?.header ?? ''
     expect(header).toContain('Nothing in this file fails.')
     expect(header).toContain(`\`${basename(symptom)}\``)
-    expect(DELIBERATELY_FLAKY).toContain(symptom)
+    expect(DELIBERATE_FAILURES[symptom]).toBe('intermittent')
   })
 })

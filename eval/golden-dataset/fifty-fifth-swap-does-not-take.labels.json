@@ -1,0 +1,10 @@
+{
+  "name": "fifty-fifth-swap-does-not-take",
+  "owner": "app_code",
+  "determinism": "deterministic",
+  "justification": "The message names a timeout, which invites the reading that the spec looked too early, and sixty moves invites the reading that it does something no user does. Neither holds. Each move waits for the server to answer before anything is checked, and what timed out is a poll of the stored rows, which held their final value from the moment the answer arrived: the database has the wrong order. The server places a moved row at the midpoint of its neighbours; moves into the same gap halve it until the midpoint rounds onto a neighbour, the two tie, and order falls back to insertion id, so the 55th move is stored as no move. A board used for weeks reaches that state by itself. Rule 2 does not fire, rule 3 decides, and the product is at fault. Deterministic: arithmetic, the same move every run, no pass in the history.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "captured",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

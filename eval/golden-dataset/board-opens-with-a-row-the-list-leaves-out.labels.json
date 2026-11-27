@@ -1,0 +1,10 @@
+{
+  "name": "board-opens-with-a-row-the-list-leaves-out",
+  "owner": "test_code",
+  "determinism": "deterministic",
+  "justification": "The tempting reading is app_code: the board shows a row the spec did not expect, which is how a row leaked from another test, or a product creating rows it should not, would look. Neither is happening. The extra row is one the board is seeded with, added to the seed deliberately, and the expectation is a hand-copied list from before that change, so it names five of six. Rule 1 does not fire: the page loaded and the assertion ran. Rule 2 does not either: the spec waits properly and depends on nothing another test did. Rule 3 decides it: the failure reproduces against an unchanged product on a freshly seeded database, and the side that is out of date is the expectation. Deterministic: the same six rows render on every run, and the history has no pass.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "captured",
+  "bucket": "stale-test",
+  "lowConfidenceGroundTruth": false
+}

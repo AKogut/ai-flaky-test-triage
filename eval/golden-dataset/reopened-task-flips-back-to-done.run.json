@@ -1,0 +1,35 @@
+{
+  "name": "reopened-task-flips-back-to-done",
+  "scenario": "A task is completed and then reopened straight away, and the row ends up showing it done.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/complete-and-reopen.spec.ts›keeps a task open when it is completed and reopened straight away",
+      "title": "keeps a task open when it is completed and reopened straight away",
+      "file": "tests/e2e/complete-and-reopen.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "workerIndex": 3,
+      "startedAt": "2026-11-27T12:54:19.047Z",
+      "flakyWithinRun": false,
+      "durationMs": 10781,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('task-item').filter({ has: getByText('Draft the release notes', { exact: true }) }).getByTestId('task-status')\nExpected: \u001b[32m\"To do\"\u001b[39m\nReceived: \u001b[31m\"Done\"\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" getByTestId('task-item').filter({ has: getByText('Draft the release notes', { exact: true }) }).getByTestId('task-status') with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('task-item').filter({ has: getByText('Draft the release notes', { exact: true }) }).getByTestId('task-status')\u001b[22m\n\u001b[2m    24 × locator resolved to <span class=\"task-status\" data-testid=\"task-status\">Done</span>\u001b[22m\n\u001b[2m       - unexpected value \"Done\"\u001b[22m\n",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByTestId('task-item').filter({ has: getByText('Draft the release notes', { exact: true }) }).getByTestId('task-status')\nExpected: \u001b[32m\"To do\"\u001b[39m\nReceived: \u001b[31m\"Done\"\u001b[39m\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" getByTestId('task-item').filter({ has: getByText('Draft the release notes', { exact: true }) }).getByTestId('task-status') with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByTestId('task-item').filter({ has: getByText('Draft the release notes', { exact: true }) }).getByTestId('task-status')\u001b[22m\n\u001b[2m    24 × locator resolved to <span class=\"task-status\" data-testid=\"task-status\">Done</span>\u001b[22m\n\u001b[2m       - unexpected value \"Done\"\u001b[22m\n\n    at tests/e2e/complete-and-reopen.spec.ts:99:60",
+        "snippet": "   97 |   await expect.poll(() => stored(db).find((task) => task.title === TASK)?.status).toBe('active')\n   98 |\n>  99 |   await expect(row(page, TASK).getByTestId('task-status')).toHaveText('To do')\n      |                                                            ^\n  100 | })\n  101 |"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/complete-and-reopen.spec.ts›keeps a task open when it is completed and reopened straight away",
+      "flakinessScore": 0.74,
+      "consecutiveFailures": 1,
+      "totalRuns": 5,
+      "statusHistory": "PFPPF",
+      "firstSeenAt": "2026-11-27T12:41:55.006Z",
+      "lastPassedAt": "2026-11-27T12:50:34.583Z",
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const TASK = 'Draft the release notes'\n\nfunction statusWrites(page: Page): () => number {\n  let answered = 0\n  page.on('response', (response) => {\n    if (response.request().method() === 'PATCH' && /\\/api\\/tasks\\/\\d+/.test(response.url())) {\n      answered += 1\n    }\n  })\n  return () => answered\n}\n\ntest.beforeEach(async ({ page }) => {\n  await open(page)\n})\n\ntest('keeps a task open when it is completed and reopened straight away', async ({ page, db }) => {\n  const answered = statusWrites(page)\n\n  await action(page, TASK, 'Complete').click()\n  await expect(row(page, TASK).getByTestId('task-status')).toHaveText('Done')\n\n  await action(page, TASK, 'Reopen').click()\n  await expect(row(page, TASK).getByTestId('task-status')).toHaveText('To do')\n\n  await expect.poll(answered).toBe(2)\n  await expect.poll(() => stored(db).find((task) => task.title === TASK)?.status).toBe('active')\n\n  await expect(row(page, TASK).getByTestId('task-status')).toHaveText('To do')\n})\n"
+}

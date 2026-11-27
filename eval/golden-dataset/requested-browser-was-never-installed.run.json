@@ -1,0 +1,34 @@
+{
+  "name": "requested-browser-was-never-installed",
+  "scenario": "A test that adds a task from the keyboard in a second browser engine fails.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board-in-webkit.spec.ts›adds a task from the keyboard in WebKit",
+      "title": "adds a task from the keyboard in WebKit",
+      "file": "tests/e2e/board-in-webkit.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "workerIndex": 6,
+      "startedAt": "2026-11-27T13:01:34.480Z",
+      "flakyWithinRun": false,
+      "durationMs": 5,
+      "annotations": [],
+      "error": {
+        "message": "Error: browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/webkit-2388/pw_run.sh\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝",
+        "stack": "Error: browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/webkit-2388/pw_run.sh\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board-in-webkit.spec.ts›adds a task from the keyboard in WebKit",
+      "flakinessScore": 0,
+      "consecutiveFailures": 7,
+      "totalRuns": 7,
+      "statusHistory": "FFFFFFF",
+      "firstSeenAt": "2026-11-27T12:41:55.006Z",
+      "lastPassedAt": null,
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const TITLE = 'Book the retrospective room'\n\ntest('adds a task from the keyboard in WebKit', async ({ page }) => {\n  await open(page)\n\n  await page.getByPlaceholder('What needs doing?').fill(TITLE)\n  await page.getByPlaceholder('What needs doing?').press('Enter')\n\n  await expect(titles(page).last()).toHaveText(TITLE)\n})\n"
+}

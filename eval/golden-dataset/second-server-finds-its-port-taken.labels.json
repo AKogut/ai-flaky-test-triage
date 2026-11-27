@@ -1,0 +1,10 @@
+{
+  "name": "second-server-finds-its-port-taken",
+  "owner": "environment",
+  "determinism": "intermittent",
+  "justification": "The tempting answer is test_code, and it has a real argument: the port is a constant in the spec, the file runs its tests in parallel, and the fix, deriving the port from the worker or listening on port 0, would go in that file. Rule 1 still comes first and fires. The server the test needed could not bind, so no assertion ran, and the rubric applies that regardless of anything else; the failure says nothing about whether the test is a valid detector, because it never got to detect anything. Intermittent: two tests in the file start their servers on the same port at the same moment, the system gives it to whichever asked first, and which one that is changes from run to run. The history this fixture carries alternates: 5 failures and 2 passes in 7 CI runs. It ends in two failures, but the last five runs include a pass, which is what the rule asks.",
+  "ruleApplied": "rule-1-no-assertion-reached",
+  "provenance": "captured",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}

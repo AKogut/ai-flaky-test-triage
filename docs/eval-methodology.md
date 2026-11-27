@@ -59,44 +59,44 @@ the project demonstrates something rarer than a working classifier: a willingnes
 ### What it scores today
 
 The baseline is the only classifier with a number: no model has been scored yet (#38). Against all
-39 committed fixtures — both slices, and the one arguable fixture included — with 95% Wilson
+44 committed fixtures — both slices, and the one arguable fixture included — with 95% Wilson
 intervals:
 
 | Metric                | Baseline              | Macro-F1 |
 | --------------------- | --------------------- | -------- |
-| **Joint** (both axes) | **33.3% [20.6–49.0]** | —        |
-| `owner`               | 51.3% [36.2–66.1]     | 0.41     |
-| `determinism`         | 76.9% [61.7–87.4]     | 0.77     |
+| **Joint** (both axes) | **34.1% [21.9–48.9]** | —        |
+| `owner`               | 52.3% [37.9–66.2]     | 0.51     |
+| `determinism`         | 77.3% [63.0–87.2]     | 0.77     |
 
 Three things in that table are worth reading carefully, because they are the reason the metrics are
 shaped this way.
 
-**Joint accuracy is 18pp below the `owner` axis and 44pp below `determinism`.** Reporting either
-axis alone would describe a classifier that half works; 33.3% is how often it produces an answer a
+**Joint accuracy is 18pp below the `owner` axis and 43pp below `determinism`.** Reporting either
+axis alone would describe a classifier that half works; 34.1% is how often it produces an answer a
 developer could act on without checking.
 
-**`test_code` has an F1 of 0.20.** The baseline identifies two test-code failures out of twelve —
-support 12, eight predictions, two correct — and both are captured fixtures with no commit under
-test, where there is no product diff for the ownership rule to fire on. It was exactly 0 until those
-fixtures arrived. Accuracy hides this completely; macro-F1 is what makes it visible, which is the
-argument for reporting both.
+**`test_code` has an F1 of 0.25.** The baseline identifies three test-code failures out of thirteen
+— support 13, eleven predictions, three correct — and all three are captured fixtures with no
+commit under test, where there is no product diff for the ownership rule to fire on. It was exactly 0
+until captured fixtures arrived. Accuracy hides this completely; macro-F1 is what makes it visible,
+which is the argument for reporting both.
 
-**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 59.0%
-against 51.3%, because 23 of 39 fixtures are `app_code`. That is not a defect in the baseline — it
-is the adversarial dataset doing its job. The constant classifier's macro-F1 is 0.25 against the
-baseline's 0.41, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
-two intervals overlap heavily, so at n=39 neither result is evidence of a difference at all. That
+**A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, 56.8%
+against 52.3%, because 25 of 44 fixtures are `app_code`. That is not a defect in the baseline — it
+is the adversarial dataset doing its job. The constant classifier's macro-F1 is 0.24 against the
+baseline's 0.51, so the baseline is genuinely better; accuracy alone simply cannot say so. And the
+two intervals overlap heavily, so at n=44 neither result is evidence of a difference at all. That
 is the honest reading, and it is also the argument for growing the dataset to 60.
 
 Every number above is pinned in `eval/metrics.test.ts`. A change to the rules or to the dataset
 fails the suite with the old and new values side by side.
 
 `eval/report.md` scores the development slice instead, the one `npm run eval` reads by default:
-34.6% joint [19.4–53.8] over the 26 fixtures it scores. That is the figure the README quotes.
+35.5% joint [21.1–53.1] over the 31 fixtures it scores. That is the figure the README quotes.
 
 ## 2. An adversarial dataset
 
-`eval/golden-dataset/` targets **≥60 fixtures**, hand-labelled — it holds 39 today — with this
+`eval/golden-dataset/` targets **≥60 fixtures**, hand-labelled — it holds 44 today — with this
 composition:
 
 | Bucket                                                        | Share | Purpose                                                                  |
@@ -119,26 +119,35 @@ a prose justification for the label, and the rules from
 `mutated` (a captured run with an injected defect). Metrics are broken down by provenance —
 if the agent only performs on synthetic fixtures, that is visible.
 
+Eleven fixtures are `captured` today, ten of them from CI runs and one from local runs, and they
+cover all six quadrants. On the development slice the baseline scores 33.3% [12.1–64.6] joint over
+nine captured fixtures against 36.4% [19.7–57.0] over 22 synthetic ones: 3.0pp apart, with
+intervals that overlap almost entirely. At n=4 captured the gap was 11.4pp. Neither number says
+anything yet about whether the hand-authored fixtures are easier than real ones, and #171 keeps the
+question open until there are twenty captured fixtures to read it against.
+
 ### Evidence the buckets do what they claim
 
 A bucket that says it "punishes diff-only reasoning" is a claim, not a fact, until something is
 measured against it. Scoring the baseline per bucket is that measurement:
 
-| Bucket                      |   n | Joint  | `owner` | `determinism` |
-| --------------------------- | --: | ------ | ------- | ------------- |
-| `straightforward`           |   8 | 100.0% | 100.0%  | 100.0%        |
-| `hard-quadrant`             |  12 | 25.0%  | 50.0%   | 75.0%         |
-| `stale-test`                |   7 | 0.0%   | 0.0%    | 100.0%        |
-| `unsynchronised-test`       |   3 | 33.3%  | 66.7%   | 66.7%         |
-| `misleading-history`        |   4 | 0.0%   | 75.0%   | 0.0%          |
-| `environment-as-regression` |   4 | 25.0%  | 25.0%   | 100.0%        |
-| `cross-file-state-leak`     |   1 | 0.0%   | 0.0%    | 0.0%          |
+| Bucket                      |   n | Joint | `owner` | `determinism` |
+| --------------------------- | --: | ----- | ------- | ------------- |
+| `straightforward`           |  11 | 81.8% | 90.9%   | 90.9%         |
+| `hard-quadrant`             |  13 | 23.1% | 46.2%   | 76.9%         |
+| `stale-test`                |   8 | 12.5% | 12.5%   | 100.0%        |
+| `unsynchronised-test`       |   3 | 33.3% | 66.7%   | 66.7%         |
+| `misleading-history`        |   4 | 0.0%  | 75.0%   | 0.0%          |
+| `environment-as-regression` |   4 | 25.0% | 25.0%   | 100.0%        |
+| `cross-file-state-leak`     |   1 | 0.0%  | 0.0%    | 0.0%          |
 
 Each adversarial bucket defeats the baseline **on the axis it was built to attack, and only that
 axis**:
 
-- `stale-test` targets diff-only reasoning about ownership. Owner drops to 0%; determinism stays
-  at 100%.
+- `stale-test` targets diff-only reasoning about ownership. Owner drops to 0% on its seven
+  synthetic fixtures, every one of which carries a product diff; determinism stays at 100%. The
+  one captured stale test has no diff to mislead the rule, names a locator, and is called
+  `test_code` — right for a reason that is not the reason.
 - `unsynchronised-test` is the mirror image, and the baseline is barely defeated by it on ownership:
   two of its three fixtures name a locator in their message, its crude rule reads that and answers
   `test_code`, and it is right for a reason that is not the reason. It loses the third, and two of
@@ -152,9 +161,14 @@ That orthogonality is the part worth noticing. Buckets that all failed together 
 fixtures were simply hard, or simply badly written. Failing on precisely the intended axis is what
 distinguishes an adversarial dataset from a difficult one.
 
-`straightforward` at 100% is the control on the control: it says the baseline is a working
-classifier rather than a broken one, so the failures above are properties of the fixtures rather
-than of the code being measured.
+`straightforward` is the control on the control: at 100% on its eight synthetic fixtures it says the
+baseline is a working classifier rather than a broken one, so the failures above are properties of
+the fixtures rather than of the code being measured. Its three captured fixtures score one of three,
+and that is a finding about provenance rather than a broken control. The synthetic ones all carry
+the product diff the ownership rule keys on; the captured regression carries none and names a
+timeout, so it is called `test_code`, and the captured port collision ended its history on two
+failures, so it is called deterministic. A captured run gives the baseline fewer clean signals than
+a hand-authored one, which is the reason captured fixtures exist.
 
 The full confusion matrices and quadrant table are regenerated into `eval/report.md`; the numbers
 here are pinned in `eval/confusion.test.ts`.
@@ -163,8 +177,8 @@ here are pinned in `eval/confusion.test.ts`.
 
 Two independent sources of noise, both measured.
 
-**Sampling noise from a small dataset.** The baseline's joint accuracy on the 26 scored
-development fixtures is 34.6% with a 95% Wilson interval of 19.4–53.8 — 34 points wide, enough to
+**Sampling noise from a small dataset.** The baseline's joint accuracy on the 31 scored
+development fixtures is 35.5% with a 95% Wilson interval of 21.1–53.1 — 32 points wide, enough to
 hide a real regression. At 60 fixtures the same accuracy would still carry an interval about 23
 points wide. Every reported metric carries its interval, and the dataset size is a tracked project
 metric.
@@ -285,12 +299,12 @@ live in `eval/gate.ts`, one file, each with the reason it has the value it does.
 | Hard-quadrant accuracy lower bound below floor                      | 0.50           | M3     |
 | Cost per fixture rises sharply                                      | +50%           | model  |
 
-**Comparisons use interval lower bounds, never point estimates.** At n=26 a point estimate moves
+**Comparisons use interval lower bounds, never point estimates.** At n=31 a point estimate moves
 several percentage points between two classifiers that are indistinguishable, so gating on it
 would fire on the dice. The lower bound fires when the evidence supports a regression.
 
 **Four of the six are targets for the agent, not descriptions of the baseline.** The baseline's
-joint accuracy lower bound is 0.194 against a floor of 0.65; its hard-quadrant lower bound is 0.071
+joint accuracy lower bound is 0.211 against a floor of 0.65; its hard-quadrant lower bound is 0.063
 against 0.50. Enabling those today would make `main` permanently red on facts everybody already
 knows, and a permanently red gate is one people learn to merge past. They are implemented, printed
 in every run with the current distance to the target, and each names the condition that switches it
@@ -388,7 +402,7 @@ source or the run context, so any accuracy those fields buy is accuracy the cont
 
 The conclusions in the report are written by the generator, under the rule the main report uses: a
 difference counts only when the intervals do not overlap, and anything less is called within noise
-in those words. At n = 26 that is most single-field effects. A paired test would detect smaller
+in those words. At n = 31 that is most single-field effects. A paired test would detect smaller
 moves, since every row scores the same fixtures; the per-variant count of changed predictions is
 the paired measurement, reported rather than tested.
 
@@ -425,24 +439,24 @@ So the per-bucket balance is **best-effort and measured**, not guaranteed:
 | --------------------------- | ----: | --: | -------: |
 | `cross-file-state-leak`     |     1 |   1 |        0 |
 | `environment-as-regression` |     4 |   3 |        1 |
-| `hard-quadrant`             |    12 |   8 |        4 |
+| `hard-quadrant`             |    13 |   9 |        4 |
 | `misleading-history`        |     4 |   3 |        1 |
-| `stale-test`                |     7 |   5 |        2 |
-| `straightforward`           |     8 |   5 |        3 |
+| `stale-test`                |     8 |   6 |        2 |
+| `straightforward`           |    11 |   8 |        3 |
 | `unsynchronised-test`       |     3 |   2 |        1 |
-| **Total**                   |    39 |  27 |   **12** |
+| **Total**                   |    44 |  32 |   **12** |
 
-12 of 39 is 31%, not 20%. That is ordinary binomial variance at this size — the expected count is
-7.8 with a standard deviation of 2.5 — and it narrows as the dataset grows towards 60. A bucket of
+12 of 44 is 27%, not 20%. That is ordinary binomial variance at this size — the expected count is
+8.8 with a standard deviation of 2.7 — and it narrows as the dataset grows towards 60. A bucket of
 four has a 41% chance of receiving no held-out fixture at all, and the newest bucket — one fixture,
 from #54 — has none. The report states which buckets the held-out slice is silent about rather than
 letting a reader assume the split guarantees coverage.
 
 One methodological note, since this is a document about not fooling yourself. Two reasonable
 constructions exist for turning a hash into a uniform value — dividing by 2³², and the slightly
-biased `hash % 100` — and on these 39 fixtures they produce **different splits**, 12 held out
-against 6. Choosing between them after seeing that would be picking a test set by how convenient it
-looks. The unbiased one is used; the result is reported, not selected.
+biased `hash % 100` — and on the 39 fixtures the choice was made against they produced **different
+splits**, 12 held out against 6. Choosing between them after seeing that would be picking a test
+set by how convenient it looks. The unbiased one is used; the result is reported, not selected.
 
 ### The usage budget
 

@@ -77,7 +77,7 @@ the dataset cannot move a number without the build saying so.
 
 ## 2. An adversarial dataset
 
-A target of 60 fixtures — 39 today, 27 in the development slice and 12 held out — weighted towards
+A target of 60 fixtures — 44 today, 32 in the development slice and 12 held out — weighted towards
 the cases that defeat obvious shortcuts:
 
 | Bucket                                       | Target share |

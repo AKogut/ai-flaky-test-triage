@@ -163,10 +163,11 @@ describe('the committed dataset split', () => {
   )
   const held = composition.reduce((n, row) => n + row.holdout, 0)
 
-  it('holds out 12 of 39', () => {
-    // Pinned. 31% against a 20% target is ordinary binomial variance at n=39
-    // (sd ≈ 2.5 on an expected 7.8), not a defect in the rule. If this number
-    // moves without a fixture being added, the rule changed.
+  it('holds out 12 of 44', () => {
+    // Pinned. 27% against a 20% target is ordinary binomial variance at n=44
+    // (sd ≈ 2.7 on an expected 8.8), not a defect in the rule. If this number
+    // moves without a fixture being added, the rule changed. The five #171
+    // added all landed in dev, which is a one-in-three outcome at 80% each.
     expect(held).toBe(12)
   })
 
@@ -181,7 +182,7 @@ describe('the committed dataset split', () => {
   })
 
   it('leaves enough in the development slice to iterate against', () => {
-    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(27)
+    expect(composition.reduce((n, row) => n + row.dev, 0)).toBe(32)
   })
 })
 

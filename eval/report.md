@@ -9,11 +9,11 @@
 | classifier             | `baseline`                           |
 | model                  | none — a heuristic, no model call    |
 | prompt version         | none                                 |
-| dataset                | 27 fixtures in `eval/golden-dataset` |
-| dataset revision       | `08b6da23ebcfe892`                   |
+| dataset                | 32 fixtures in `eval/golden-dataset` |
+| dataset revision       | `f185ef3b4aa87fd2`                   |
 | slice                  | `dev`                                |
 | samples per fixture    | 1                                    |
-| scored in the headline | 26 (1 excluded)                      |
+| scored in the headline | 31 (1 excluded)                      |
 
 There is deliberately **no generation timestamp** here. The report is committed, so
 `git log eval/report.md` already records when each set of numbers was produced — and a clock
@@ -27,13 +27,13 @@ and a label edit both move it, because both move the numbers.
 
 | metric                 |          baseline | agent | delta |
 | ---------------------- | ----------------: | ----: | ----: |
-| **joint accuracy**     | 34.6% [19.4–53.8] |     — |     — |
-| `owner` accuracy       | 46.2% [28.8–64.5] |     — |     — |
-| `determinism` accuracy | 84.6% [66.5–93.8] |     — |     — |
-| `owner` macro-F1       |             0.410 |     — |     — |
-| `determinism` macro-F1 |             0.845 |     — |     — |
+| **joint accuracy**     | 35.5% [21.1–53.1] |     — |     — |
+| `owner` accuracy       | 48.4% [32.0–65.2] |     — |     — |
+| `determinism` accuracy | 83.9% [67.4–92.9] |     — |     — |
+| `owner` macro-F1       |             0.509 |     — |     — |
+| `determinism` macro-F1 |             0.836 |     — |     — |
 
-All figures over **n = 26**, with 95% Wilson intervals.
+All figures over **n = 31**, with 95% Wilson intervals.
 
 The agent column is empty because the agent has not been scored yet. It exists and
 `--classifier=agent` runs it, but scoring it takes live model calls, and no run with an API key
@@ -63,16 +63,16 @@ construction, not by measurement.
 
 ## Calibration
 
-**Confidence is weakly informative.** Confidence ranks predictions at AUROC 0.70 with an expected calibration error of 0.215. It orders predictions better than chance but the stated number is not the observed rate — treat it as a sortable hint, not a probability. No root-cause threshold could be derived: the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point. At 26 predictions from a stratified dataset this is a direction, not a measurement.
+**Confidence is weakly informative.** Confidence ranks predictions at AUROC 0.70 with an expected calibration error of 0.200. It orders predictions better than chance but the stated number is not the observed rate — treat it as a sortable hint, not a probability. No root-cause threshold could be derived: no confidence value reaches 70.0% accuracy at all; the best any threshold managed was 66.7%. At 31 predictions from a stratified dataset this is a direction, not a measurement.
 
-|                              |                                                                                                                                                 |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| predictions scored           | 26                                                                                                                                              |
-| distinct confidence values   | 4                                                                                                                                               |
-| discrimination (AUROC)       | 0.696 — 0.50 is a coin toss                                                                                                                     |
-| expected calibration error   | 0.215                                                                                                                                           |
-| worst single bin             | 0.350                                                                                                                                           |
-| derived root-cause threshold | not derived — the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point |
+|                              |                                                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| predictions scored           | 31                                                                                                        |
+| distinct confidence values   | 5                                                                                                         |
+| discrimination (AUROC)       | 0.698 — 0.50 is a coin toss                                                                               |
+| expected calibration error   | 0.200                                                                                                     |
+| worst single bin             | 0.350                                                                                                     |
+| derived root-cause threshold | not derived — no confidence value reaches 70.0% accuracy at all; the best any threshold managed was 66.7% |
 
 ### Reliability curve
 
@@ -83,9 +83,9 @@ two columns equal in every row. Empty bins are omitted; where the classifier nev
 | confidence | predictions | stated | observed |    gap |
 | ---------- | ----------: | -----: | -------: | -----: |
 | 0.3–0.4    |           2 |  0.350 |    0.000 | -0.350 |
-| 0.5–0.6    |          12 |  0.500 |    0.250 | -0.250 |
-| 0.6–0.7    |          11 |  0.600 |    0.455 | -0.145 |
-| 0.7–0.8    |           1 |  0.700 |    1.000 | +0.300 |
+| 0.5–0.6    |          13 |  0.500 |    0.231 | -0.269 |
+| 0.6–0.7    |          13 |  0.608 |    0.462 | -0.146 |
+| 0.7–0.8    |           3 |  0.700 |    0.667 | -0.033 |
 
 ### Deriving the threshold
 
@@ -96,25 +96,26 @@ everything it can be right about, and a higher bar buys accuracy by answering le
 
 | threshold | predictions at or above | accuracy |     |
 | --------: | ----------------------: | -------: | --- |
-|      0.35 |                      26 |    34.6% |     |
-|      0.50 |                      24 |    37.5% |     |
-|      0.60 |                      12 |    50.0% |     |
-|      0.70 |                       1 |   100.0% |     |
+|      0.35 |                      31 |    35.5% |     |
+|      0.50 |                      29 |    37.9% |     |
+|      0.60 |                      16 |    50.0% |     |
+|      0.65 |                       5 |    60.0% |     |
+|      0.70 |                       3 |    66.7% |     |
 
 ## Per quadrant
 
 | quadrant                        | support | correct |          accuracy |
 | ------------------------------- | ------: | ------: | ----------------: |
-| `app_code` + `deterministic`    |       7 |       5 | 71.4% [35.9–91.8] |
-| **`app_code` + `intermittent`** |       8 |       2 |  25.0% [7.1–59.1] |
-| `test_code` + `deterministic`   |       6 |       0 |   0.0% [0.0–39.0] |
+| `app_code` + `deterministic`    |       8 |       5 | 62.5% [30.6–86.3] |
+| **`app_code` + `intermittent`** |       9 |       2 |  22.2% [6.3–54.7] |
+| `test_code` + `deterministic`   |       7 |       1 |  14.3% [2.6–51.3] |
 | `test_code` + `intermittent`    |       2 |       1 |  50.0% [9.5–90.5] |
-| `environment` + `deterministic` |       2 |       1 |  50.0% [9.5–90.5] |
-| `environment` + `intermittent`  |       1 |       0 |   0.0% [0.0–79.3] |
+| `environment` + `deterministic` |       3 |       2 | 66.7% [20.8–93.9] |
+| `environment` + `intermittent`  |       2 |       0 |   0.0% [0.0–65.8] |
 
 The bold row is the hard quadrant — an `app_code` defect that does not reproduce on rerun.
 It is the case this project exists for, so it is reported on its own rather than averaged
-into the headline, where 8 fixtures out of 26 would be invisible.
+into the headline, where 9 fixtures out of 31 would be invisible.
 
 ## Confusion matrices
 
@@ -124,10 +125,10 @@ Rows are ground truth, columns are what the classifier said; the bold diagonal i
 
 | actual ↓ / predicted → | `app_code` | `test_code` | `environment` | **total** |
 | ---------------------- | ---------: | ----------: | ------------: | --------: |
-| `app_code`             |     **10** |           5 |             0 |        15 |
-| `test_code`            |          7 |       **1** |             0 |         8 |
-| `environment`          |          2 |           0 |         **1** |         3 |
-| **total**              |         19 |           6 |             1 |    **26** |
+| `app_code`             |     **10** |           7 |             0 |        17 |
+| `test_code`            |          7 |       **2** |             0 |         9 |
+| `environment`          |          2 |           0 |         **3** |         5 |
+| **total**              |         19 |           9 |             3 |    **31** |
 
 ### `determinism`
 
@@ -135,19 +136,19 @@ Rows are ground truth, columns are what the classifier said; the bold diagonal i
 
 | actual ↓ / predicted → | `deterministic` | `intermittent` | **total** |
 | ---------------------- | --------------: | -------------: | --------: |
-| `deterministic`        |          **12** |              3 |        15 |
-| `intermittent`         |               1 |         **10** |        11 |
-| **total**              |              13 |             13 |    **26** |
+| `deterministic`        |          **15** |              3 |        18 |
+| `intermittent`         |               2 |         **11** |        13 |
+| **total**              |              17 |             14 |    **31** |
 
 ## Per class
 
 | axis          | class           | support | predicted | correct |           precision |            recall |    F1 |
 | ------------- | --------------- | ------: | --------: | ------: | ------------------: | ----------------: | ----: |
-| `owner`       | `app_code`      |      15 |        19 |      10 |   52.6% [31.7–72.7] | 66.7% [41.7–84.8] | 0.588 |
-| `owner`       | `test_code`     |       8 |         6 |       1 |    16.7% [3.0–56.4] |  12.5% [2.2–47.1] | 0.143 |
-| `owner`       | `environment`   |       3 |         1 |       1 | 100.0% [20.7–100.0] |  33.3% [6.1–79.2] | 0.500 |
-| `determinism` | `deterministic` |      15 |        13 |      12 |   92.3% [66.7–98.6] | 80.0% [54.8–93.0] | 0.857 |
-| `determinism` | `intermittent`  |      11 |        13 |      10 |   76.9% [49.7–91.8] | 90.9% [62.3–98.4] | 0.833 |
+| `owner`       | `app_code`      |      17 |        19 |      10 |   52.6% [31.7–72.7] | 58.8% [36.0–78.4] | 0.556 |
+| `owner`       | `test_code`     |       9 |         9 |       2 |    22.2% [6.3–54.7] |  22.2% [6.3–54.7] | 0.222 |
+| `owner`       | `environment`   |       5 |         3 |       3 | 100.0% [43.9–100.0] | 60.0% [23.1–88.2] | 0.750 |
+| `determinism` | `deterministic` |      18 |        17 |      15 |   88.2% [65.7–96.7] | 83.3% [60.8–94.2] | 0.857 |
+| `determinism` | `intermittent`  |      13 |        14 |      11 |   78.6% [52.4–92.4] | 84.6% [57.8–95.7] | 0.815 |
 
 `support` is how many fixtures genuinely are that class; `predicted` is how often the
 classifier reached for it. A class with support and no correct predictions has an F1 of 0 and
@@ -158,23 +159,23 @@ it.
 
 ### By provenance
 
-| provenance  |   n |             joint |             owner |         determinism |
-| ----------- | --: | ----------------: | ----------------: | ------------------: |
-| `captured`  |   4 |  25.0% [4.6–69.9] |  25.0% [4.6–69.9] | 100.0% [51.0–100.0] |
-| `synthetic` |  22 | 36.4% [19.7–57.0] | 50.0% [30.7–69.3] |   81.8% [61.5–92.7] |
+| provenance  |   n |             joint |             owner |       determinism |
+| ----------- | --: | ----------------: | ----------------: | ----------------: |
+| `captured`  |   9 | 33.3% [12.1–64.6] | 44.4% [18.9–73.3] | 88.9% [56.5–98.0] |
+| `synthetic` |  22 | 36.4% [19.7–57.0] | 50.0% [30.7–69.3] | 81.8% [61.5–92.7] |
 
-Captured fixtures score 11.4pp below synthetic ones on joint accuracy (4 against 22 fixtures). The two intervals overlap, so this is a difference between point estimates and not evidence of a difference between the populations. At these counts it cannot be read as one, and reporting it as one would be the exact error this section exists to catch.
+Captured fixtures score 3.0pp below synthetic ones on joint accuracy (9 against 22 fixtures). The two intervals overlap, so this is a difference between point estimates and not evidence of a difference between the populations. At these counts it cannot be read as one, and reporting it as one would be the exact error this section exists to catch.
 
 ### By difficulty bucket
 
-| bucket                      |   n |               joint |               owner |         determinism |
-| --------------------------- | --: | ------------------: | ------------------: | ------------------: |
-| `environment-as-regression` |   3 |    33.3% [6.1–79.2] |    33.3% [6.1–79.2] | 100.0% [43.9–100.0] |
-| `hard-quadrant`             |   8 |    25.0% [7.1–59.1] |   37.5% [13.7–69.4] |   87.5% [52.9–97.8] |
-| `misleading-history`        |   3 |     0.0% [0.0–56.1] |   66.7% [20.8–93.9] |     0.0% [0.0–56.1] |
-| `stale-test`                |   5 |     0.0% [0.0–43.4] |     0.0% [0.0–43.4] | 100.0% [56.6–100.0] |
-| `straightforward`           |   5 | 100.0% [56.6–100.0] | 100.0% [56.6–100.0] | 100.0% [56.6–100.0] |
-| `unsynchronised-test`       |   2 |    50.0% [9.5–90.5] |    50.0% [9.5–90.5] | 100.0% [34.2–100.0] |
+| bucket                      |   n |             joint |             owner |         determinism |
+| --------------------------- | --: | ----------------: | ----------------: | ------------------: |
+| `environment-as-regression` |   3 |  33.3% [6.1–79.2] |  33.3% [6.1–79.2] | 100.0% [43.9–100.0] |
+| `hard-quadrant`             |   9 |  22.2% [6.3–54.7] | 33.3% [12.1–64.6] |   88.9% [56.5–98.0] |
+| `misleading-history`        |   3 |   0.0% [0.0–56.1] | 66.7% [20.8–93.9] |     0.0% [0.0–56.1] |
+| `stale-test`                |   6 |  16.7% [3.0–56.4] |  16.7% [3.0–56.4] | 100.0% [61.0–100.0] |
+| `straightforward`           |   8 | 75.0% [40.9–92.9] | 87.5% [52.9–97.8] |   87.5% [52.9–97.8] |
+| `unsynchronised-test`       |   2 |  50.0% [9.5–90.5] |  50.0% [9.5–90.5] | 100.0% [34.2–100.0] |
 
 ### Excluded from the headline
 
@@ -192,12 +193,12 @@ This report scores the `dev` slice.
 | --------------------------- | -----: | -----: | -------: |
 | `cross-file-state-leak`     |      1 |      1 |        0 |
 | `environment-as-regression` |      4 |      3 |        1 |
-| `hard-quadrant`             |     12 |      8 |        4 |
+| `hard-quadrant`             |     13 |      9 |        4 |
 | `misleading-history`        |      4 |      3 |        1 |
-| `stale-test`                |      7 |      5 |        2 |
-| `straightforward`           |      8 |      5 |        3 |
+| `stale-test`                |      8 |      6 |        2 |
+| `straightforward`           |     11 |      8 |        3 |
 | `unsynchronised-test`       |      3 |      2 |        1 |
-| **total**                   | **39** | **27** |   **12** |
+| **total**                   | **44** | **32** |   **12** |
 
 A fixture's slice is a pure function of its name — the first 32 bits of its SHA-256, held out
 below 20%. Nothing about the rest of the dataset enters into it, so adding, removing or
@@ -205,7 +206,7 @@ renaming any other fixture cannot move it. That property is worth more than an e
 a fixture silently changing slice would invalidate every held-out number ever published, and
 would do it without any visible failure.
 
-The realised split is 12 of 39 — 31%, against a 20% target. That gap is
+The realised split is 12 of 44 — 27%, against a 20% target. That gap is
 ordinary binomial variance at this size, not a defect in the rule, and it narrows as the
 dataset grows towards the 60 fixtures the methodology targets.
 
@@ -223,6 +224,7 @@ number can be read to mean.
 | ------------------------------------------------- | --------------------------- | --------------------------- | --------------------------- | --- | ----: |
 | `added-row-not-on-screen-inside-the-allowed-time` | `unsynchronised-test`       | test_code / intermittent    | test_code / intermittent    | ✓   |  0.50 |
 | `board-control-appears-twice-after-panel-split`   | `misleading-history`        | test_code / deterministic   | app_code / intermittent     | ✗   |  0.50 |
+| `board-opens-with-a-row-the-list-leaves-out`      | `stale-test`                | test_code / deterministic   | test_code / deterministic   | ✓   |  0.65 |
 | `board-shows-a-row-nothing-in-the-file-created`   | `cross-file-state-leak`     | test_code / intermittent    | app_code / deterministic    | ✗   |  0.35 |
 | `bulk-insert-reuses-identifier`                   | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `client-calls-unversioned-endpoint-path`          | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
@@ -236,13 +238,17 @@ number can be read to mean.
 | `editing-title-clears-board-position`             | `straightforward`           | app_code / deterministic    | app_code / deterministic    | ✓   |  0.60 |
 | `expectation-assumes-flat-response-body`          | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `export-now-includes-archived-rows`               | `misleading-history`        | app_code / deterministic    | app_code / intermittent     | ½   |  0.50 |
+| `fifty-fifth-swap-does-not-take`                  | `straightforward`           | app_code / deterministic    | test_code / deterministic   | ½   |  0.65 |
 | `list-order-reverts-after-two-quick-moves`        | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
 | `locator-still-uses-retired-test-id`              | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `package-registry-certificate-expired-on-agent`   | `environment-as-regression` | environment / deterministic | app_code / deterministic    | ½   |  0.60 |
 | `port-still-held-by-the-previous-job`             | `environment-as-regression` | environment / deterministic | environment / deterministic | ✓   |  0.70 |
 | `position-collision-orders-by-insertion-id`       | `hard-quadrant`             | app_code / intermittent     | app_code / intermittent     | ✓   |  0.50 |
+| `reopened-task-flips-back-to-done`                | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
 | `reorder-reconciliation-overwrites-later-drag`    | `hard-quadrant`             | app_code / intermittent     | test_code / intermittent    | ½   |  0.50 |
+| `requested-browser-was-never-installed`           | `straightforward`           | environment / deterministic | environment / deterministic | ✓   |  0.70 |
 | `search-rejects-the-empty-query-it-used-to-allow` | `misleading-history`        | app_code / deterministic    | app_code / intermittent     | ½   |  0.50 |
+| `second-server-finds-its-port-taken`              | `straightforward`           | environment / intermittent  | environment / deterministic | ½   |  0.70 |
 | `seed-helper-sends-retired-column`                | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `spec-asserts-withdrawn-legacy-field`             | `stale-test`                | test_code / deterministic   | app_code / deterministic    | ½   |  0.60 |
 | `stored-status-read-before-the-write-answered`    | `unsynchronised-test`       | test_code / intermittent    | app_code / intermittent     | ½   |  0.35 |

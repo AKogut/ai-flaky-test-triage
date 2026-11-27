@@ -1,0 +1,10 @@
+{
+  "name": "requested-browser-was-never-installed",
+  "owner": "environment",
+  "determinism": "deterministic",
+  "justification": "The run broke before the test did anything. The browser fixture could not launch the engine the spec asked for, because the executable at the path the message names was never downloaded onto the runner, so no page existed and no assertion ran. Rule 1 fires, and it fires before the tempting test_code reading is weighed: that the spec asked for an engine the project does not configure. The request is a legitimate one, and the fix is an install step in CI rather than a line in the spec. Deterministic: no retry downloads a browser, every attempt fails the same way at the same point, and the history has no pass.",
+  "ruleApplied": "rule-1-no-assertion-reached",
+  "provenance": "captured",
+  "bucket": "straightforward",
+  "lowConfidenceGroundTruth": false
+}
