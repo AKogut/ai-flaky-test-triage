@@ -29,13 +29,16 @@ the transport. Between them:
   months to notice.
 - **Telemetry.** Every successful call reports a `CallTelemetry` record — model, prompt version,
   attempts, schema violations, transient failures, token counts, duration — to a callback the
-  caller supplies, and the eval harness turns those into the cost figures in `eval/report.md`.
-  `agents/pricing.ts` prices each call for the report footer. Every call, however it ends, also
-  reports a `CallRecord` to an `onCall` observer, and that is what the OpenTelemetry spans are
-  built from — see [Spans](#spans). What remains of cost accounting is #77.
+  caller supplies. Every call, however it ends, also reports a `CallRecord` to an `onCall`
+  observer, and that is what the OpenTelemetry spans are built from — see [Spans](#spans).
+  Neither record keeps a token count of its own: see [Cost](#cost).
 - **Budget.** A per-run token ceiling, checked **before** dispatch against a real
   `count_tokens` call rather than a character estimate, and re-checked before each schema retry
   because a corrected prompt is longer. A budget that only reports what was spent is an invoice.
+  The count admits a request; what the budget is then charged is what the API billed for it,
+  read from the same ledger as every other cost figure, so the budget and the bill agree. A
+  request still in flight holds its count against the budget, so two calls admitted at once each
+  see the other.
   One budget is shared across a whole run — a per-call ceiling is not a ceiling on anything, since
   thirty-nine fixtures would each stay inside it. In the pipeline, once it refuses a call the
   orchestrator stops dispatching, and every test it never reached is reported as `not-dispatched`
@@ -92,12 +95,12 @@ the OpenTelemetry GenAI semantic conventions where those have one (`gen_ai.*`, `
 `sentra.*` where they do not. The schema, every attribute and a few `jq` starting points are in the
 JSDoc at the top of `agents/spans.ts`; this page does not repeat them.
 
-Spans are built from `CallRecord`, not `CallTelemetry`. `CallTelemetry` is success-only because
-`eval/report.md` would count a failed call as an answer. A span needs the opposite: the calls worth
-reading are the ones that were refused, ran out of budget or never matched the schema. So
-`callModel` reports a second record on every exit, with an outcome of `ok`, `refused`,
-`schema-invalid`, `budget` or `error`. An observer that throws is ignored — instrumentation that
-can turn a classification into a failed row changes what it measures.
+Spans are built from `CallRecord`, not `CallTelemetry`. `CallTelemetry` is success-only: it
+describes an answer. A span needs the opposite: the calls worth reading are the ones that were
+refused, ran out of budget or never matched the schema. So `callModel` reports a second record on
+every exit, with an outcome of `ok`, `refused`, `schema-invalid`, `budget` or `error`. An observer
+that throws is ignored — instrumentation that can turn a classification into a failed row changes
+what it measures.
 
 - **A file, not a collector.** Per [ADR-0001](adr/0001-single-repo-no-persistent-services.md),
   nothing stays running. The `TracerProvider` belongs to the run and is not registered globally,
@@ -115,10 +118,6 @@ can turn a classification into a failed row changes what it measures.
   class in `error.type`, never through `recordException`: that would copy the message, and a
   schema violation's message names the test.
 
-**Span cost and report cost differ on purpose.** A span counts the tokens a failed call spent,
-including on answers the schema rejected; the report footer's usage line counts successful calls
-only. Reconciling the two is part of #77.
-
 The OpenTelemetry SDK is on the 3.x line, with the `@opentelemetry/api` 1.10 that every 3.x
 package requires. Most of what 3.0 changed does not reach this code: the removed packages and
 exports are ones it never used, and it imports four packages by name, so the new `dist/` build
@@ -127,6 +126,46 @@ behind an `exports` map is invisible to it. Its spans are the same as under 2.x 
 `unknown`, and SDK 3 records an object or a mixed array where 2.x dropped it, so neither the
 compiler nor the SDK would stop a structure that carries a test title. `agents/spans.ts` builds
 every attribute against a type of its own that admits strings, numbers and booleans only.
+
+### Cost
+
+Every token count in the project is read from one list, the usage ledger in `agents/ledger.ts`.
+`callModel` writes one entry per request it sends — every `Transport.send`, retries included — at
+the moment its outcome is known, and everything else is a view of that list:
+
+| Reads it                           | As                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------- |
+| `TokenBudget`                      | the billed input tokens it is charged                                   |
+| A call's span                      | the sum of that call's own entries, priced per answering model          |
+| The run's span                     | the sum over its calls; `sentra.budget.used` is the billed input        |
+| The report footer                  | the run's total, and the part of it that bought nothing                 |
+| The console after `agents:analyze` | the same total, on one line                                             |
+| `eval/report.md` and the gate      | the total, per fixture, per classification and projected to 50 failures |
+
+**What a reader is shown is what was billed.** That is every response that arrived with usage on
+it, whatever happened next: the ones the schema accepted, the ones it rejected and the call
+retried, a refusal, and a reply with nothing in it to parse. A refusal is an HTTP 200 the API bills
+like an answer, and before the ledger no figure anywhere counted one. The part of the total that
+bought nothing the run could use is printed beside it — `$0.0300, $0.0200 of it on responses the
+run could not use` — rather than taken out of it, because a footer that leaves out the retries
+makes an unstable prompt look cheap.
+
+A request that got no response (a rate limit, a server fault, a malformed request, a cassette
+miss) is recorded with zero tokens, because nothing was billed; it still counts as a request. A
+call the budget refused never reaches the ledger, because nothing was sent; its span says
+`budget`. Prices come from the dated table in `agents/pricing.ts`, at the price of the model that
+answered each response. A model with no price there is named wherever the cost is printed, and
+its share is missing from the figure rather than counted as zero.
+
+Two costs are still invisible, and
+[operational limitations](limitations-and-guardrails.md#operational-limitations) lists them: the
+declined hop of a server-side fallback, and a request that timed out after the server had
+processed it.
+
+The evaluation's cost threshold is enforced whenever a model ran. It compares cost per fixture
+with the figure recorded on `main` and fails a rise of more than half; it fails outright when a
+model in the run has no price, because a cost with a missing share is a floor, not a figure. With
+the baseline, which calls nothing, every one of these figures says no model call and $0.
 
 ## 1. Triage agent
 

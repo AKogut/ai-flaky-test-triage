@@ -260,6 +260,19 @@ describe('the rendered report', () => {
     expect(report).toContain('none — a heuristic, no model call')
   })
 
+  /**
+   * Present on the baseline too, saying $0 and why. A Cost section that only
+   * appeared once a model ran would leave its absence ambiguous: free, or not
+   * measured.
+   */
+  it('says what the baseline cost, which is nothing, and what a CI run would', () => {
+    expect(report).toContain('## Cost')
+    expect(report).toContain('No model call, so $0')
+    expect(report).toMatch(/\| per fixture +\| +\$0\.0000 \|/)
+    expect(report).toMatch(/\| projected, 50-failure CI run +\| +\$0\.0000 \|/)
+    expect(evaluation.cost.dispatches).toBe(0)
+  })
+
   it('keeps the agent column visible while it is empty', () => {
     // The project reports a delta over the baseline. Dropping the column would
     // let the absolute number read as the result.
@@ -272,6 +285,7 @@ describe('the rendered report', () => {
     for (const heading of [
       '## Provenance',
       '## Headline',
+      '## Cost',
       '## Per quadrant',
       '## Confusion matrices',
       '## Per class',

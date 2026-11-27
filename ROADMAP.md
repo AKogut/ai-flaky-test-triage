@@ -194,11 +194,11 @@ either justified by the numbers or removed because of them.
 
 Spans are done (#76, closed by #235): `agents:analyze` writes `otel-spans.json` — one root span per
 run and one per model call, carrying identifiers, counts, tokens and cost and no untrusted text —
-and CI uploads it in the `triage-report` artifact. Cost accounting is partly there:
-`agents/pricing.ts` prices every call, the report footer carries tokens and dollars, and
-`eval/report.md` adds a per-fixture cost and a 50-failure projection whenever a model ran. #77 is
-the remainder, including the gap between span cost, which counts the tokens failed calls spent, and
-the footer, which counts successful calls only.
+and CI uploads it in the `triage-report` artifact. Cost accounting is done (#77): every request
+is recorded once in a usage ledger, refusals and rejected answers included, and the token budget,
+the spans, the report footer, the console line after a run and `eval/report.md` all read their
+figures from it. The report carries cost per fixture and a 50-failure projection, and the gate's
+cost check is enforced whenever a model ran.
 
 The ablation harness (#78) exists: `npm run eval:ablation` runs every context variant in the
 methodology and writes `eval/ablation.md`. What that file holds today is the baseline control,

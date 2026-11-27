@@ -20,7 +20,6 @@ import {
 } from '@opentelemetry/sdk-trace'
 import { CassetteMissError, type Mode } from './cassettes.js'
 import { BudgetExceededError, SchemaViolationError, type CallRecord } from './model-client.js'
-import { cost } from './pricing.js'
 import { redactSecrets } from './redact.js'
 import { TransportError } from './transport.js'
 
@@ -83,11 +82,17 @@ export type { IdGenerator }
  * | `sentra.run.tests.considered` | tests selected for triage                                     |
  * | `sentra.run.tests.classified` | of those, how many got a verdict                              |
  * | `sentra.run.calls`            | model calls made, including failed ones                       |
+ * | `sentra.run.input_tokens`     | billed input tokens, summed over the calls                    |
+ * | `sentra.run.output_tokens`    | billed output tokens, likewise                                |
  * | `sentra.run.cost_usd`         | the priced calls' cost, from `agents/pricing.ts`              |
  * | `sentra.run.unpriced_calls`   | calls to a model `pricing.ts` has no price for                |
  * | `sentra.budget.limit`         | the input-token budget                                        |
- * | `sentra.budget.used`          | input tokens reserved against it                              |
+ * | `sentra.budget.used`          | billed input tokens charged against it                        |
  * | `sentra.cassette.mode`        | `replay`, `record` or `live`, when cassettes are in play      |
+ *
+ * Every token figure here is a sum over the usage ledger (`agents/ledger.ts`),
+ * the same list the report footer totals, so the run's tokens, its cost and
+ * `sentra.budget.used` agree with the footer by construction.
  *
  * A run that crashed before its report was written still gets a root span,
  * with status `ERROR` and message `incomplete`.
@@ -104,7 +109,7 @@ export type { IdGenerator }
  * | `gen_ai.request.model`           | what `MODEL_CONFIG` asked for                        |
  * | `gen_ai.response.model`          | what answered; absent if nothing did                 |
  * | `gen_ai.request.max_tokens`      | the output ceiling                                   |
- * | `gen_ai.usage.input_tokens`      | summed over every attempt that got a response        |
+ * | `gen_ai.usage.input_tokens`      | billed, over every attempt that got a response       |
  * | `gen_ai.usage.output_tokens`     | likewise                                             |
  * | `error.type`                     | on failure only — see below                          |
  * | `sentra.prompt.version`          | e.g. `triage.v1`                                     |
@@ -383,7 +388,7 @@ export class RunSpans {
   private readonly parent: Context
   private readonly now: () => number
   private readonly cassetteMode: Mode | undefined
-  private readonly totals = { calls: 0, costUsd: 0, unpriced: 0 }
+  private readonly totals = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, unpriced: 0 }
   private completed = false
 
   constructor(run: RunIdentity, options: RunSpansOptions) {
@@ -418,17 +423,22 @@ export class RunSpans {
     this.parent = trace.setSpan(ROOT_CONTEXT, this.root)
   }
 
-  /** One span per model call. Bound, so it can be handed straight to the pipeline. */
+  /**
+   * One span per model call. Bound, so it can be handed straight to the pipeline.
+   *
+   * Tokens and cost are copied from the record, never recomputed: `callModel`
+   * sums them from the usage ledger, and a second pricing here would be a second
+   * number with every chance of disagreeing with the footer.
+   */
   readonly onCall = (call: CallRecord): void => {
-    const model = call.responseModel ?? call.requestModel
-    const priced = cost([{ model, inputTokens: call.inputTokens, outputTokens: call.outputTokens }])
-    const isPriced = priced.unpricedModels.length === 0
     const agent = agentName(call.promptVersion)
     const failed = call.outcome !== 'ok'
 
     this.totals.calls += 1
-    if (isPriced) this.totals.costUsd += priced.usd
-    else this.totals.unpriced += 1
+    this.totals.inputTokens += call.inputTokens
+    this.totals.outputTokens += call.outputTokens
+    if (call.costUsd === undefined) this.totals.unpriced += 1
+    else this.totals.costUsd += call.costUsd
 
     const attributes: FlatAttributes = {
       'gen_ai.operation.name': 'chat',
@@ -447,7 +457,7 @@ export class RunSpans {
       'sentra.call.attempts': call.attempts,
       'sentra.call.schema_violations': call.schemaViolations,
       'sentra.call.transient_failures': call.transientFailures,
-      ...(isPriced && { 'sentra.call.cost_usd': dollars(priced.usd) }),
+      ...(call.costUsd !== undefined && { 'sentra.call.cost_usd': dollars(call.costUsd) }),
       ...(this.cassetteMode !== undefined && {
         'sentra.cassette.mode': this.cassetteMode,
         // In replay every call is served from a cassette or fails for want of
@@ -489,6 +499,8 @@ export class RunSpans {
     try {
       this.root.setAttributes({
         'sentra.run.calls': this.totals.calls,
+        'sentra.run.input_tokens': this.totals.inputTokens,
+        'sentra.run.output_tokens': this.totals.outputTokens,
         'sentra.run.cost_usd': dollars(this.totals.costUsd),
         'sentra.run.unpriced_calls': this.totals.unpriced,
       } satisfies FlatAttributes)

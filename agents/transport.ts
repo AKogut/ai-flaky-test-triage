@@ -82,12 +82,25 @@ export type FailureKind =
   /** The model declined. A policy outcome, not a fault — see below. */
   | 'refusal'
 
+/**
+ * A response that arrived and was then turned into an error: what answered, and
+ * what the API billed for it.
+ */
+export type BilledResponse = Pick<ModelResponse, 'model' | 'usage'>
+
 export class TransportError extends Error {
   constructor(
     readonly kind: FailureKind,
     message: string,
     readonly status?: number,
     override readonly cause?: unknown,
+    /**
+     * Present when a response arrived before the error did — a refusal, or a
+     * reply with nothing in it to parse. Both are billed like an answer, so the
+     * usage ledger has to see them; without this they were the one cost no
+     * figure in the project counted.
+     */
+    readonly response?: BilledResponse,
   ) {
     super(message)
     this.name = 'TransportError'
@@ -234,25 +247,7 @@ export class AnthropicTransport implements Transport {
       throw classify(error)
     }
 
-    // Checked before `content` is touched. A refused response is a successful
-    // HTTP 200 whose content array is empty or partial, so indexing it first
-    // turns a policy outcome into an undefined-property crash. With fallback
-    // on, a refusal that still reaches here is the final word: either every
-    // model in the chain declined, or the category routes to none.
-    if (response.stop_reason === 'refusal') {
-      throw new TransportError(
-        'refusal',
-        fallback
-          ? 'the model declined to classify this input, and no fallback model answered'
-          : 'the model declined to classify this input (model fallback is off for this transport)',
-        200,
-        response.stop_details,
-      )
-    }
-
-    return {
-      raw: extractJson(response.content),
-      stopReason: response.stop_reason,
+    const billed: BilledResponse = {
       // The model that produced the message, which after a fallback is the
       // fallback's — including a turn the API routed straight to it, which
       // carries no `fallback` block to say so. Reporting `request.model` here
@@ -266,6 +261,29 @@ export class AnthropicTransport implements Transport {
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
       },
+    }
+
+    // Checked before `content` is touched. A refused response is a successful
+    // HTTP 200 whose content array is empty or partial, so indexing it first
+    // turns a policy outcome into an undefined-property crash. With fallback
+    // on, a refusal that still reaches here is the final word: either every
+    // model in the chain declined, or the category routes to none.
+    if (response.stop_reason === 'refusal') {
+      throw new TransportError(
+        'refusal',
+        fallback
+          ? 'the model declined to classify this input, and no fallback model answered'
+          : 'the model declined to classify this input (model fallback is off for this transport)',
+        200,
+        response.stop_details,
+        billed,
+      )
+    }
+
+    return {
+      raw: extractJson(response.content, billed),
+      stopReason: response.stop_reason,
+      ...billed,
     }
   }
 }
@@ -282,15 +300,24 @@ export class AnthropicTransport implements Transport {
  * skipped the same way. Every text block is the answering model's: a
  * non-streaming response leaves out whatever the declined model wrote before
  * it stopped.
+ *
+ * Either failure carries the response's usage: the reply was billed whether or
+ * not anything in it could be read.
  */
-function extractJson(content: readonly { type: string }[]): unknown {
+function extractJson(content: readonly { type: string }[], billed: BilledResponse): unknown {
   const text = content
     .filter((block): block is { type: 'text'; text: string } => block.type === 'text')
     .map((block) => block.text)
     .join('')
 
   if (text.trim() === '') {
-    throw new TransportError('server', 'the response carried no text block to parse')
+    throw new TransportError(
+      'server',
+      'the response carried no text block to parse',
+      undefined,
+      undefined,
+      billed,
+    )
   }
 
   try {
@@ -299,6 +326,12 @@ function extractJson(content: readonly { type: string }[]): unknown {
     // Structured output should make this impossible; treated as a schema
     // problem rather than a crash so the retry loop can show the model its
     // own output.
-    throw new TransportError('server', `the response was not JSON: ${text.slice(0, 200)}`)
+    throw new TransportError(
+      'server',
+      `the response was not JSON: ${text.slice(0, 200)}`,
+      undefined,
+      undefined,
+      billed,
+    )
   }
 }

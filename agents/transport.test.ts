@@ -257,6 +257,47 @@ describe('AnthropicTransport', () => {
     expect(error.cause).toMatchObject({ category: 'cyber' })
   })
 
+  /**
+   * A refusal is a 200 the API bills like an answer. Thrown away here, its
+   * tokens reached no figure anywhere — the budget, the spans, the footer and
+   * the evaluation all missed it — so the error carries what was billed.
+   */
+  it('carries what a refusal was billed, and which model refused', async () => {
+    const transport = new AnthropicTransport({
+      client: stubClient({
+        create: () =>
+          Promise.resolve(
+            reply([], { stop_reason: 'refusal', usage: { input_tokens: 900, output_tokens: 3 } }),
+          ),
+      }),
+    })
+    const error = (await transport.send(request).catch((e: unknown) => e)) as TransportError
+    expect(error.response).toEqual({
+      model: 'claude-opus-5',
+      usage: { inputTokens: 900, outputTokens: 3 },
+    })
+  })
+
+  it.each([
+    ['no text block', [thinkingBlock('…')]],
+    ['not JSON', [textBlock('I think app_code.')]],
+  ])('carries what an unreadable reply was billed: %s', async (_name, content) => {
+    const transport = new AnthropicTransport({
+      client: stubClient({ create: () => Promise.resolve(reply(content)) }),
+    })
+    const error = (await transport.send(request).catch((e: unknown) => e)) as TransportError
+    expect(error.kind).toBe('server')
+    expect(error.response?.usage).toEqual({ inputTokens: 120, outputTokens: 34 })
+  })
+
+  it('carries no response for a failure that never got one', async () => {
+    const transport = new AnthropicTransport({
+      client: stubClient({ create: () => Promise.reject(from(429)) }),
+    })
+    const error = (await transport.send(request).catch((e: unknown) => e)) as TransportError
+    expect(error.response).toBeUndefined()
+  })
+
   it('says whether a fallback was asked for, so the message explains the situation', async () => {
     const refused = () => Promise.resolve(reply([], { stop_reason: 'refusal', stop_details: null }))
 

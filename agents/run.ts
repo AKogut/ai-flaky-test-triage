@@ -13,6 +13,7 @@ import { classifyWithBaseline } from './baseline.js'
 import { runContextFor } from './context.js'
 import { readDiff } from './diff.js'
 import { openRepository, type GitReader } from './git.js'
+import { NO_SPEND, spendLine, UsageLedger } from './ledger.js'
 import { TokenBudget } from './model-client.js'
 import { hasWork, workList } from './orchestrate.js'
 import { runPipeline, type PipelineDeps } from './pipeline.js'
@@ -243,12 +244,13 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
           runId: analysis.runId,
           model: 'none — the baseline heuristic, no model call',
           promptVersions: { triage: triagePrompt.version },
-          usage: [],
+          spend: NO_SPEND,
           notices,
           ...scored,
         }),
       )
       log(`  wrote ${options.out} (degraded: ${String(notices.length)} notice(s))`)
+      log(spendLine(NO_SPEND))
       const considered = workList(analysis).length
       spans.complete({
         classifier: 'baseline',
@@ -275,6 +277,11 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
         ? new CassetteTransport(inner, { mode: resolveMode(env) })
         : inner
 
+    // The run's one record of what it was billed. The budget is charged from it,
+    // each call's span sums its share of it, and the footer and the console line
+    // below total it — see agents/ledger.ts.
+    const ledger = new UsageLedger()
+
     const pipelineDeps: PipelineDeps = {
       triage: {
         transport,
@@ -284,7 +291,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
       // Root cause and fix suggestion stay off until a calibration exists — see
       // shouldInvestigate. A threshold nobody measured is a guess with a decimal.
       threshold: null,
-      budget: new TokenBudget(options.budget),
+      budget: new TokenBudget(options.budget, ledger),
       inputFor: (test): ClassificationInput => inputFor(test),
       ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }),
       onCall: spans.onCall,
@@ -301,11 +308,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
         runId: analysis.runId,
         model: result.telemetry[0]?.model ?? 'unknown',
         promptVersions: { triage: triagePrompt.version },
-        usage: result.telemetry.map((t) => ({
-          model: t.model,
-          inputTokens: t.inputTokens,
-          outputTokens: t.outputTokens,
-        })),
+        spend: ledger.spend,
         notices,
         ...scored,
       }),
@@ -313,6 +316,7 @@ export async function main(argv: string[], deps: RunDeps = {}): Promise<number> 
     log(
       `  wrote ${options.out} (${String(result.triaged.length)} tests, degraded: ${String(result.degraded)})`,
     )
+    log(spendLine(ledger.spend))
     spans.complete({
       classifier: 'model',
       degraded: result.degraded || notices.length > 0,

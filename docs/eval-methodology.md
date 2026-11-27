@@ -262,8 +262,10 @@ else. That result gets published, not worked around.
 - Metrics broken down by fixture provenance
 - Self-consistency rate across N samples
 - Reliability curve + ECE
-- Cost, when a model ran: tokens and dollars per fixture, and the projected cost of a 50-failure
-  CI run
+- Cost: requests, tokens and dollars, per fixture and per classification, and the projected cost
+  of a 50-failure CI run. Read from the same usage ledger the token budget is charged from, so it
+  includes the responses the run could not use, and names that part. The baseline's section says
+  no model call, $0
 - Prompt version, model ID and dataset revision. Deliberately no timestamp: the report is
   committed, so `git log eval/report.md` dates every set of numbers, and a clock reading in the
   body would make every regeneration a diff
@@ -281,21 +283,31 @@ live in `eval/gate.ts`, one file, each with the reason it has the value it does.
 | Agent fails to beat the baseline on joint accuracy                  | any regression | M3     |
 | Self-consistency below floor                                        | 0.80           | M3     |
 | Hard-quadrant accuracy lower bound below floor                      | 0.50           | M3     |
-| Cost per fixture rises sharply                                      | +50%           | M3     |
+| Cost per fixture rises sharply                                      | +50%           | model  |
 
 **Comparisons use interval lower bounds, never point estimates.** At n=26 a point estimate moves
 several percentage points between two classifiers that are indistinguishable, so gating on it
 would fire on the dice. The lower bound fires when the evidence supports a regression.
 
-**Five of the six are targets for the agent, not descriptions of the baseline.** The baseline's
+**Four of the six are targets for the agent, not descriptions of the baseline.** The baseline's
 joint accuracy lower bound is 0.194 against a floor of 0.65; its hard-quadrant lower bound is 0.071
 against 0.50. Enabling those today would make `main` permanently red on facts everybody already
 knows, and a permanently red gate is one people learn to merge past. They are implemented, printed
 in every run with the current distance to the target, and each names the condition that switches it
 on.
 
-That leaves one active check, plus freshness. It is the one that matters today: nothing may make
-the classifier measurably worse than what is recorded on `main`.
+That leaves one check active on every run, plus freshness. It is the one that matters today:
+nothing may make the classifier measurably worse than what is recorded on `main`.
+
+**The cost check is active whenever a model ran** (`model` in the table), whichever classifier it
+was. Its figure is cost per fixture at the run's sample count, from the usage ledger, so a prompt
+that makes the model retry pays for the retries here as it would on a pull request. It compares
+with the figure recorded on `main` and skips only when there is nothing to compare: no model call,
+or no cost on `main` yet. A run on a model `agents/pricing.ts` has no price for fails it, because a
+cost with a missing share is a floor, and a floor held to a ceiling passes for the wrong reason.
+
+The 50-failure projection in the report is per classification rather than per fixture: a pull
+request with fifty failures gets one triage call each, not one per evaluation sample.
 
 Thresholds start permissive and ratchet as the dataset grows. Ratcheting means editing `gate.ts` in
 a reviewable commit — the gate has no runtime override, because a gate you can wave through at 3am

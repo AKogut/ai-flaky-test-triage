@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { format } from 'prettier'
 import type { FixtureLabels } from '@sentra/contracts'
-import { cost, formatUsd, MODEL_CONFIG, type Cost } from '@sentra/agents'
+import { formatUsd, MODEL_CONFIG, type Spend } from '@sentra/agents'
 import {
   calibrate,
   deriveThreshold,
@@ -270,8 +270,12 @@ export interface Evaluation {
   calibration: Calibration
   threshold: Threshold
   verdict: Verdict
-  /** Tokens and dollars. Zero everywhere for the baseline, which makes no calls. */
-  cost: Cost
+  /**
+   * Tokens and dollars, from the usage ledger the token budget is charged from:
+   * every request, including the ones whose answer was rejected or refused.
+   * Zero everywhere for the baseline, which makes no calls.
+   */
+  cost: Spend
   metrics: Metrics
   /** How the whole dataset divides between the slices, whichever slice ran. */
   composition: SliceComposition[]
@@ -361,7 +365,7 @@ export async function evaluate(options: Options, deps: ClassifierDeps = {}): Pro
         actual: f.judgement.actual,
       })),
     ),
-    cost: cost(chosen.usage),
+    cost: chosen.ledger.spend,
     ...calibrationOf(headline),
     metrics: score(headline.map((f) => f.judgement)),
     // Over the whole dataset, not the slice being scored, so the dev report can
@@ -425,6 +429,10 @@ export function renderReport(evaluation: Evaluation): string {
     '## Stability',
     '',
     renderStability(evaluation),
+    '',
+    '## Cost',
+    '',
+    renderCost(evaluation),
     '',
     '## Calibration',
     '',
@@ -577,7 +585,7 @@ const LABEL: Record<Verdict['usability'], string> = {
 const signed = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(3)}`
 
 function renderStability(evaluation: Evaluation): string {
-  const { sampling, cost: spend, options } = evaluation
+  const { sampling, options } = evaluation
 
   if (sampling.samples <= 1) {
     return [
@@ -622,36 +630,130 @@ function renderStability(evaluation: Evaluation): string {
           ),
         ]
 
-  const spendRows: string[] =
-    spend.inputTokens + spend.outputTokens === 0
+  return [markdownTable(['', ''], rows, ['left', 'left']), '', ...flips].join('\n')
+}
+
+/** How many failures the projection prices — the size of a bad CI run, per the methodology. */
+export const PROJECTED_FAILURES = 50
+
+/**
+ * Dollars per fixture, and per classification, for the run as a whole.
+ *
+ * Per fixture is the gated figure (`eval/gate.ts`), and it is at the run's
+ * sample count, because that is what scoring a fixture costs. The projection is
+ * per classification instead: a pull request with fifty failures gets one
+ * triage call per failure, not five.
+ */
+export function unitCosts(evaluation: Evaluation): {
+  perFixture: number
+  perClassification: number
+} {
+  const fixtures = Math.max(1, evaluation.fixtures.length)
+  return {
+    perFixture: evaluation.cost.usd / fixtures,
+    perClassification: evaluation.cost.usd / (fixtures * evaluation.options.samples),
+  }
+}
+
+/**
+ * The figure `eval/gate.ts` holds to its cost threshold, as `eval/metrics.json` records it.
+ *
+ * Null when no model was called, which is a different fact from a cost of zero:
+ * the gate says so rather than comparing it.
+ */
+export const gatedCost = (evaluation: Evaluation): number | null =>
+  evaluation.cost.dispatches === 0 ? null : unitCosts(evaluation).perFixture
+
+/** The run's cost on one line, for the console. The same figures as the report's Cost section. */
+export function costLine(evaluation: Evaluation): string {
+  const { cost: spend } = evaluation
+  if (spend.dispatches === 0) return `Cost: no model call, ${formatUsd(0)}.`
+  const { perFixture, perClassification } = unitCosts(evaluation)
+  return (
+    `Cost: ${formatUsd(spend.usd)} over ${String(spend.dispatches)} model request(s) — ` +
+    `${formatUsd(perFixture)} per fixture, ${formatUsd(perClassification * PROJECTED_FAILURES)} ` +
+    `projected for a ${String(PROJECTED_FAILURES)}-failure CI run` +
+    (spend.unpricedModels.length === 0 ? '.' : `, not counting ${spend.unpricedModels.join(', ')}.`)
+  )
+}
+
+/**
+ * What the run cost, and what a CI run would.
+ *
+ * Present in every report, the baseline's included. A section that appeared
+ * only once a model ran would make its absence ambiguous — free, or not
+ * measured — and the baseline's honest answer is the first one.
+ */
+function renderCost(evaluation: Evaluation): string {
+  const { cost: spend, options, classifier } = evaluation
+
+  if (spend.dispatches === 0) {
+    return [
+      options.classifier === 'baseline'
+        ? 'No model call, so $0: the baseline is a heuristic. Every figure here is zero by'
+        : 'No model call, so $0: no request reached the model. Every figure here is zero by',
+      'construction, not by measurement.',
+      '',
+      markdownTable(
+        ['', ''],
+        [
+          ['model requests', 'none'],
+          ['tokens', '0'],
+          ['total', formatUsd(0)],
+          ['per fixture', formatUsd(0)],
+          [`projected, ${String(PROJECTED_FAILURES)}-failure CI run`, formatUsd(0)],
+        ],
+        ['left', 'right'],
+      ),
+    ].join('\n')
+  }
+
+  const { perFixture, perClassification } = unitCosts(evaluation)
+  return [
+    'Every request the run made, from the usage ledger the token budget is charged from, and',
+    'priced by `agents/pricing.ts` at the price of the model that answered it. A response the',
+    'run could not use — rejected by the schema, refused, or with nothing to parse — was billed',
+    'like any other and is counted here.',
+    '',
+    markdownTable(
+      ['', ''],
+      [
+        ['model requests', String(spend.dispatches)],
+        ['input tokens', String(spend.inputTokens)],
+        ['output tokens', String(spend.outputTokens)],
+        ['total', formatUsd(spend.usd)],
+        ['of which, on responses it could not use', formatUsd(spend.unused.usd)],
+        ['per fixture', `${formatUsd(perFixture)} at ${String(options.samples)} sample(s) each`],
+        ['per classification', formatUsd(perClassification)],
+        [
+          `projected, ${String(PROJECTED_FAILURES)}-failure CI run`,
+          formatUsd(perClassification * PROJECTED_FAILURES),
+        ],
+        ...(spend.unpricedModels.length === 0
+          ? []
+          : [['unpriced models', spend.unpricedModels.map((m) => `\`${m}\``).join(', ')]]),
+      ],
+      ['left', 'right'],
+    ),
+    '',
+    `The projection is ${String(PROJECTED_FAILURES)} classifications at this run's cost per classification, retries`,
+    'included — what `agents:analyze` spends on a pull request with that many failures, one triage',
+    'call each, while root cause and fix suggestion are off.',
+    ...(classifier.mode === 'replay'
+      ? [
+          '',
+          'Replayed from cassettes, so this run sent nothing and was billed nothing. The tokens are',
+          'the recorded responses’ own: what the same run costs live.',
+        ]
+      : []),
+    ...(spend.unpricedModels.length === 0
       ? []
       : [
           '',
-          '### Cost',
-          '',
-          markdownTable(
-            ['', ''],
-            [
-              ['input tokens', String(spend.inputTokens)],
-              ['output tokens', String(spend.outputTokens)],
-              ['total', formatUsd(spend.usd)],
-              [
-                'per fixture',
-                `${formatUsd(spend.usd / Math.max(1, evaluation.fixtures.length))} at ${String(sampling.samples)} sample(s) each`,
-              ],
-              [
-                'projected, 50-failure CI run',
-                formatUsd((spend.usd / Math.max(1, evaluation.fixtures.length)) * 50),
-              ],
-              ...(spend.unpricedModels.length === 0
-                ? []
-                : [['unpriced models', spend.unpricedModels.join(', ')]]),
-            ],
-            ['left', 'right'],
-          ),
-        ]
-
-  return [markdownTable(['', ''], rows, ['left', 'left']), '', ...flips, ...spendRows].join('\n')
+          '**Some of this run is not priced.** `agents/pricing.ts` has no price for the models',
+          'listed above, so their share is missing from every dollar figure rather than zero.',
+        ]),
+  ].join('\n')
 }
 
 const share = (value: number): string => `${(value * 100).toFixed(1)}%`
@@ -1041,10 +1143,7 @@ export async function main(argv: string[]): Promise<number> {
       // that as a perfect score would let the self-consistency floor pass on
       // evidence nobody gathered.
       selfConsistency: evaluation.sampling.samples > 1 ? evaluation.sampling.selfConsistency : null,
-      costPerFixtureUsd:
-        evaluation.cost.inputTokens + evaluation.cost.outputTokens === 0
-          ? null
-          : evaluation.cost.usd / Math.max(1, evaluation.fixtures.length),
+      costPerFixtureUsd: gatedCost(evaluation),
     },
   )
   const metricsPath = metricsPathFor(options)
@@ -1059,6 +1158,7 @@ export async function main(argv: string[]): Promise<number> {
       const gate = runGate({
         current,
         reference: readReferenceSnapshot(metricsPath, options.reference),
+        unpricedModels: evaluation.cost.unpricedModels,
       })
       console.log(`  Thresholds against \`${options.reference}\`:\n`)
       console.log(`${renderGateReport(gate)}\n`)
@@ -1090,7 +1190,8 @@ export async function main(argv: string[]): Promise<number> {
 
   writeFileSync(options.out, report)
   writeFileSync(metricsPath, `${JSON.stringify(current, null, 2)}\n`)
-  console.log(`\n  Wrote ${options.out} and ${metricsPath}\n`)
+  console.log(`\n  Wrote ${options.out} and ${metricsPath}`)
+  console.log(`  ${costLine(evaluation)}\n`)
   return 0
 }
 

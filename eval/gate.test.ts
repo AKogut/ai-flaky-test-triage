@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import type { ModelRequest, ModelResponse, Transport } from '@sentra/agents'
 import { describe, expect, it } from 'vitest'
 import {
   MetricsSnapshotSchema,
@@ -10,7 +11,7 @@ import {
   type MetricsSnapshot,
 } from './gate.js'
 import { quadrantBreakdown } from './confusion.js'
-import { DEFAULTS, evaluate, METRICS_PATHS } from './run-eval.js'
+import { DEFAULTS, evaluate, gatedCost, METRICS_PATHS, type Evaluation } from './run-eval.js'
 
 const at = (lower: number, over: Partial<MetricsSnapshot> = {}): MetricsSnapshot => ({
   version: 1,
@@ -200,6 +201,135 @@ describe('checks waiting on a model', () => {
     const current = at(0.9, { costPerFixtureUsd: 0.01 * (1 + THRESHOLDS.costIncrease) })
     const reference = at(0.9, { costPerFixtureUsd: 0.01 })
     expect(check(runGate({ current, reference }), 'cost-per-fixture')?.status).toBe('pass')
+  })
+
+  it('skips the first priced run, which has nothing on main to compare with', () => {
+    const result = check(
+      runGate({ current: at(0.9, { costPerFixtureUsd: 0.01 }), reference: at(0.9) }),
+      'cost-per-fixture',
+    )
+    expect(result?.status).toBe('skipped')
+    expect(result?.detail).toBe('no cost recorded on main to compare with')
+  })
+
+  /**
+   * A cost with a missing share is a floor. Holding a floor to a ceiling passes
+   * for the wrong reason — the cheaper the unpriced model looks, the more it
+   * hides — so the check fails and names the fix.
+   */
+  it('fails a run whose model has no price rather than comparing what is left', () => {
+    const result = check(
+      runGate({
+        current: at(0.9, { costPerFixtureUsd: 0.001 }),
+        reference: at(0.9, { costPerFixtureUsd: 0.01 }),
+        unpricedModels: ['claude-unreleased-9'],
+      }),
+      'cost-per-fixture',
+    )
+    expect(result?.status).toBe('fail')
+    expect(result?.detail).toContain('claude-unreleased-9')
+    expect(result?.detail).toContain('agents/pricing.ts')
+  })
+
+  it('still skips a run that called no model, whatever the price table lacks', () => {
+    expect(
+      check(
+        runGate({ current: at(0.9), reference: null, unpricedModels: ['claude-unreleased-9'] }),
+        'cost-per-fixture',
+      )?.status,
+    ).toBe('skipped')
+  })
+})
+
+/**
+ * The cost threshold, held to a scored agent run end to end — no key, no
+ * cassettes, a scripted transport.
+ *
+ * What makes it enforceable is that the figure is real: it comes from the usage
+ * ledger the token budget is charged from, so a prompt that makes the model
+ * retry costs what it costs. A success-only tally would price the run below.
+ */
+describe('the cost check, against an agent run', { timeout: 30_000 }, () => {
+  const REPLY = {
+    owner: 'app_code',
+    determinism: 'intermittent',
+    confidence: 0.5,
+    reasoning: 'a reason',
+    evidence: ['status: failed'],
+  }
+  const USAGE = { inputTokens: 1_000, outputTokens: 200 }
+
+  /** Answers every request; when `retrying`, rejects each fixture's first answer. */
+  const answering = (over: { model?: string; retrying?: boolean } = {}): Transport => ({
+    countInputTokens: () => Promise.resolve(USAGE.inputTokens),
+    send: (request: ModelRequest): Promise<ModelResponse> =>
+      Promise.resolve({
+        raw:
+          over.retrying === true && !request.prompt.includes('did not match the required schema')
+            ? { owner: 'app_code' }
+            : REPLY,
+        stopReason: 'end_turn',
+        model: over.model ?? 'claude-opus-5-5',
+        usage: USAGE,
+      }),
+  })
+
+  const scored = async (transport: Transport): Promise<Evaluation> =>
+    evaluate(
+      { ...DEFAULTS, classifier: 'agent', samples: 1 },
+      {
+        env: { SENTRA_REPLAY: '1' },
+        transport,
+      },
+    )
+
+  const snapshotOf = (run: Evaluation): MetricsSnapshot =>
+    snapshot(run.metrics, quadrantBreakdown(run.fixtures.map((f) => f.judgement)), {
+      classifier: 'agent',
+      promptVersion: run.classifier.promptVersion,
+      slice: 'dev',
+      datasetRevision: run.datasetRevision,
+      selfConsistency: null,
+      costPerFixtureUsd: gatedCost(run),
+    })
+
+  const gate = (run: Evaluation, mainCost: number) =>
+    check(
+      runGate({
+        current: snapshotOf(run),
+        reference: at(0.2, { costPerFixtureUsd: mainCost }),
+        unpricedModels: run.cost.unpricedModels,
+      }),
+      'cost-per-fixture',
+    )
+
+  it('records what each fixture was billed', async () => {
+    // 1,000 in at $4/M and 200 out at $20/M, one sample a fixture.
+    expect(gatedCost(await scored(answering()))).toBeCloseTo(0.008, 10)
+  })
+
+  it('passes a run that costs what main recorded', async () => {
+    expect(gate(await scored(answering()), 0.008)?.status).toBe('pass')
+  })
+
+  it('blocks a run that costs more than half as much again as main', async () => {
+    const result = gate(await scored(answering()), 0.005)
+    expect(result?.status).toBe('fail')
+    expect(result?.detail).toContain('$0.0080 now, $0.0050 on main')
+  })
+
+  /** Every fixture answered on the second try: twice the bill for the same verdicts. */
+  it('counts the answers the schema rejected, so a retrying prompt cannot pass as cheap', async () => {
+    const run = await scored(answering({ retrying: true }))
+    expect(gatedCost(run)).toBeCloseTo(0.016, 10)
+    expect(run.cost.unused.usd).toBeCloseTo(run.cost.usd / 2, 10)
+    expect(gate(run, 0.008)?.status).toBe('fail')
+  })
+
+  it('fails a run on a model the price table does not know', async () => {
+    const run = await scored(answering({ model: 'claude-unreleased-9' }))
+    expect(gatedCost(run)).toBe(0)
+    expect(gate(run, 0.008)?.status).toBe('fail')
   })
 })
 
