@@ -83,15 +83,17 @@ const withoutFences = (md: string): string =>
 
 /** Inline code holds examples of links, not links: `[Getting Started](Getting-Started)` in the README. */
 const prose = (md: string): string =>
-  withoutFences(md)
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/`[^`\n]+`/g, (code) => ' '.repeat(code.length))
+  withoutFences(md).replace(/`[^`\n]+`/g, (code) => ' '.repeat(code.length))
 
 /** Inline link targets — the only link style these pages use. */
 const linksIn = (md: string): string[] =>
   [...prose(md).matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)].map((m) => m[1] ?? '')
 
-/** A heading's text as rendered: link text kept, code kept, emphasis and tags dropped. */
+/**
+ * A heading's text as rendered: link text and code kept, emphasis dropped. No
+ * heading here carries inline HTML, so nothing is done about it; one that did
+ * would fail the link test the moment something linked to it.
+ */
 const plainText = (inline: string): string =>
   inline
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
@@ -99,10 +101,7 @@ const plainText = (inline: string): string =>
     .map((part) =>
       part.startsWith('`')
         ? part.slice(1, -1)
-        : part
-            .replace(/<[^>]+>/g, '')
-            .replace(/\*+/g, '')
-            .replace(/(^|\s)_(.+?)_(?=\s|$)/g, '$1$2'),
+        : part.replace(/\*+/g, '').replace(/(^|\s)_(.+?)_(?=\s|$)/g, '$1$2'),
     )
     .join('')
 
