@@ -159,6 +159,25 @@ call the budget refused never reaches the ledger, because nothing was sent; its 
 answered each response. A model with no price there is named wherever the cost is printed, and
 its share is missing from the figure rather than counted as zero.
 
+Each entry also records how it was billed. A response from a Message Batch carries `tier: 'batch'`,
+taken from the API's own `usage.service_tier`, and is priced at the batch column of the same table,
+which is half the standard price for every model listed. A cassette does not record the tier. It
+records what the model said, so a replay is priced at the standard rate however the answers were
+paid for, and a batched report gives both figures.
+
+**A ceiling in dollars**, for the evaluation's paid runs (`--max-usd`, in `agents/spend-cap.ts`),
+sits beside the token budget rather than replacing it. It admits a request on its worst case, which
+is the counted input plus `max_tokens` of output, against what the ledger says was billed. It is a
+decorator on the live transport and nowhere else, because that is the only layer where a request is
+about to be paid for. In a batched run, the requests answered from the batch were capped as one
+batch when it was submitted, and pricing them a second time would refuse corrections on money
+already spent. A request the cap refuses is never sent, so like a budget refusal it never reaches
+the ledger, and its span says `budget`.
+
+The input count that the budget, the cap and the estimate all use comes from `count_tokens`, run on
+the body that is sent minus `max_tokens`. That includes the `output_config` response format, which
+the count used to leave out.
+
 Two costs are still invisible, and
 [operational limitations](limitations-and-guardrails.md#operational-limitations) lists them: the
 declined hop of a server-side fallback, and a request that timed out after the server had
@@ -292,6 +311,21 @@ buy wall-clock and cost a deterministic order for the budget to run out in.
 In replay mode the transport handed to the decorator is one that throws on any call. Constructing a
 real client there would work — the SDK does not check a key until it sends — and would turn a
 cassette miss into a live request from a run that was supposed to be free.
+
+**A paid run can be estimated, capped and batched** (`eval/paid-run.ts`; the flags are described in
+[the methodology](eval-methodology.md#paying-for-an-agent-run)). All three start from one plan:
+the requests `evaluate` would send, built with `triageOptions` and `buildRequest`, which are the
+functions `triage` and `callModel` use. A test runs `evaluate` and checks that it asks for exactly
+those requests, in that order.
+
+A batched run does not go around the seam. The batch is submitted through `BatchTransport`, a second
+port that `AnthropicTransport` implements with the same request body as `send`. It is the plain
+endpoint with fallback off, because the Batches API rejects `fallbacks`, and the transport refuses to
+batch if it was built to fall back. The results come back as `BatchResultsTransport`
+(`agents/batch.ts`): a `Transport` that answers each request from its `custom_id`, reads a `succeeded`
+message the way `send` reads a synchronous reply, refusal check first, and sends anything no batch
+could carry to the live transport behind it. The cassette decorator wraps it the way it wraps the
+network, so the loop, the schema check, the ledger and the recordings are the synchronous run's own.
 
 ## 2. Root-cause agent
 

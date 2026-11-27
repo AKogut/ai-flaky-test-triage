@@ -26,6 +26,11 @@ test-results/
 blob-report/
 .playwright/
 
+# The ids of Message Batches a batched evaluation submitted, kept until the run that
+# paid for them is scored. Local state about one person's spend, not source: a batch
+# belongs to the workspace whose key submitted it, and nobody else can collect it.
+/.sentra/
+
 # Run history lives in the CI cache (ADR-0004), not in git.
 .flakemetry/history.json
 # The temp file an atomic write renames from, left behind only by a killed job.

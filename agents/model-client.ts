@@ -1,6 +1,7 @@
 import type { z } from 'zod'
 import { toolSchema } from '@sentra/contracts'
 import { spendOf, UsageLedger, type Dispatch } from './ledger.js'
+import { SpendCapExceededError } from './spend-cap.js'
 import {
   TransportError,
   type Effort,
@@ -300,6 +301,7 @@ export class SchemaViolationError extends Error {
  */
 export function callOutcome(error: unknown): CallOutcome {
   if (error instanceof BudgetExceededError) return 'budget'
+  if (error instanceof SpendCapExceededError) return 'budget'
   if (error instanceof SchemaViolationError) return 'schema-invalid'
   if (error instanceof TransportError && error.kind === 'refusal') return 'refused'
   return 'error'
@@ -371,7 +373,9 @@ export async function callModel<T>(
     try {
       return await deps.transport.send(attempt)
     } catch (error) {
-      note(unanswered(error))
+      // A request the spending cap refused was never sent, so like one the
+      // token budget refused it has no place in a list of what was dispatched.
+      if (!(error instanceof SpendCapExceededError)) note(unanswered(error))
       throw error
     }
   }
@@ -426,6 +430,7 @@ export async function callModel<T>(
           model: response.model,
           result: parsed.success ? 'answered' : 'rejected',
           ...response.usage,
+          ...(response.tier === 'batch' && { tier: response.tier }),
         })
       } finally {
         // After the entry is written, so the budget never sees the hold gone
@@ -480,6 +485,7 @@ function unanswered(error: unknown): Omit<Dispatch, 'promptVersion' | 'requestMo
     model: billed.model,
     result: error instanceof TransportError && error.kind === 'refusal' ? 'refused' : 'unreadable',
     ...billed.usage,
+    ...(billed.tier === 'batch' && { tier: billed.tier }),
   }
 }
 
@@ -489,8 +495,12 @@ function unanswered(error: unknown): Omit<Dispatch, 'promptVersion' | 'requestMo
  * Full jitter rather than a fixed multiplier: a fleet that all backs off by the
  * same curve re-collides at every step, which is how one rate limit becomes a
  * synchronised herd. `random()` is injected so the schedule is assertable.
+ *
+ * Exported for the one caller outside `callModel` that dispatches on its own:
+ * the evaluation's cost estimate, which counts every request of a run before
+ * any is sent and has to ride out a rate limit the same way.
  */
-async function withTransientRetry<T>(
+export async function withTransientRetry<T>(
   operation: () => Promise<T>,
   config: ModelConfig,
   counters: { transientFailures: number },

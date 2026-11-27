@@ -1,4 +1,4 @@
-import { cost, formatUsd, type Cost, type Usage } from './pricing.js'
+import { cost, formatUsd, type Cost, type Tier, type Usage } from './pricing.js'
 
 /**
  * Every token a run was billed for, recorded once.
@@ -63,6 +63,11 @@ export interface Dispatch {
   /** As the API reported them. Zero when no response arrived. */
   inputTokens: number
   outputTokens: number
+  /**
+   * How the response was billed. Present only for `batch`: an entry without it
+   * is standard, which keeps every entry written before batches existed exact.
+   */
+  tier?: Tier
 }
 
 /**
@@ -78,6 +83,14 @@ export interface Spend extends Cost {
   dispatches: number
   /** The part of the total spent on responses the run could not use. */
   unused: Cost
+  /** Dispatches billed at the Message Batches rate rather than the standard one. */
+  batched: number
+  /**
+   * The same tokens at the standard rate. Equal to `usd` unless something was
+   * batched, and then the figure a replay of the same responses reports — a
+   * cassette records what the model said, not how the request was paid for.
+   */
+  atStandardRate: number
 }
 
 /** Only a dispatch that got a response is priced; an unanswered one has no model to price. */
@@ -85,15 +98,25 @@ const billed = (dispatches: readonly Dispatch[]): Usage[] =>
   dispatches.flatMap((d) =>
     d.model === undefined
       ? []
-      : [{ model: d.model, inputTokens: d.inputTokens, outputTokens: d.outputTokens }],
+      : [
+          {
+            model: d.model,
+            inputTokens: d.inputTokens,
+            outputTokens: d.outputTokens,
+            ...(d.tier !== undefined && { tier: d.tier }),
+          },
+        ],
   )
 
 /** The total over any set of dispatches. Pure, so a call and a run are summed the same way. */
 export function spendOf(dispatches: readonly Dispatch[]): Spend {
+  const usage = billed(dispatches)
   return {
-    ...cost(billed(dispatches)),
+    ...cost(usage),
     dispatches: dispatches.length,
     unused: cost(billed(dispatches.filter((d) => d.result !== 'answered'))),
+    batched: dispatches.filter((d) => d.tier === 'batch').length,
+    atStandardRate: cost(usage.map(({ tier: _tier, ...standard }) => standard)).usd,
   }
 }
 

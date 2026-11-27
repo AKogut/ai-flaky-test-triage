@@ -336,6 +336,80 @@ Whether anything under `agents/`, `eval/` or `prompts/` changed is detected and 
 network — so it runs either way. Once the gate scores the model (#38), that flag is what will stop
 a documentation-only change from paying for a model run.
 
+## Paying for an agent run
+
+Scoring the agent is the one run here that costs money, so three flags decide what it costs before
+any of it is spent. None of them does anything in replay, and each refuses to run there rather than
+print a figure nobody measured. They only apply to `--classifier=agent`.
+
+**`--estimate` comes first.** It builds every request the run would send, with the agent's own
+request builder, and counts each one with `count_tokens`. Counting is free, but it is still an API
+call, so without credentials the flag stops with a message and exit code 1 rather than guessing
+from character counts. It sends nothing to the model, and prints:
+
+- the number of requests, and the input tokens counted for them;
+- the output-token assumption, stated twice. The **worst case** is `max_tokens` for every request
+  (8,000, from `MODEL_CONFIG`). Thinking is on and is billed as output, so this is the most a
+  request can cost, and it is the figure the cap is held to. The **expected case** is the mean
+  output of the recorded cassettes for this prompt on this model, and it is left empty when there
+  are none;
+- the cost of each case at the synchronous rate and at the Message Batches rate;
+- whether the input fits `SENTRA_TOKEN_BUDGET`, and whether each worst case fits `--max-usd` when
+  one is given.
+
+Schema corrections and transient re-sends are not in the figures. Each is an extra request that
+happens only when something goes wrong, and each is still held to the cap.
+
+**`--batch` sends the run as one Message Batch, at half the price.** Every request goes in under a
+`custom_id` equal to its cassette key, and results are matched on that id, never on position: the
+API returns them in any order. The run then reads its answers back through the transport stack a
+synchronous run uses. Parsing, the schema check, the ledger and cassette recording do not know a
+batch was involved, so the cassettes a batch records are the same files a synchronous recording
+writes, and a replay of either produces the same `eval/report.md`, byte for byte. A test records the
+same run both ways and compares the files and the reports.
+
+- **A schema correction is sent synchronously.** Its prompt carries the first answer, so no batch
+  could have held it. The same applies to a re-send after a reply with nothing in it to parse. Both
+  are billed at the standard rate and both go through the cap.
+- **A refusal is collected as an answer**, because the model gave it and it was billed. The run then
+  stops on it exactly as a synchronous run would.
+- **Errored, expired and canceled requests are named**, by fixture and sample. Nothing is billed for
+  them. If they can be answered on a second try (an overload, a rate limit, an expiry), running the
+  same command again resubmits only those. If the API rejected the request itself, the run stops and
+  submits nothing more.
+- **Nothing is paid for twice.** The batch id is written to `.sentra/batch-<slice>.json` as soon as
+  the batch exists. The run polls with a growing interval, up to `--wait` minutes (60 by default).
+  If the batch is still running after that, the run stops with the id saved, and running the same
+  command again collects that batch instead of submitting a new one. The file is removed once the
+  run has been scored. It is local and gitignored, because a batch belongs to the workspace whose
+  key submitted it.
+
+The Cost section of a batched report says **Sent as a Message Batch**. It counts the requests billed
+at the batch rate and also gives the same tokens at the standard rate. That standard-rate figure is
+what a replay reports, because a cassette records what the model said, not how the request was paid
+for. Prices for both rates are in `agents/pricing.ts`, copied from the published table with the
+date they were checked.
+
+**`--max-usd=<dollars>` is a hard ceiling.** A batched run is always estimated before it submits,
+and a synchronous run is estimated first when it has a ceiling. A run whose worst case does not fit
+is refused before anything is sent: a batch as a whole, because nothing can stop a batch once it is
+submitted, and a synchronous run against its total. After that, each request sent synchronously is
+admitted on its own worst case, against what the usage ledger says has already been billed, so a
+run of retries the estimate could not foresee stops before it passes the ceiling. Whenever the run
+was estimated, `SENTRA_TOKEN_BUDGET` is checked before anything is spent too, because the token
+budget would otherwise stop the run part-way through requests that were already paid for.
+
+The order for #38:
+
+```bash
+npm run eval -- --classifier=agent --estimate               # free; needs a key
+npm run cassettes:record -- --batch --max-usd=<worst case>  # records the dataset as one batch
+SENTRA_REPLAY=1 npm run eval -- --classifier=agent          # the report that is committed
+```
+
+The last step sets `SENTRA_REPLAY=1` because, with a key in the environment, the default mode is
+live, and a live run would pay again for answers that are already recorded.
+
 ## Ablation study
 
 `npm run eval:ablation` re-runs the development slice once per variant below, with that variant's

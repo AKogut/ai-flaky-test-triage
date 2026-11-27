@@ -48,7 +48,29 @@ describe('a total', () => {
       unpricedModels: [],
       dispatches: 1,
       unused: { usd: 0, inputTokens: 0, outputTokens: 0, unpricedModels: [] },
+      batched: 0,
+      atStandardRate: 0.01,
     })
+  })
+
+  /**
+   * A Message Batch bills every token at half the standard price. The entry
+   * says so, because the response said so, and the total is what was billed —
+   * with the standard figure beside it, which is what a replay of the same
+   * answers reports.
+   */
+  it('prices a batched response at the batch rate, and says what it would have cost', () => {
+    const spend = spendOf([answered({ tier: 'batch' }), answered()])
+    // 1,000 in at $2.50/M and 200 out at $12.50/M, then the same at $5/$25.
+    expect(spend.usd).toBeCloseTo(0.005 + 0.01, 10)
+    expect(spend.batched).toBe(1)
+    expect(spend.atStandardRate).toBeCloseTo(0.02, 10)
+  })
+
+  it('counts a refused batch response at the batch rate in what bought nothing', () => {
+    const spend = spendOf([answered({ tier: 'batch', result: 'refused' })])
+    expect(spend.unused.usd).toBeCloseTo(0.005, 10)
+    expect(spend.batched).toBe(1)
   })
 
   it.each<DispatchResult>(['rejected', 'refused', 'unreadable'])(

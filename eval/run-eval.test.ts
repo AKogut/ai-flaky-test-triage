@@ -379,5 +379,25 @@ describe('the usage text', () => {
     )
     expect(baseline.slice).toBe(DEFAULTS.slice)
     expect(agent.samples).toBe(DEFAULT_SAMPLES.agent)
+    expect(USAGE).toContain(
+      `saved and stopping          (default: ${String(parseArgs(['--classifier=agent', '--batch']).waitMinutes)})`,
+    )
+  })
+
+  it('names every flag the parser accepts', () => {
+    for (const flag of [
+      '--classifier',
+      '--slice',
+      '--n',
+      '--gate',
+      '--reference',
+      '--out',
+      '--estimate',
+      '--batch',
+      '--max-usd',
+      '--wait',
+    ]) {
+      expect(USAGE).toContain(flag)
+    }
   })
 })
