@@ -429,6 +429,16 @@ jobs:
           SENTRA_EVAL_SCOPE_CHANGED: ${{ steps.scope.outputs.changed }}
         run: npm run eval -- --gate
 
+      # eval/ablation.md is committed for the same reason eval/report.md is, and
+      # goes stale the same way: a dataset or classifier change that nobody
+      # regenerated it for. This is its `--gate`, minus thresholds — an ablation
+      # describes, it does not block. The baseline control, explicitly, because
+      # it is the study that can run without a model; the agent's waits on #38.
+      # `!cancelled()` so a red gate above does not hide a stale study as well.
+      - name: Committed ablation study matches a fresh run
+        if: ${{ !cancelled() }}
+        run: npm run eval:ablation -- --classifier=baseline --check
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -436,6 +446,7 @@ jobs:
           path: |
             eval/report.md
             eval/metrics.json
+            eval/ablation.md
           retention-days: 30
 
   # ---------------------------------------------------------------------------

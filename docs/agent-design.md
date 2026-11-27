@@ -303,8 +303,8 @@ sub-goal to decompose. A ReAct-style loop would add latency, cost, and non-deter
 for the model re-reading text it already has.
 
 This is a claim, not an axiom, and the project treats it as testable: the ablation harness
-(`npm run eval:ablation`, 🚧 #78) will include a multi-step variant (#80). If it wins on the hard
-quadrants by a margin that justifies the cost, the result becomes an ADR and the architecture
+(`npm run eval:ablation`, #78) lists a multi-step variant (#80), not built yet. If it wins on the
+hard quadrants by a margin that justifies the cost, the result becomes an ADR and the architecture
 changes. Until then, the simple thing stays.
 
 ## Prompt-injection considerations

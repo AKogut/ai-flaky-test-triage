@@ -1,7 +1,13 @@
-import type { ModelRequest, ModelResponse, Transport } from '@sentra/agents'
+import {
+  classifyWithBaseline,
+  type ModelRequest,
+  type ModelResponse,
+  type Transport,
+} from '@sentra/agents'
 import { describe, expect, it } from 'vitest'
 import { chooseClassifier, DEFAULT_TOKEN_BUDGET, tokenBudget, unreachable } from './classifier.js'
 import { listFixtures, loadPayload } from './dataset.js'
+import { sliceOf } from './slices.js'
 
 const payload = (): ReturnType<typeof loadPayload>['payload'] =>
   loadPayload(listFixtures()[0] ?? '').payload
@@ -93,6 +99,52 @@ describe('the agent', () => {
   it('has no live transport to fall through to in replay mode', async () => {
     const chosen = chooseClassifier('agent', { env: REPLAY_ENV })
     await expect(chosen.classify(payload(), 0)).rejects.toThrow(/no cassette for/)
+  })
+})
+
+/**
+ * The ablation's variable, taken at the seam so both classifiers are denied
+ * the same thing by the same argument.
+ */
+describe('withholding an input', () => {
+  const streak = (): ReturnType<typeof payload> => {
+    const name = listFixtures().find(
+      (n) =>
+        sliceOf(n) === 'dev' &&
+        classifyWithBaseline(loadPayload(n).payload).determinism === 'deterministic',
+    )
+    return loadPayload(name ?? '').payload
+  }
+
+  it('reaches the baseline as a blanked input', async () => {
+    const full = await chooseClassifier('baseline').classify(streak(), 0)
+    const without = await chooseClassifier('baseline', { withhold: ['history'] }).classify(
+      streak(),
+      0,
+    )
+    expect(full.determinism).toBe('deterministic')
+    expect(without.determinism).toBe('intermittent')
+  })
+
+  it('reaches the agent as a line in the prompt naming what was withheld', async () => {
+    const transport = stub()
+    await chooseClassifier('agent', { env: REPLAY_ENV, transport, withhold: ['history'] }).classify(
+      payload(),
+      0,
+    )
+    expect(transport.sent[0]?.prompt).toContain(
+      'Withheld from this run on purpose (ablation): flakinessSignal, statusHistory.',
+    )
+  })
+
+  it('changes nothing when the list is empty, not even the request', async () => {
+    const [plain, empty] = [stub(), stub()]
+    await chooseClassifier('agent', { env: REPLAY_ENV, transport: plain }).classify(payload(), 0)
+    await chooseClassifier('agent', { env: REPLAY_ENV, transport: empty, withhold: [] }).classify(
+      payload(),
+      0,
+    )
+    expect(empty.sent).toEqual(plain.sent)
   })
 })
 

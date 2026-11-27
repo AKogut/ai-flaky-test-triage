@@ -312,24 +312,82 @@ a documentation-only change from paying for a model run.
 
 ## Ablation study
 
-Not built yet. `npm run eval:ablation` is a 🚧 placeholder (#78); when it lands it will re-run the
-dataset with parts of the context removed:
+`npm run eval:ablation` re-runs the development slice once per variant below, with that variant's
+inputs withheld, and writes [`eval/ablation.md`](../eval/ablation.md). This is the section that
+turns "I built an AI classifier" into "I measured which parts of it work" — and it is also how the
+context bundle gets pruned, since a field that contributes nothing is cost with no return.
 
-| Variant                  | Question it answers                                   |
-| ------------------------ | ----------------------------------------------------- |
-| Full context             | Reference                                             |
-| No history               | How much does the flakiness signal contribute? (#79)  |
-| No diff                  | How much does git context contribute?                 |
-| No test source           | Does reading the test matter?                         |
-| Error message only       | How far does the trivial input get?                   |
-| Baseline heuristic       | Is the LLM needed at all?                             |
-| Multi-step agent variant | Does a loop beat one call? (#80, see agent-design.md) |
-| Smaller model            | What does the capability tier buy? (#81)              |
+| Variant                  | Question it answers                                   | Withholds                               |
+| ------------------------ | ----------------------------------------------------- | --------------------------------------- |
+| Full context             | Reference                                             | nothing                                 |
+| No history               | How much does the flakiness signal contribute? (#79)  | the flakiness signal and status history |
+| No diff                  | How much does git context contribute?                 | the diff and everything derived from it |
+| No test source           | Does reading the test matter?                         | the test source                         |
+| No run context           | Does the worker sequence earn its place? (ADR-0008)   | the worker run context                  |
+| Error message only       | How far does the trivial input get?                   | everything but the error message        |
+| Baseline heuristic       | Is the LLM needed at all?                             | — a different classifier                |
+| Multi-step agent variant | Does a loop beat one call? (#80, see agent-design.md) | — not built: a different agent          |
+| Smaller model            | What does the capability tier buy? (#81)              | — not built: a different model          |
 
-Results will go to `eval/ablation.md`. This is the section that turns "I built an AI classifier"
-into "I measured which parts of it work" — and it is also how the context bundle gets pruned, since
-a field that contributes nothing is cost with no return. Every variant but the baseline needs live
-model calls.
+`eval/variants.ts` holds the variants and `eval/variants.test.ts` reads this table, so a row added
+here without a variant behind it fails the suite. "No run context" was added with the harness: the
+worker sequence ([ADR-0008](adr/0008-run-level-context-is-the-worker-sequence.md)) arrived after the
+table was written, and the ADR names this study as what decides whether the field stays.
+
+Each variant is an argument to the classifier seam `npm run eval` already uses, not a second
+harness. Every row is scored exactly as the headline is — the same fixtures, the same consensus over
+samples, the same Wilson intervals — and the report adds what intervals cannot show at this size:
+how many predictions each variant moved, how many fixtures carry what it withholds, and a breakdown
+by quadrant and by bucket, since a field may only matter for the hard cases. Cost per variant sits
+beside accuracy, because a field is pruned on both.
+
+**What is withheld is an input, not an assembler field.** Three of the assembler's thirteen fields —
+the diff summary, its hunks and the derived diff signal — are views of one string, and no change to
+the raw input removes the hunks while keeping the paths. Withholding by input keeps the two
+classifiers' deprivation identical by construction.
+
+**A withheld input reaches the two classifiers differently, on purpose.** The agent is told:
+`agents/context.ts` drops the fields and names them in the prompt as withheld, never as missing,
+because "no stack trace was captured" and "we chose not to send one" are different inputs and only
+the second is the variable. With nothing withheld the prompt is byte-identical to the one
+`npm run eval` sends, so the full-context row replays the same cassettes. The baseline reads the raw
+input rather than a prompt, so there is nobody to tell; the input is blanked instead, to the value
+that carries no signal. "No history" is blanked to what the analyser emits on a cache miss — computed
+by `flakemetry-lib` itself, so the variant tests an input the pipeline really produces rather than
+zeroes chosen for the occasion.
+
+**The held-out slice is never ablated.** An ablation is iteration by definition, and spending the
+held-out budget on it would leave nothing to confirm a result with. `--slice` is refused rather than
+accepted, and nothing the ablation does is written to `eval/holdout-log.json`.
+
+### What runs today
+
+The agent's variants need model calls, and none are recorded (#38). `npm run eval:ablation` defaults
+to the agent anyway, because the study is the agent's: on a clean clone it lists every variant as
+"not run — no cassettes, see #38", exits 1 and writes nothing. It never estimates a row it could not
+score, and replay never falls through to a live call.
+
+`npm run eval:ablation -- --classifier=baseline` runs the same variants through the baseline. That
+costs nothing and answers a narrower question that is still a real one — which signals the
+**control** relies on — and it is what `eval/ablation.md` holds today, under a heading that says so.
+A field the baseline ignores may still be the one the agent needs, so none of its rows is a verdict
+on the context bundle. It does say where the agent has room to win: the baseline never reads the test
+source or the run context, so any accuracy those fields buy is accuracy the control cannot have.
+
+The conclusions in the report are written by the generator, under the rule the main report uses: a
+difference counts only when the intervals do not overlap, and anything less is called within noise
+in those words. At n = 26 that is most single-field effects. A paired test would detect smaller
+moves, since every row scores the same fixtures; the per-variant count of changed predictions is
+the paired measurement, reported rather than tested.
+
+CI runs `npm run eval:ablation -- --classifier=baseline --check` in the evaluation job, the same
+freshness check `--gate` applies to `eval/report.md`, so the committed study cannot drift from the
+code and dataset that produce it. A change to the dataset regenerates both files.
+
+Recording the agent's variants waits on the same credentials as #38, and three things move with it:
+the CI check switches to the default command, `npm run cassettes:record` gains an ablation pass, and
+`npm run cassettes:check` learns the ablation's requests — without that, every recorded ablation
+cassette would read as orphaned.
 
 ## Development and held-out slices
 

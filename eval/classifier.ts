@@ -11,6 +11,7 @@ import {
 import type { Classification, ClassificationInput } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
 import { classifyWithBaseline } from '@sentra/agents'
+import { contextFor, withhold, type InputName } from './variants.js'
 
 /**
  * Choosing which classifier the harness runs.
@@ -65,15 +66,28 @@ export interface ClassifierDeps {
   env?: NodeJS.ProcessEnv
   /** Injected so the agent path is testable without a key, a cassette or a network. */
   transport?: Transport
+  /**
+   * Inputs kept from the classifier — the ablation study's variable (#78).
+   * Absent or empty is the full context, and changes nothing, not even a
+   * cassette key.
+   *
+   * Taken here, at the seam, so both classifiers are denied the same thing by
+   * the same argument. Each applies it the way it reads its input: the agent's
+   * assembler drops the fields and says so in the prompt, and the baseline,
+   * which reads the raw input, is handed it blanked. `variants.ts` has both.
+   */
+  withhold?: readonly InputName[]
 }
 
 export function chooseClassifier(
   classifier: 'baseline' | 'agent',
   deps: ClassifierDeps = {},
 ): ChosenClassifier {
+  const withheld = deps.withhold ?? []
+
   if (classifier === 'baseline') {
     return {
-      classify: (input) => Promise.resolve(classifyWithBaseline(input)),
+      classify: (input) => Promise.resolve(classifyWithBaseline(withhold(input, withheld))),
       context: { promptVersion: null, mode: null },
       usage: [],
     }
@@ -88,6 +102,7 @@ export function chooseClassifier(
 
   const budget = new TokenBudget(tokenBudget(env))
   const usage: Usage[] = []
+  const context = contextFor(withheld)
 
   return {
     classify: async (input, sample) => {
@@ -96,6 +111,7 @@ export function chooseClassifier(
         system: prompt.system,
         promptVersion: prompt.version,
         budget,
+        context,
         sample,
         onTelemetry: (telemetry) => {
           usage.push({
