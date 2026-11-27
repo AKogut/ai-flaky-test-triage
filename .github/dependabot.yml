@@ -107,3 +107,25 @@ updates:
       # release that pulls; drop this once that issue is closed.
       - dependency-name: 'ossf/scorecard-action'
         versions: ['2.6.0']
+
+  # The Codespaces image, which .devcontainer/Dockerfile pins by digest. `docker`, not
+  # `devcontainers`: that updater only updates Features, and the image is not one.
+  - package-ecosystem: docker
+    directory: '/.devcontainer'
+    schedule:
+      interval: monthly
+    # Same rule as above, with one gap. Dependabot takes an image's release date
+    # from Docker Hub only, and this one is on mcr.microsoft.com, so it proposes
+    # the update anyway and records a warning that the date was unavailable. The
+    # two weeks are then checked by hand, against the versioned tag's date on MCR.
+    cooldown:
+      default-days: 14
+    # A development dependency: nothing in CI or the published pipeline runs in
+    # this image. Named like the npm dev tooling above.
+    commit-message:
+      prefix: 'chore(deps-dev)'
+    ignore:
+      # The tag is the Node major, so `26-bookworm` is a major update, not a newer
+      # build of this one. Held to engines.node, as @types/node is above.
+      - dependency-name: 'mcr.microsoft.com/devcontainers/javascript-node'
+        update-types: ['version-update:semver-major']

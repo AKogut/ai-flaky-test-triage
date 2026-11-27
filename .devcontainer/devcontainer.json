@@ -1,0 +1,16 @@
+// GitHub Codespaces, or any editor that reads the Dev Containers spec: Node 24 and
+// the dependencies, and nothing that needs a key. `npm run demo` is the first command.
+//
+// Docker Desktop for Mac mounts the workspace as a file share from the host, and the
+// e2e suite does not work there: the reset each test writes to SQLite never reaches
+// the server, which reads the same file through WAL, so most of the suite fails.
+// Codespaces keeps the workspace on the VM's own disk, and from a disk like that the
+// suite fails only where it is meant to.
+{
+  "name": "Sentra",
+  "build": { "dockerfile": "Dockerfile" },
+  "postCreateCommand": "npm ci",
+  // Codespaces opens the editor before postCreateCommand has finished, and a terminal
+  // opened in that window would find no tsx. Waiting makes the first terminal a ready one.
+  "waitFor": "postCreateCommand"
+}
