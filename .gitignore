@@ -56,6 +56,9 @@ yarn-error.log*
 # tools would delete each other's output if they shared a directory.
 app/client/dist-bundle/
 
+# The project site, rendered by scripts/site.ts and deployed by the Pages workflow.
+/_site/
+
 # The unit run's machine-readable report. Playwright's is results.json above; the
 # two are separate files so that `npm test` cannot have one erase the other.
 /results-unit.json

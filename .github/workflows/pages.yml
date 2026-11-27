@@ -1,0 +1,91 @@
+name: Pages
+
+# The project site, https://akogut.github.io/ai-flaky-test-triage/, for a reader
+# who will not clone the repository and may not have a GitHub account. Four
+# static pages, each made from a file already here: scripts/site.ts renders the
+# README's 60-second tour, eval/report.md, eval/ablation.md and the report
+# `npm run demo` writes, and stamps each with the commit it came from. The
+# script's header says why, and what fails its build.
+#
+# No secret is referenced in this file. The demo runs in replay mode, which
+# makes no network call and needs no key, as it does on a clean clone.
+
+on:
+  push:
+    branches: [main]
+    # What the pages are made from. A change anywhere else cannot change the
+    # site, except through a dependency; a manual run covers that case.
+    paths:
+      - README.md
+      - eval/report.md
+      - eval/ablation.md
+      - 'demo/**'
+      - scripts/demo.ts
+      - scripts/site.ts
+      - scripts/site.css
+      - docs/assets/demo.gif
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and none cancelled halfway, as GitHub's own Pages
+# workflows do it. A run queued behind another deploys the newer main.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Render the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Fails on a relative link that points at nothing, on an image from
+      # another origin, and on a demo report that does not name its classifier.
+      - name: Render the pages into _site/
+        run: npx tsx scripts/site.ts
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    # A manual run can be started from any branch. It builds, which checks the
+    # pages, but only main is published.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Pages has to be enabled once, with "GitHub Actions" as its source, by
+      # someone who can change the repository's settings. Until it is, this step
+      # fails the run with "Get Pages site failed. Please verify that the
+      # repository has Pages enabled and configured to build using GitHub
+      # Actions", and nothing is deployed. Its `enablement` input stays off: it
+      # needs a token with administration rights, which this workflow will not
+      # hold, and a setting that is off should say so rather than be switched on
+      # by the job that needed it.
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
