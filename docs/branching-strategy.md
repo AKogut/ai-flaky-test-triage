@@ -96,6 +96,14 @@ intermittent, so ground truth was not reproducible between labellers.
 Closes #42
 ```
 
+**Subjects stop at 72 characters**, headers at 100. The one exception is the title Dependabot
+writes for a version bump. Its length is a package name, two versions and a group name, so it is
+let off both limits and held to every other rule. #271 failed the check with this title:
+
+```
+chore(deps-dev): bump lint-staged from 17.6.0 to 17.6.1 in the dev-tooling group across 1 directory
+```
+
 **Breaking changes** use `!` after the scope and a `BREAKING CHANGE:` footer. Schema changes to
 `analysis.json` or the fixture format are breaking; both are consumed by committed data.
 
