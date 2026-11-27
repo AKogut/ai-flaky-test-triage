@@ -3,6 +3,7 @@
 > The normative version — including the ordered labelling rules used for the golden dataset — is
 > [`docs/taxonomy.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/taxonomy.md).
 > This page explains why the scheme looks the way it does.
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 ## The obvious design, and why it fails
 

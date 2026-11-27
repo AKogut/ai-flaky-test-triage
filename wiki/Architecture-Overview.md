@@ -2,6 +2,7 @@
 
 > Narrative orientation. The normative specification — types, field definitions, failure-mode table —
 > is [`docs/architecture.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/architecture.md).
+> Repository: [AKogut/ai-flaky-test-triage](https://github.com/AKogut/ai-flaky-test-triage).
 
 ## The constraint that shapes everything
 

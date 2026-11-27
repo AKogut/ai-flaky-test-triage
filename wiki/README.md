@@ -15,14 +15,39 @@ so it gets the stricter convention, not an exemption from it.
 
 ## Publishing
 
+Merging is publishing. [`.github/workflows/wiki.yml`](../.github/workflows/wiki.yml) runs on every
+push to `main` that changes this directory or the publish script, and can be started by hand from
+the Actions tab. It runs the same script a maintainer would:
+
 ```bash
-npm run wiki:publish        # or: ./scripts/publish-wiki.sh
+npm run wiki:publish                  # or: ./scripts/publish-wiki.sh
+./scripts/publish-wiki.sh --dry-run   # print the diff it would publish, push nothing
 ```
 
-The script clones `…/ai-flaky-test-triage.wiki.git`, mirrors this directory into it, and pushes.
-Page names come from filenames: `Getting-Started.md` becomes the _Getting Started_ page.
+The script clones `…/ai-flaky-test-triage.wiki.git`, mirrors this directory into it except this
+file, and pushes. When the wiki already matches, it says so and commits nothing. Page names come
+from filenames: `Getting-Started.md` becomes the _Getting Started_ page.
+
+Either way, the commit on the wiki carries the owner's name and GitHub noreply address. In CI the
+push authenticates with the workflow's own `GITHUB_TOKEN`, granted `contents: write` on that one
+job; no personal token exists for it. By hand the default remote is SSH and uses your key, and
+`WIKI_REMOTE=https://github.com/AKogut/ai-flaky-test-triage.wiki.git` clones anonymously, which is
+all a dry run needs.
 
 `_Sidebar.md` and `_Footer.md` are special — GitHub renders them on every page.
+
+### What CI holds these pages to
+
+[`tests/unit/wiki.test.ts`](../tests/unit/wiki.test.ts) runs with the unit suite, so a page that
+breaks one of these rules fails the build before it is published:
+
+- every page links to the repository and, where it has one, to its counterpart there — a page
+  added here needs a line in that test's counterpart map
+- the `docs/` versus wiki rule stays stated on Home
+- every term in the test's list has a Glossary entry, and so does every value of the `owner`,
+  `determinism` and provenance enums and every `SENTRA_*` variable a page names
+- every link between pages, and every link into the repository, resolves — anchors included,
+  slugged the way GitHub slugs headings
 
 ### First-time setup
 
