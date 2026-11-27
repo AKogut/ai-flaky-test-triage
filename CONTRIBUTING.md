@@ -22,6 +22,8 @@ npm install
 npm run help            # every command, what it does, and whether it exists yet
 ```
 
+Or open a [Codespace](https://codespaces.new/AKogut/ai-flaky-test-triage): `.devcontainer/` gives it Node 24 and runs `npm ci` before the first terminal opens, and the e2e suite there needs `npx playwright install --with-deps chromium`: without `--with-deps`, Chromium stops at a missing `libnspr4.so`.
+
 What runs today:
 
 ```bash

@@ -8,6 +8,7 @@
 [![Open issues](https://img.shields.io/github/issues/AKogut/ai-flaky-test-triage?label=open%20issues)](https://github.com/AKogut/ai-flaky-test-triage/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D24.15-brightgreen)](package.json)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/AKogut/ai-flaky-test-triage)
 
 <!-- status:start -->
 
@@ -39,7 +40,7 @@
   titles, stacks, diffs from fork PRs — is fenced, length-capped and scanned in linear time; output
   is schema-validated; a token budget bounds every run. CodeQL and OpenSSF Scorecard watch the
   repository itself.
-- **Try it.** `git clone`, `npm ci`, `npm run demo` — no API key, no network:
+- **Try it.** `git clone`, `npm ci`, `npm run demo` — no API key, no network, and in a [Codespace](https://codespaces.new/AKogut/ai-flaky-test-triage) only the last step:
 
 <img src="docs/assets/demo.gif" width="760" alt="A terminal running npm run demo: the command prints a banner naming the input, demo/analysis.json, and the classifier that ran — the model-free baseline, because no cassettes are recorded yet — then reports that it classified 4 of 8 tests and wrote report.md.">
 
