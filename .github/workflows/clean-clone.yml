@@ -120,6 +120,7 @@ jobs:
           git status --porcelain --untracked-files=no > "$RUNNER_TEMP/install-changes.txt"
           if [ -s "$RUNNER_TEMP/install-changes.txt" ]; then
             echo "::warning title=npm install changed the checkout::$(tr '\n' ' ' < "$RUNNER_TEMP/install-changes.txt")"
+            git --no-pager diff
           fi
 
       # The baseline, because with no key and no recorded cassettes it is the
@@ -208,6 +209,8 @@ jobs:
             eval/metrics.json
           retention-days: 14
 
+      # Into the log as well as the summary, so `gh run view --log` carries the
+      # whole transcript.
       - name: Write the timings to the job summary
         if: always()
         run: |
@@ -253,4 +256,4 @@ jobs:
               echo '```'
               echo
             fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

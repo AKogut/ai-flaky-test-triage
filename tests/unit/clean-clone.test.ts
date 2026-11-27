@@ -275,10 +275,16 @@ describe('the timings', () => {
   }
 
   it('make a table with clone-to-report and the whole job', () => {
-    const { code, summary: markdown } = runStep(summary, ENV, {
+    const {
+      code,
+      stdout,
+      summary: markdown,
+    } = runStep(summary, ENV, {
       'timings.tsv': 'clone\t3\ninstall\t41\ndemo\t2\nbrowser\t30\ntest\t185\neval\t4\n',
     })
     expect(code).toBe(0)
+    // The log carries the same table, so the transcript survives without the summary page.
+    expect(stdout).toBe(markdown)
     expect(markdown).toContain('## Clean clone on Linux')
     expect(markdown).toContain('[run 42](https://github.com/owner/repo/actions/runs/42)')
     expect(markdown).toContain('| `git clone`, full history | 3s |')
