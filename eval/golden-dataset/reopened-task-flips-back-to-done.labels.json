@@ -1,0 +1,10 @@
+{
+  "name": "reopened-task-flips-back-to-done",
+  "owner": "app_code",
+  "determinism": "intermittent",
+  "justification": "A web-first assertion that timed out reads like a spec that looked too early, and that is the tempting reading. It does not hold: the spec waits for each click to paint, then for both writes to answer, then polls the stored row and finds it active, and only then checks the screen. Nothing was in flight when the last wait began, and the screen never reached the value the database already held. The client applies each status response when it arrives, with no check that it answers the newest request, so a completion answered after the reopen that followed it puts the row back to done. Rule 2 does not fire because the test encodes no unsafe assumption, so rule 3 decides, and the product is what is wrong. Intermittent: whether the slower answer is the older one changes from run to run. The history this fixture carries alternates: 2 failures and 3 passes in 5 CI runs.",
+  "ruleApplied": "rule-3-reproduces-against-unchanged-product",
+  "provenance": "captured",
+  "bucket": "hard-quadrant",
+  "lowConfidenceGroundTruth": false
+}

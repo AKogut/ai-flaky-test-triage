@@ -1,0 +1,35 @@
+{
+  "name": "fifty-fifth-swap-does-not-take",
+  "scenario": "Two tasks swap places sixty times, and on the fifty-fifth swap the saved order stays as it was.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/back-and-forth.spec.ts›keeps every move when two tasks trade places sixty times",
+      "title": "keeps every move when two tasks trade places sixty times",
+      "file": "tests/e2e/back-and-forth.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "workerIndex": 2,
+      "startedAt": "2026-11-27T13:01:04.924Z",
+      "flakyWithinRun": false,
+      "durationMs": 13196,
+      "annotations": [],
+      "error": {
+        "message": "Error: second stored row after move 55\n\nsecond stored row after move 55\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"Re\u001b[7mn\u001b[27mew the \u001b[7mstaging certificate\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Re\u001b[7mvi\u001b[27mew the \u001b[7mmigration plan\u001b[27m\"\u001b[39m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate",
+        "stack": "Error: second stored row after move 55\n\nsecond stored row after move 55\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"Re\u001b[7mn\u001b[27mew the \u001b[7mstaging certificate\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Re\u001b[7mvi\u001b[27mew the \u001b[7mmigration plan\u001b[27m\"\u001b[39m\n\nCall Log:\n- Timeout 10000ms exceeded while waiting on the predicate\n    at tests/e2e/back-and-forth.spec.ts:106:8",
+        "snippet": "  104 |     await expect\n  105 |       .poll(() => stored(db)[1]?.title, `second stored row after move ${String(move + 1)}`)\n> 106 |       .toBe(title)\n      |        ^\n  107 |\n  108 |     await expect(titles(page).nth(1)).toHaveText(title)\n  109 |   }"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/back-and-forth.spec.ts›keeps every move when two tasks trade places sixty times",
+      "flakinessScore": 0,
+      "consecutiveFailures": 7,
+      "totalRuns": 7,
+      "statusHistory": "FFFFFFF",
+      "firstSeenAt": "2026-11-27T12:41:55.006Z",
+      "lastPassedAt": null,
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "const PAIR = ['Renew the staging certificate', 'Review the migration plan'] as const\nconst MOVES = 60\n\nconst moveUp = (page: Page, title: string): Promise<void> =>\n  row(page, title).getByRole('button', { name: 'Move up' }).click()\n\nconst answered = (page: Page): Promise<unknown> =>\n  page.waitForResponse((response) => response.url().endsWith('/api/tasks/reorder'))\n\ntest.beforeEach(async ({ page }) => {\n  await open(page)\n})\n\ntest('keeps every move when two tasks trade places sixty times', async ({ page, db }) => {\n  for (let move = 0; move < MOVES; move++) {\n    const title = PAIR[move % PAIR.length] ?? ''\n\n    await Promise.all([answered(page), moveUp(page, title)])\n    await expect\n      .poll(() => stored(db)[1]?.title, `second stored row after move ${String(move + 1)}`)\n      .toBe(title)\n\n    await expect(titles(page).nth(1)).toHaveText(title)\n  }\n})\n"
+}

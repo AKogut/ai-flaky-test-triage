@@ -1,0 +1,35 @@
+{
+  "name": "board-opens-with-a-row-the-list-leaves-out",
+  "scenario": "The titles on the board as it opens are compared with a list of five, and there are six.",
+  "subject": {
+    "result": {
+      "testId": "tests/e2e/board-on-open.spec.ts›opens on the seeded tasks, in order",
+      "title": "opens on the seeded tasks, in order",
+      "file": "tests/e2e/board-on-open.spec.ts",
+      "status": "failed",
+      "attempts": 1,
+      "workerIndex": 1,
+      "startedAt": "2026-11-27T13:01:04.912Z",
+      "flakyWithinRun": false,
+      "durationMs": 10374,
+      "annotations": [],
+      "error": {
+        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.task-title')\nTimeout: 10000ms\n\u001b[32m- Expected  - 0\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[2m    \"Write the incident postmortem\",\u001b[22m\n\u001b[2m    \"Review the migration plan\",\u001b[22m\n\u001b[2m    \"Renew the staging certificate\",\u001b[22m\n\u001b[31m+   \"Review the release checklist\",\u001b[39m\n\u001b[2m    \"Draft the release notes\",\u001b[22m\n\u001b[2m    \"Investigate the board spec\",\u001b[22m\n\u001b[2m  ]\u001b[22m\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('.task-title') with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.task-title')\u001b[22m\n\u001b[2m    24 × locator resolved to 6 elements\u001b[22m\n",
+        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.task-title')\nTimeout: 10000ms\n\u001b[32m- Expected  - 0\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[2m  Array [\u001b[22m\n\u001b[2m    \"Write the incident postmortem\",\u001b[22m\n\u001b[2m    \"Review the migration plan\",\u001b[22m\n\u001b[2m    \"Renew the staging certificate\",\u001b[22m\n\u001b[31m+   \"Review the release checklist\",\u001b[39m\n\u001b[2m    \"Draft the release notes\",\u001b[22m\n\u001b[2m    \"Investigate the board spec\",\u001b[22m\n\u001b[2m  ]\u001b[22m\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('.task-title') with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('.task-title')\u001b[22m\n\u001b[2m    24 × locator resolved to 6 elements\u001b[22m\n\n    at tests/e2e/board-on-open.spec.ts:67:30",
+        "snippet": "  65 |\n  66 | test('opens on the seeded tasks, in order', async ({ page }) => {\n> 67 |   await expect(titles(page)).toHaveText([\n     |                              ^\n  68 |     'Write the incident postmortem',\n  69 |     'Review the migration plan',\n  70 |     'Renew the staging certificate',"
+      }
+    },
+    "signal": {
+      "testId": "tests/e2e/board-on-open.spec.ts›opens on the seeded tasks, in order",
+      "flakinessScore": 0,
+      "consecutiveFailures": 7,
+      "totalRuns": 7,
+      "statusHistory": "FFFFFFF",
+      "firstSeenAt": "2026-11-27T12:41:55.006Z",
+      "lastPassedAt": null,
+      "isNew": false
+    }
+  },
+  "historyAvailable": true,
+  "testSource": "test.beforeEach(async ({ page }) => {\n  await open(page)\n})\n\ntest('opens on the seeded tasks, in order', async ({ page }) => {\n  await expect(titles(page)).toHaveText([\n    'Write the incident postmortem',\n    'Review the migration plan',\n    'Renew the staging certificate',\n    'Draft the release notes',\n    'Investigate the board spec',\n  ])\n})\n"
+}
