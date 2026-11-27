@@ -64,10 +64,13 @@ updates:
       - dependency-name: '@opentelemetry/api'
         versions: ['>=1.11.0']
 
-      # typescript-eslint caps its peer range at `typescript <6.1.0`, and every
-      # type-aware rule — including the agent I/O guardrail — runs through it. A
-      # major TypeScript bump is unsatisfiable until that cap moves, so it is held
-      # rather than reopened weekly. Tracked in #124.
+      # TypeScript 6.0 is in, and 7 is held. typescript-eslint still caps its peer
+      # range at `typescript <6.1.0`, and every type-aware rule — including the
+      # agent I/O guardrail — runs through it; its parser and plugin throw on 7.0.
+      # Its only route to 7 so far is an experimental tsgo backend, through an
+      # optional `@typescript/native` peer that starts at 7.1, which is still in
+      # beta. The major bump stays unsatisfiable until the `typescript` peer admits
+      # 7, so it is held rather than reopened weekly. Tracked in #124.
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
 
