@@ -39,8 +39,8 @@ changed non-test path counts.
 earlier version counted every non-test path, so a documentation-only commit read as a product
 change — the right answer for the wrong reason, fixed in #112.
 
-The rule's remaining crudeness is left in deliberately. Every fixture in the `stale-test` bucket
-has a genuine product diff, so the baseline calls all of them `app_code` and gets all of them
+The rule's remaining crudeness is left in deliberately. Every synthetic fixture in the `stale-test`
+bucket has a genuine product diff, so the baseline calls all seven `app_code` and gets all seven
 wrong. Narrowing that would mean tuning the control against the dataset it exists to control for,
 and the distinction matters: excluding documentation makes the rule mean what this page says it
 means, while excluding "diffs that only look product-ish" would mean fitting the control to the

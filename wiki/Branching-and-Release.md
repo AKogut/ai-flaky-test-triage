@@ -20,8 +20,8 @@ fix/57-history-atomic-write
 exp/61-multistep-agent-ablation
 ```
 
-Prefixes: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`, `perf`, `exp`.
-
+The prefix is the kind of change — the list is in
+[the strategy](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/branching-strategy.md#branch-naming).
 The issue number makes the branch self-linking in the UI and makes a stale branch traceable to
 closed work six months later.
 
@@ -44,9 +44,9 @@ description. Prompts are code.
 
 Required before merge:
 
-1. The five required checks green — repository hygiene, PR title, static analysis, unit & contract
-   tests, and the eval gate, which runs on every pull request. E2E runs too but is not required:
-   its flaky specs are deliberate input, not defects
+1. The required checks green — the eval gate among them, on every pull request; they are named in
+   [Who can merge](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/branching-strategy.md#who-can-merge).
+   E2E runs too but is not required: its flaky specs are deliberate input, not defects
 2. A description that says **how the change was verified**, not that tests pass
 3. The before/after eval table for any prompt or agent change
 4. No unresolved threads

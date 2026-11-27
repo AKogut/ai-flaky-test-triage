@@ -9,8 +9,8 @@ answers it with numbers instead of assertions.
 
 A non-LLM heuristic of about ninety lines classifies the same dataset, and every agent number is
 reported next to it. If the heuristic wins, the README says the heuristic wins. That comparison,
-plus an ablation study that will measure what each piece of context contributes (🚧 M9, #78), is
-the part that is not a wrapper.
+plus an ablation study that measures what each piece of context contributes
+(`npm run eval:ablation`, #78; the agent's rows wait on #38), is the part that is not a wrapper.
 
 No model has been scored yet. Scoring one needs an API key the project does not have, so today the
 comparison has one column; the agent's arrives with #38, and the commitment above does not move.
@@ -57,8 +57,9 @@ The flaky specs are input, not oversight. They exist so the pipeline has realist
 classify, and each one's header comment explains the mechanism and why the label is what it is —
 a reader can check the ground truth rather than take it on trust.
 
-There are ten. Three are the application's fault, two are the runner's, and three fail on every
-run rather than some of the time:
+There are nine, and one more that failed by accident and has been fixed. Of the ten below, three
+are the application's fault, two are the runner's, and three fail on every run rather than some of
+the time:
 
 | Spec                               | Owner         | Rerun           | Why it fails                                                            |
 | ---------------------------------- | ------------- | --------------- | ----------------------------------------------------------------------- |
@@ -74,8 +75,8 @@ run rather than some of the time:
 | `after-a-restart.spec.ts`          | `environment` | `intermittent`  | Two tests' own servers race for one fixed port                          |
 
 That spread is the point. A flat "flaky" label would put all of them in one bucket while they need
-completely different responses, and the pair at the top — same symptom, opposite owner — is what
-makes the two-axis taxonomy earn its keep.
+completely different responses, and `reorder-quick-succession` beside `find-by-name` — same
+symptom, opposite owner — is what makes the two-axis taxonomy earn its keep.
 
 The distinction that matters for all of them: their failures are **emergent**, not scripted. They
 come from seeded latency in the server, from how the runner happens to schedule files, from
@@ -129,11 +130,12 @@ project with a different set of problems.
 
 ## Why is the evaluation itself slightly flaky?
 
-Because model output is non-deterministic and this model exposes no sampling controls to pretend otherwise, and a
-small dataset carries wide intervals — 44 fixtures today, 60 at target, and even at 60 the lower
-bound of a 95% interval around 90% accuracy sits ten points below it. Rather than pretending
-otherwise, the harness samples each fixture five times when a model is classifying, reports
-variance and label stability, and gates CI on interval lower bounds.
+Today it is not: it scores the baseline, a pure function, once per fixture. It turns flaky once a
+model is scored, because model output is non-deterministic and this model exposes no sampling
+controls to pretend otherwise. A small dataset adds wide intervals on top — 44 fixtures today, 60
+at target, and even at 60 the lower bound of a 95% interval around 90% accuracy sits ten points
+below it. Rather than pretending otherwise, the harness samples each fixture five times when a
+model is classifying, reports variance and label stability, and gates CI on interval lower bounds.
 
 A flaky-test triage tool with a mildly flaky test suite is a fair irony, and hiding it would be
 worse than owning it.

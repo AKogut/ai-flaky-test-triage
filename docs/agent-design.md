@@ -40,7 +40,7 @@ the transport. Between them:
   request still in flight holds its count against the budget, so two calls admitted at once each
   see the other.
   One budget is shared across a whole run — a per-call ceiling is not a ceiling on anything, since
-  thirty-nine fixtures would each stay inside it. In the pipeline, once it refuses a call the
+  forty-four fixtures would each stay inside it. In the pipeline, once it refuses a call the
   orchestrator stops dispatching, and every test it never reached is reported as `not-dispatched`
   rather than left out. In the evaluation harness a refusal ends the run, because a partly scored
   dataset is not a result.
@@ -122,7 +122,7 @@ what it measures.
 
 The OpenTelemetry SDK is on the 3.x line, with the `@opentelemetry/api` 1.10 that every 3.x
 package requires. Most of what 3.0 changed does not reach this code: the removed packages and
-exports are ones it never used, and it imports four packages by name, so the new `dist/` build
+exports are ones it never used, and it imports five packages by name, so the new `dist/` build
 behind an `exports` map is invisible to it. Its spans are the same as under 2.x apart from
 `telemetry.sdk.version`. One change does reach it. The API now types every attribute value as
 `unknown`, and SDK 3 records an object or a mixed array where 2.x dropped it, so neither the
@@ -285,8 +285,8 @@ about the two paths differs after this function returns.
 The seam is async for both. That costs the baseline nothing and keeps every caller identical.
 
 One token budget is shared across the whole run rather than one per call — a per-call ceiling is
-not a ceiling on anything, since thirty-nine fixtures would each stay inside it and the run would
-spend thirty-nine times what was authorised. Fixtures are scored sequentially: concurrency would
+not a ceiling on anything, since forty-four fixtures would each stay inside it and the run would
+spend forty-four times what was authorised. Fixtures are scored sequentially: concurrency would
 buy wall-clock and cost a deterministic order for the budget to run out in.
 
 In replay mode the transport handed to the decorator is one that throws on any call. Constructing a

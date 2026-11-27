@@ -20,16 +20,12 @@ something.
 ## 1. A non-LLM baseline
 
 A deliberately simple heuristic — roughly ninety lines of code, in `agents/baseline.ts` — classifies
-the same fixtures:
+the same fixtures. It reads an infrastructure error as `environment`, a commit that changes product
+source as `app_code`, a failure that names a locator or a wait as `test_code`, and an unbroken
+failure streak as `deterministic`. The rules, in order, are in
+[the methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md#1-a-non-llm-baseline).
 
-```
-no assertion reached (crash / bind / install)   → environment
-the commit changes any non-test source file     → app_code
-locator or timeout error, not a value           → test_code
-otherwise                                       → app_code
-```
-
-The second rule says **any** changed non-test source path, not "the file under test". A heuristic
+The ownership rule says **any** changed non-test source path, not "the file under test". A heuristic
 cannot map a test to the implementation it exercises, and the looser wording pointed in two
 opposite directions at once.
 
@@ -63,9 +59,10 @@ What is worth saying without a figure attached, because it does not change when 
 
 - **Joint accuracy sits well below either axis.** Reporting one axis alone describes a classifier
   that half works; joint accuracy is how often the answer is one a developer could act on.
-- **`test_code` recall is close to nothing.** The baseline's ownership rule fires on the diff, and
-  the fixtures where the test is at fault mostly carry a product diff too. Accuracy hides that
-  entirely; macro-F1 is what makes it visible, which is the argument for reporting both.
+- **`test_code` recall is low.** The baseline's ownership rule fires on the diff, and the synthetic
+  fixtures where the test is at fault carry a product diff too; the ones it gets right are captured
+  runs with no diff to mislead it. Accuracy hides that entirely; macro-F1 is what makes it visible,
+  which is the argument for reporting both.
 - **A classifier that answers `app_code` unconditionally beats it on `owner` accuracy**, because
   most fixtures are `app_code`. That is the adversarial dataset doing its job rather than a defect
   in the baseline — on macro-F1 the constant classifier loses badly — and the intervals overlap, so
@@ -78,18 +75,11 @@ the dataset cannot move a number without the build saying so.
 ## 2. An adversarial dataset
 
 A target of 60 fixtures — 44 today, 32 in the development slice and 12 held out — weighted towards
-the cases that defeat obvious shortcuts:
-
-| Bucket                                       | Target share |
-| -------------------------------------------- | ------------ |
-| Hard quadrant (`app_code` + `intermittent`)  | ~20%         |
-| Misleading history                           | ~10%         |
-| Environment dressed as regression            | ~10%         |
-| Stale tests after refactors                  | ~15%         |
-| Unsynchronised tests                         | ~10%         |
-| Cross-file state leaks                       | ~10%         |
-| Straightforward                              | ~25%         |
-| Genuinely ambiguous (excluded from headline) | ~10%         |
+the cases that defeat obvious shortcuts: the hard quadrant, misleading history, environment failures
+dressed as regressions, stale tests, unsynchronised tests and cross-file state leaks. Straightforward
+cases are the sanity floor, and genuinely ambiguous ones are excluded from the headline. Each
+bucket's target share is in
+[the methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md#2-an-adversarial-dataset).
 
 Fixtures carry their **provenance**: `synthetic` (hand-authored), `captured` (from a real CI run,
 labelled after the fact), `mutated` (a real run with an injected defect). Metrics are broken down by
@@ -111,16 +101,18 @@ That orthogonality is the point. Buckets that all failed together would mean the
 merely hard, or badly written. Failing on precisely the intended axis is what separates an
 adversarial dataset from a difficult one.
 
-`straightforward` is the control on the control: the baseline gets those right, so the failures
-above are properties of the fixtures rather than of the code being measured.
+`straightforward` is the control on the control: the baseline gets every synthetic one right, so the
+failures above are properties of the fixtures rather than of the code being measured. The captured
+ones it mostly misses, for want of the product diff its ownership rule keys on — a finding about
+provenance, not a broken control.
 
 ### Development and held-out slices
 
 Iterating prompts against every fixture fits them to it. `npm run eval` defaults to
 `--slice=dev`; the held-out fixtures are scored separately by `--slice=holdout`.
 
-The split is a **pure function of the fixture name** — the first 32 bits of its SHA-256 over 2³²,
-held out below 20%. Adding, removing or renaming any other fixture cannot move it.
+The split is a **pure function of the fixture name** — a hash of it, with about a fifth held out.
+Adding, removing or renaming any other fixture cannot move it.
 
 That property costs exact stratification, and the trade is deliberate. A split with guaranteed
 per-bucket counts has to look at the other fixtures, so inserting one reshuffles the boundary and
@@ -128,14 +120,16 @@ silently moves an existing fixture across it — invalidating every held-out num
 that moment, with nothing going red. Poor stratification is visible and self-correcting; a moving
 split is neither.
 
-The realised share runs above 20% — ordinary binomial variance at this size, which narrows as the
+The realised share runs above a fifth — ordinary binomial variance at this size, which narrows as the
 dataset grows towards 60. The per-bucket split is in
 [the report](https://github.com/AKogut/ai-flaky-test-triage/blob/main/eval/report.md#slices).
 
 **The usage budget.** A held-out set consulted freely is a development set with extra steps.
 `eval/holdout-log.json` records every evaluation and is committed, so the record cannot be quietly
-reset. Past three evaluations in 30 days the harness warns. `--slice=all` counts as a
-consultation — it reads the held-out fixtures just as surely as asking for them by name.
+reset, and past the budget the methodology sets the harness warns. `--slice=all` counts as a
+consultation — it reads the held-out fixtures just as surely as asking for them by name. What the
+budget is, and why it over-counts:
+[the methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md#the-usage-budget).
 
 ## 3. Reported uncertainty
 
@@ -156,8 +150,8 @@ more useful than one that is 88% accurate and flips on a third of fixtures — b
 cannot be trusted at the level of an individual pull-request comment, which is the only level at
 which anyone actually reads it.
 
-There is an obvious irony in a flaky-test triage tool whose own evaluation is mildly flaky. It is
-documented rather than hidden.
+There is an obvious irony in a flaky-test triage tool whose own evaluation turns mildly flaky the
+moment a model is in it. It is documented rather than hidden.
 
 ## 4. Does confidence mean anything?
 
@@ -198,22 +192,15 @@ to accidentally flatter the classifier.
 
 `npm run eval -- --gate` runs on every pull request. It verifies the committed report and metrics
 match a fresh run, then holds those numbers to the thresholds in `eval/gate.ts` — one file, each
-value carrying the reason it has the value it does.
+value carrying the reason it has the value it does. Every threshold, and when each is active, is in
+[the methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md#ci-gate).
 
-| Condition                                                           | Threshold      | Active |
-| ------------------------------------------------------------------- | -------------- | ------ |
-| Joint accuracy lower bound drops below the value recorded on `main` | −5pp           | yes    |
-| Joint accuracy lower bound below absolute floor                     | 0.65           | M3     |
-| Agent fails to beat the baseline on joint accuracy                  | any regression | M3     |
-| Self-consistency below floor                                        | 0.80           | M3     |
-| Hard-quadrant accuracy lower bound below floor                      | 0.50           | M3     |
-| Cost per fixture rises sharply                                      | +50%           | M3     |
-
-Five of the six are targets for the **agent**, not descriptions of the baseline — whose joint
-accuracy lower bound, in the report, sits far below the 0.65 floor. Enabling them today would make
-`main` permanently red on facts everybody already knows, and a permanently red gate is one people
-learn to merge past. They are implemented, printed on every run with the current distance to the target, and
-each names the condition that switches it on.
+One check is active on every run: nothing may make the classifier measurably worse than what is
+recorded on `main`. The cost check is active whenever a model ran. The rest are targets for the
+**agent**, not descriptions of the baseline, which sits far below the floors in the report.
+Enabling them today would make `main` permanently red on facts everybody already knows, and a
+permanently red gate is one people learn to merge past. They are implemented, printed on every run with the current
+distance to the target, and each names the condition that switches it on.
 
 Comparisons use interval **lower bounds**, never point estimates: at this dataset size a point
 estimate moves several percentage points between two classifiers that are indistinguishable, so
@@ -247,7 +234,7 @@ Stated plainly, because a methodology page claiming none is not credible.
 
 - **Author bias.** The fixtures, the rubric, and the prompt share an author. Mitigated by captured
   fixtures from real runs and by labelling rules mechanical enough for someone else to reproduce.
-- **Small n.** Thirty-nine fixtures — sixty at target — is not a benchmark. Hence the intervals.
+- **Small n.** Forty-four fixtures — sixty at target — is not a benchmark. Hence the intervals.
 - **Distribution shift.** TaskFlow's failure modes are not every codebase's. Nothing here claims to
   generalise beyond this repository.
 - **Prompt overfitting.** Iterating against the same fixtures fits them. Mitigated by a held-out

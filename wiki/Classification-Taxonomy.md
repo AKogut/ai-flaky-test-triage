@@ -69,33 +69,22 @@ that out and say so.
 
 ## Cases chosen to be hard
 
-Each of these is a case the golden dataset is built to cover, because each defeats one tempting
-shortcut. Two are not in it yet: no fixture pairs a regression with a dependency bump, and the one
-cross-file leak is a row left behind by another spec rather than a modal.
+Six cases are chosen because each defeats one tempting shortcut: "intermittent means flaky test",
+"a slower runner means environment", "intermittent means timing", reasoning from diff noise,
+reasoning about one test in isolation, and reasoning from the flakiness score. Each is listed with
+its correct label in
+[`docs/taxonomy.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/taxonomy.md#known-hard-cases),
+along with which ones the golden dataset does not cover yet.
 
-| Case                                                                | Truth                        | What it defeats                    |
-| ------------------------------------------------------------------- | ---------------------------- | ---------------------------------- |
-| Optimistic update races the API; test is correct and waits properly | `app_code` + `intermittent`  | "Intermittent means flaky test"    |
-| Test passes locally, fails on a slower CI runner; product is fine   | `test_code` + `intermittent` | "Slower runner means environment"  |
-| Selector matches two elements only when the list has ≥3 items       | `test_code` + `intermittent` | "Intermittent means timing"        |
-| Real regression in a commit that also bumps a dependency            | `app_code` + `deterministic` | Diff-noise reasoning               |
-| Test times out because a prior test left a modal open               | `test_code` + `intermittent` | Single-test-in-isolation reasoning |
-| Long-flaky test failing today for a **new** reason                  | `app_code` + `deterministic` | Flakiness-score reasoning          |
-
-The last one is the sharpest. It punishes exactly the feature a history-only baseline is built on,
-which is what makes the baseline comparison meaningful rather than a straw man.
+The sharpest is a test that has been flaky for months and today fails for a **new** reason. It
+punishes exactly the feature a history-only baseline is built on, which is what makes the baseline
+comparison meaningful rather than a straw man.
 
 ## Output shape
 
-```ts
-{
-  owner: 'app_code' | 'test_code' | 'environment'
-  determinism: 'deterministic' | 'intermittent'
-  confidence: number
-  reasoning: string
-  evidence: string[]     // quoted fragments from the input
-}
-```
+A classification carries the two axis values, a confidence, a short reasoning, and `evidence`: the
+fragments of the input it rests on, quoted. The schema, with its limits, is in
+[`docs/taxonomy.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/taxonomy.md#output-schema).
 
 `evidence` is not decoration. Requiring the model to quote what it relied on makes fabricated
 justifications visible in review, and gives the evaluation something to check beyond the label

@@ -10,18 +10,20 @@ unusually clear about its own.
 ## What the agents are not allowed to do
 
 The distinction that matters: the enforced ones are not promises, they are **absent capabilities**.
-Every row below is enforced today. A guarantee that was only planned would be labelled as planned,
+All six below are enforced today. A guarantee that was only planned would be labelled as planned,
 because a guardrail nobody has built yet reads exactly like one that works — and three of these
-rows were, until #63, #65 and #66 closed.
+were, until #63, #65 and #66 closed.
 
-| Guarantee                         | Status       | How it holds                                                                                                                                                                                                                |
-| --------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Never modify the working tree     | **enforced** | The pure agent modules cannot import `fs` or `child_process` — a lint rule fails the build, and a test feeds that rule a real violation to prove it fires. Another test drives a full run and asserts the files it writes.  |
-| Cannot fail your build            | **enforced** | The analysis job is `continue-on-error`. Only the tests and the eval gate can turn CI red.                                                                                                                                  |
-| Never approve or merge            | **enforced** | The workflow token is scoped `pull-requests: write, contents: read`. It cannot approve its own pull requests.                                                                                                               |
-| Cost cannot run away              | **enforced** | One token budget per run, checked before dispatch against a real `count_tokens` call. Once it refuses a call the orchestrator stops dispatching, and every test it never reached appears in the report as `not-dispatched`. |
-| Never push, tag, or commit        | **enforced** | `agents/git.ts` hands out four reads — `diff`, `log`, `show`, `fileAtRef` — and holds the client in a closure, so there is nothing to reach through. Lint makes it the only module allowed to import the git client.        |
-| Fix suggestions are never applied | **enforced** | `agents/fix-suggestion.ts` exports two functions, both of which return objects. There is no apply step to switch off, and a test asserts the module's whole export list.                                                    |
+- The agents never modify the working tree.
+- The triage stages cannot fail your build.
+- The agents never approve or merge.
+- Cost cannot run away.
+- The agents never push, tag, or commit.
+- Fix suggestions are never applied.
+
+What enforces each one — the lint rule, the token scope, the test that feeds a rule a real
+violation — is in the
+[guardrail table](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/limitations-and-guardrails.md#capability-guardrails).
 
 A promise enforced by discipline is not a guardrail. A promise enforced by the absence of a
 capability holds in six months, in a hurry, when nobody is thinking about it — which is why a
@@ -45,8 +47,8 @@ guarantee that is not yet enforced says so.
 Measured and published in `eval/report.md`, not hypothetical — so far for the baseline only, since
 no model has been scored yet (#38):
 
-- **The hard quadrant is the weakest and the most consequential.** A missed product race gets rerun
-  until green and ships.
+- **The hard quadrant is the most consequential, and a weak one.** A missed product race gets rerun
+  until green and ships. It is not the baseline's weakest quadrant; the report shows which are.
 - **Confidence may not be trustworthy** until calibration says otherwise. Treat it as a sortable
   hint.
 - **Misleading history is a known trap** — a test flaky for 200 runs that today fails for a new,

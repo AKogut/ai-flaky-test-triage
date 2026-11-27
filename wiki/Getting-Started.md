@@ -18,7 +18,10 @@
 
 ## Requirements
 
-Node ≥ 24.15. Nothing else. No Docker, no database, and no API key for anything that works today.
+Node ≥ 24.15, and for the e2e half of `npm test`, Playwright's Chromium — one command, below.
+Nothing else. No Docker, no database, and no API key for anything that works today. A
+[Codespace](https://codespaces.new/AKogut/ai-flaky-test-triage) arrives with Node and the
+dependencies already in place.
 
 ## Clone and run
 
@@ -37,7 +40,7 @@ still being built.
 
 ```bash
 npm run demo          # classifies the bundled run in demo/, writes report.md
-npm run test:unit     # the full suite, including the dataset's own tests
+npm run test:unit     # the unit suite, including the dataset's own tests
 npm run eval:lint     # golden-dataset composition and label-leakage check
 npm run typecheck
 ```
@@ -85,6 +88,7 @@ suspicious outcome.
 ```bash
 cp .env.example .env
 # add ANTHROPIC_API_KEY
+npx playwright install chromium   # once: the browser the e2e half of npm test drives
 npm test                     # runs the suite, writes results.json and results-unit.json
 npm run flakemetry:analyze   # test reports + history → analysis.json
 npm run agents:analyze       # analysis.json → report.md
@@ -133,6 +137,7 @@ optimistic-update race is captured for the dataset rather than waited for.
 | `report.md`                | `agents:analyze`, or `npm run demo`                  | no                                                 |
 | `otel-spans.json`          | `agents:analyze`; `--spans <path>` puts it elsewhere | no — CI uploads it in the `triage-report` artifact |
 | `eval/report.md`           | `npm run eval`                                       | **yes** — a regression shows up as a diff          |
+| `eval/ablation.md`         | `npm run eval:ablation -- --classifier=baseline`     | **yes** — CI fails when it is stale                |
 | `.flakemetry/history.json` | CI, on `main` only                                   | no — lives in the CI cache                         |
 
 ## Common questions
