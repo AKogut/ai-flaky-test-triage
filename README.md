@@ -412,20 +412,29 @@ UI.
 ## Definition of Done
 
 `v1.0.0` ships when every line below holds on a clean clone ([ROADMAP](ROADMAP.md), M10). Each is
-a command to run or a thing to look at, and #85 runs them in a fresh container before the tag.
+a command to run or a thing to look at. [`clean-clone.yml`](.github/workflows/clean-clone.yml)
+runs 1 and 2 on a fresh Linux and macOS runner every week (#85).
 
 1. `git clone` → `npm install` → `npm run demo` writes `report.md` with no API key and no other
    setup, on Linux and macOS, and the time from clone to output is measured and stated here.
+   Clone to `report.md` took **14 s on Linux and 17 s on macOS**, measured on 2026-11-27 in
+   [run 45997208498](https://github.com/AKogut/ai-flaky-test-triage/actions/runs/45997208498):
+   a full-history clone, `npm install` with no npm cache, and the demo, with Node 24 already
+   installed. Newer numbers, if this date is old, are on the
+   [workflow's runs](https://github.com/AKogut/ai-flaky-test-triage/actions/workflows/clean-clone.yml).
 2. `npm test` and `npm run eval` run to completion without an API key. `npm test` may be red — the
    suite carries specs that fail on purpose — but it writes `results.json` and `results-unit.json`.
+   It needs the Playwright browser first: `npx playwright install chromium`, with `--with-deps` on
+   a Linux machine that lacks its libraries. In the same run the whole job, clone to last step
+   with the browser download, took 1 min 37 s on Linux and 1 min 44 s on macOS.
 3. A pull request that touches a flaky spec gets exactly one comment, and pushing again updates it
    rather than adding another (#75).
 4. `eval/report.md` scores the triage agent and the baseline on the same fixtures, with intervals —
    and if the baseline wins, this README says so (#38).
 5. `v1.0.0` is tagged with the `eval/report.md` headline numbers in its release notes (#87).
 
-Not met yet. CI exercises 1 and 2 on every run, but not on a clean machine; 3 is wired and waits
-for its verification pull request; 4 waits for an API key.
+Not met yet. 1 and 2 hold on a clean runner, as measured above; 3 is wired and waits for its
+verification pull request; 4 waits for an API key.
 
 ---
 

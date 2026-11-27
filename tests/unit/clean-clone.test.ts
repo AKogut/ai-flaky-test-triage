@@ -319,3 +319,23 @@ describe('the timings', () => {
     expect(markdown).toContain('```\n M package-lock.json\n```')
   }, 20_000)
 })
+
+describe('the README', () => {
+  /** A duration with no date and no run is a number nobody can check or notice going stale. */
+  it('states the measured time with the date and the run it came from', () => {
+    expect(dod).toMatch(
+      /measured on \d{4}-\d{2}-\d{2} in\s+\[run \d+\]\(https:\/\/github\.com\/AKogut\/ai-flaky-test-triage\/actions\/runs\/\d+\)/,
+    )
+    expect(dod).toMatch(/\d+ s on Linux and \d+ s on macOS/)
+  })
+
+  it('points at this workflow, so the next measurement is one click away', () => {
+    expect(dod).toContain(`(${FILE})`)
+    expect(dod).toContain('actions/workflows/clean-clone.yml')
+  })
+
+  /** The clean runs install the browser before `npm test`, and the Definition of Done says so. */
+  it('names the browser npm test needs', () => {
+    expect(dod).toContain('npx playwright install chromium')
+  })
+})
