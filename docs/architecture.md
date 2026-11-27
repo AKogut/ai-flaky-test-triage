@@ -8,7 +8,7 @@ queue, no listener, no hosted database.
 
 This is not a simplification for its own sake. A triage system that only ever runs once per CI
 job has no reason to be a service, and making it one would add an availability problem, a
-deployment problem, and a credentials problem to a system whose entire job takes eleven seconds.
+deployment problem, and a credentials problem to a system whose entire job takes seconds.
 The constraint also produces the strongest property of the project: a reviewer can clone it and
 run the whole thing.
 

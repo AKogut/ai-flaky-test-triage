@@ -93,8 +93,8 @@ Three things, all of which are measured rather than claimed:
    non-deterministic, with no sampling controls to pretend otherwise. Every metric ships with its confidence interval, and
    the CI gate fires on the lower bound.
 
-There is a pleasing irony in a flaky-test triage tool whose own evaluation is mildly flaky. It is
-documented rather than hidden.
+There is a pleasing irony in a flaky-test triage tool whose own evaluation turns mildly flaky the
+moment a model is in it. It is documented rather than hidden.
 
 ---
 

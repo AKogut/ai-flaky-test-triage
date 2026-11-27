@@ -14,7 +14,7 @@ about honest reporting.
 | Guardrail                                            | Status       | How                                                                                                                                                                                                                                                                                                                                                                                  |
 | ---------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Agents never modify the working tree                 | **enforced** | The pure agent modules cannot import `fs` or `child_process` at all — `eslint.config.js` fails the build on it, and `tests/unit/lint-guardrails.test.ts` feeds the config an actual violation, because a rule that silently does nothing passes as loudly as one that works.                                                                                                         |
-| The pipeline cannot fail the build on its own errors | **enforced** | The agent job is `continue-on-error: true`. Only the test job and the eval gate can turn CI red.                                                                                                                                                                                                                                                                                     |
+| The pipeline cannot fail the build on its own errors | **enforced** | The flakiness-analysis and agent jobs are `continue-on-error: true`. What turns CI red is the repository's own checks — hygiene, PR title, static analysis, the test jobs and the eval gate — never a triage stage.                                                                                                                                                                  |
 | Agents never approve or merge                        | **enforced** | The workflow's token is scoped `contents: read, pull-requests: write` on that job and `contents: read` globally. It cannot approve its own pull requests or merge one.                                                                                                                                                                                                               |
 | Cost cannot run away                                 | **enforced** | `TokenBudget` is checked before dispatch against a real `count_tokens` call, one budget per run, and charged what the API billed, from the same usage ledger the footer prints. Once it refuses a call the orchestrator stops dispatching, and every test it never reached appears in the report as `not-dispatched` rather than as silence.                                         |
 | Agents never push, tag, or open PRs                  | **enforced** | `agents/git.ts` hands out four reads — `diff`, `log`, `show`, `fileAtRef` — and holds the client in a closure, so there is no field to reach through and no cast that recovers one. Lint makes it the only module allowed to import `simple-git`, and `tests/unit/lint-guardrails.test.ts` checks that by feeding the config a violation rather than by trusting the config's shape. |
@@ -53,8 +53,9 @@ that the bug is a secret.
 
 Measured, published in `eval/report.md`, and expected:
 
-- **`app_code + intermittent` is the weakest quadrant** and also the most consequential. A missed
-  product race gets rerun until green and ships.
+- **`app_code + intermittent` is the most consequential quadrant, and a weak one.** A missed
+  product race gets rerun until green and ships. It is not the baseline's weakest: in
+  `eval/report.md`, `test_code + deterministic` and `environment + intermittent` score lower.
 - **Confidence is not automatically trustworthy.** See the calibration section of
   [eval-methodology.md](eval-methodology.md#4-confidence-calibration). Until ECE is measured and
   acceptable, treat the number as a sortable hint, not a probability.
@@ -86,7 +87,7 @@ into a prompt.
 | Data leaving the repository           | Once a key is configured, source snippets and diff hunks are sent to the Anthropic API; none is, so nothing has been sent. This is stated in the README and is the one genuine data-egress path. Private forks should not enable the agent job without understanding it.   |
 | Secret leakage into prompts           | A secret-pattern scrub runs over every untrusted field before it enters a prompt, and before the length cap is applied so a credential cannot be sliced past its own pattern. One pattern list, shared with the cassette writer. Best-effort, not a guarantee.             |
 | Untrusted text in spans               | `otel-spans.json` holds identifiers, counts, enums and numbers only. Run id, commit and branch must look like identifiers and pass the secret scrub, or are recorded as `[withheld]`. Failures are recorded by class, never by message. Tested against a hostile title.    |
-| Token scope                           | Least privilege: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope.                                                                                                                                                               |
+| Token scope                           | Least privilege on the triage job: `pull-requests: write`, `contents: read`. No `actions: write`, no `packages`, no org scope. The one `contents: write` in any workflow is the wiki publish, on `main` only.                                                              |
 
 ## Operational limitations
 
@@ -102,8 +103,9 @@ into a prompt.
   write history replaces the unusable file, so the next one starts clean.
 - **Comment upsert relies on a marker.** If a user deletes the bot comment, the next run posts a
   fresh one. Harmless, occasionally confusing.
-- **Non-determinism in the eval gate.** The classifier's own eval is mildly flaky, which is why
-  the gate uses a confidence lower bound and N-sample averaging. Acknowledged irony.
+- **Non-determinism in the eval gate.** Once it scores a model, the classifier's own eval is mildly
+  flaky, which is why the gate uses a confidence lower bound and N-sample averaging. Today it scores
+  the baseline, a pure function, so it is not. Acknowledged irony.
 - **Rate limits.** A run with many failures serialises behind API rate limits. Concurrency is
   capped at 4, and the budget stops dispatch on a long tail, listing what it never reached.
 - **A model fallback is only partly accounted for.** On the PR-comment path a refused call can be

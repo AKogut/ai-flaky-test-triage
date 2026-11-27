@@ -21,7 +21,7 @@ git clone https://github.com/AKogut/ai-flaky-test-triage.git
 cd ai-flaky-test-triage
 npm install
 npm run help            # every command, and whether it exists yet
-npm run test:coverage   # the full suite, with the coverage floor enforced
+npm run test:coverage   # the unit suite, with the coverage floor enforced
 npm run eval            # score the baseline against the golden dataset
 npm run demo            # classifies a bundled run, no API key — writes report.md
 ```
@@ -59,30 +59,19 @@ marks self-contained work that needs little surrounding context.
 
 ## Working on prompts
 
-The highest-leverage and easiest-to-fool area of the project.
-
-- Prompts are versioned files. Once a version's numbers are recorded in `eval/report.md`, do not
-  edit it in place — add a new version, or the link between a number and the thing that produced it
-  is gone.
-- Iterate against the **development slice**. The held-out slice is consulted once, at the end, and
-  reported separately. Tuning against held-out data destroys the only honest number in the project.
-- Report intervals, not point estimates. A 2pp move on a few dozen fixtures is noise.
-- The rubric in the prompt and the labelling rules in `docs/taxonomy.md` come from one source. If a
-  change makes them disagree, that is a bug, not an improvement.
+The highest-leverage and easiest-to-fool area of the project. A published prompt version is never
+edited in place, iteration happens against the **development slice** and never the held-out one,
+and a change is judged by its interval rather than its point estimate. The rules in full are in
+[`CONTRIBUTING.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/CONTRIBUTING.md#working-on-prompts).
 
 ## Working on the golden dataset
 
-Use the **Golden dataset fixture** issue template, and **label before writing the fixture**.
-
-- Apply the ordered rules in
-  [`docs/taxonomy.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/taxonomy.md) and
-  record which rule decided it, plus why the tempting alternative is wrong.
-- Never let the agent's output influence a label. If its answer changed your mind, the rules were
-  ambiguous — fix the rules in a separate pull request first.
-- Ground-truth terms must not leak into payloads, filenames, or test titles. A lint step checks the
-  obvious cases.
-- Genuinely arguable cases are welcome. Mark them `lowConfidenceGroundTruth` and they are excluded
-  from headline metrics and reported separately.
+Use the **Golden dataset fixture** issue template, and **label before writing the fixture**, by the
+ordered rules in
+[`docs/taxonomy.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/taxonomy.md) —
+never by what the agent said. Genuinely arguable cases are welcome, marked
+`lowConfidenceGroundTruth`. The rest, label leakage included, is in
+[`CONTRIBUTING.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/CONTRIBUTING.md#working-on-the-golden-dataset).
 
 Contributing a fixture is often more valuable than contributing code, because it makes a whole class
 of failure measurable rather than anecdotal.

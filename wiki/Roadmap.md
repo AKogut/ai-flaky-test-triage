@@ -24,23 +24,16 @@ with real captured runs rather than to bootstrap it.
 
 ## Milestones
 
-Each has one exit criterion. A milestone is not done because its issues are closed; it is done when
-the criterion holds. M7 is the proof: every issue in it is closed, and it is not done. M5 was the
-same until its tenth fixture captured from CI landed.
+Eleven milestones, M0 to M10, run from the foundations and the golden dataset, through the triage
+agent, the application and its test suite, to the CI wiring, observability and the release. Each
+has one exit criterion. A milestone is not done because its issues are closed; it is done when the
+criterion holds. M7 is the proof: every issue in it is closed, and it is not done. M5 was the same
+until its tenth fixture captured from CI landed.
 
-|         | Theme                              | Status                                                  | Exit criterion                                                                                                                                        |
-| ------- | ---------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **M0**  | Foundations & repository hygiene   | done                                                    | `npm ci && npm run lint && npm run typecheck` passes on a clean clone, enforced in CI                                                                 |
-| **M1**  | Contracts, schemas & taxonomy      | done                                                    | Every pipeline artifact has a Zod schema, an inferred type, and a round-trip test                                                                     |
-| **M2**  | Golden dataset, baseline & eval    | done                                                    | `npm run eval` scores the baseline on ≥30 labelled fixtures with intervals and confusion matrices — **no model involved**                             |
-| **M3**  | Triage agent & replay mode         | in progress — the agent waits on an API key (#38)       | The agent beats the baseline by a margin surviving its interval — or the finding that it does not is in the README. `npm run demo` works with no key. |
-| **M4**  | TaskFlow application               | done                                                    | `npm run dev` serves a task board; `SENTRA_CHAOS=<seed>` reproduces a specific race interleaving                                                      |
-| **M5**  | Test suite & emergent flakiness    | done                                                    | ≥10 `captured` fixtures from real CI runs; metrics broken down by provenance                                                                          |
-| **M6**  | flakemetry-lib integration         | done                                                    | History survives across runs on `main`; a cache miss degrades gracefully; both tested                                                                 |
-| **M7**  | Root-cause & fix-suggestion agents | in progress — replay cassettes wait on an API key       | `npm run agents:analyze` turns a fixture into a report, asserted by an integration test in replay mode                                                |
-| **M8**  | End-to-end CI & PR comment         | in progress — the verification pull request (#75)       | A PR touching a flaky spec produces exactly one comment; pushing again updates it                                                                     |
-| **M9**  | Observability, ablation & cost     | in progress — tracing landing (#76); ablation not built | `eval/ablation.md` reports every variant; at least one context field is justified by the numbers or removed because of them                           |
-| **M10** | Documentation, wiki & v1.0         | planned                                                 | The Definition of Done holds on a clean clone; `v1.0.0` tagged with eval numbers in the release notes                                                 |
+Every milestone's theme, status and exit criterion, and what each one in progress is waiting on,
+are in [`ROADMAP.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/ROADMAP.md); the
+current one is in the status banner on [Home](Home). They are not copied here, because a second copy
+of a status is the one that goes stale.
 
 M3 and M7 are short of their criteria for the same reason: nothing here has an `ANTHROPIC_API_KEY`.
 The agent, its prompt and the harness exist, and `npm run demo` works with no key — but scoring the
@@ -66,8 +59,8 @@ considerably rarer than a working classifier.
 
 ## Open experiments
 
-None has started: each needs the ablation harness (🚧 M9, #78) and live model calls. They may
-close as _not adopted_ — the finding is the deliverable:
+None has started. Each runs on the ablation harness, `npm run eval:ablation` (#78), and each needs
+live model calls. They may close as _not adopted_ — the finding is the deliverable:
 
 - [Does history context earn its place?](https://github.com/AKogut/ai-flaky-test-triage/issues/79)
 - [Does a multi-step agent beat a single call on the hard quadrant?](https://github.com/AKogut/ai-flaky-test-triage/issues/80)

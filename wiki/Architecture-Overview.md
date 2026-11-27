@@ -108,8 +108,8 @@ means a contract broke.
 No agent loop ([ADR-0006](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0006-single-shot-agents-no-loop.md)),
 no vector store, no fine-tuning, no cross-repository service. Each of those was considered and
 rejected for a stated reason rather than overlooked, and each rejection is written as a testable
-claim — the ablation study (🚧 M9, #78) will include a multi-step agent variant precisely so that
-"no loop" remains an empirical position rather than a preference.
+claim — the ablation study (`npm run eval:ablation`, #78) lists a multi-step agent variant, not
+built yet (#80), precisely so that "no loop" remains an empirical position rather than a preference.
 
 ## Further reading
 

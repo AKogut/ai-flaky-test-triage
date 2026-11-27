@@ -283,8 +283,10 @@ Nothing needs it, and CI never starts it.
 .
 ├── .github/
 │   ├── workflows/ci.yml         # the entire pipeline, one workflow
+│   ├── workflows/*.yml          # beside it: clean clone, wiki publish, CodeQL, Scorecard
 │   ├── ISSUE_TEMPLATE/          # task / bug / experiment / dataset fixture / ADR forms
 │   └── CODEOWNERS
+├── .devcontainer/               # the Codespace: Node 24, npm ci before the first terminal
 ├── contracts/                   # Zod schemas + inferred types for every artifact
 │                                #   the pipeline reads or writes
 ├── prompts/                     # versioned prompt files + the rubric they share
@@ -318,13 +320,14 @@ Nothing needs it, and CI never starts it.
 │   ├── calibration.ts           # reliability curve, ECE, threshold derivation
 │   ├── gate.ts                  # the CI thresholds
 │   ├── run-eval.ts              # npm run eval
+│   ├── ablation.ts              # npm run eval:ablation → ablation.md
 │   └── report.md                # the committed result, with metrics.json
 ├── scripts/                     # CLI entry points — demo, dev, capture, cassettes,
 │                                #   status banner, changelog, help
 ├── demo/                        # the bundled run `npm run demo` classifies
 ├── observability/               # optional: a local Jaeger for spans (docker-compose.yml)
 ├── docs/                        # architecture, taxonomy, methodology, ADRs
-└── wiki/                        # source of the GitHub wiki, published by script
+└── wiki/                        # source of the GitHub wiki, published by CI on merge
 ```
 
 Run history, `.flakemetry/history.json`, is deliberately not in the tree: CI restores it from the
@@ -380,7 +383,7 @@ is documented rather than hidden: [`docs/eval-methodology.md`](docs/eval-methodo
   baseline report that says why the model did not run, and uploads it as the `triage-report`
   artifact; the comment step cannot post with a read-only token. Not yet tried with a real fork.
 - **The classifier is wrong sometimes.** Measured accuracy and the confusion matrices — the
-  baseline's, today — are published in `eval/report.md`, and every report quotes the measured
+  baseline's, today — are published in `eval/report.md`, and every PR comment quotes the measured
   accuracy of the classifier that produced it. Treat output as a prioritisation hint, not a verdict.
 - **Prompt injection surface.** Test names, assertion messages, and diff content flow into
   prompts. They are wrapped, escaped, and length-capped, and the agent's output is

@@ -10,7 +10,7 @@
 | ------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
 | **Triage**         | every failing or newly-flaky test         | two-axis classification, confidence, quoted evidence                                         |
 | **Root cause**     | `app_code` above the calibrated threshold | a hypothesis, implicated files and symbols, a mechanism, a mandatory alternative when unsure |
-| **Fix suggestion** | root causes above threshold               | prose approach, an illustrative patch, **risks**, and the missing test where there is one    |
+| **Fix suggestion** | every root cause, with no threshold       | prose approach, an illustrative patch, **risks**, and the missing test where there is one    |
 
 No loops. No scratchpads. No self-critique passes. No tools beyond the structured-output schema.
 
@@ -29,10 +29,10 @@ state to query, no sub-goal to decompose. A loop would mostly re-read text the m
 in exchange for latency, cost, and non-determinism in a step whose evaluation is already fighting
 variance.
 
-The honest part: this is a claim, not an axiom. The ablation study will run a bounded multi-step
-variant against the same dataset (🚧 M9, #78). If it wins on the hard quadrant by a margin that
-survives its confidence interval and justifies the cost, that becomes a superseding ADR and the
-architecture changes.
+The honest part: this is a claim, not an axiom. The ablation study (`npm run eval:ablation`, #78)
+lists a bounded multi-step variant to run against the same dataset, not built yet (#80). If it wins
+on the hard quadrant by a margin that survives its confidence interval and justifies the cost, that
+becomes a superseding ADR and the architecture changes.
 
 [ADR-0006](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/adr/0006-single-shot-agents-no-loop.md) ·
 [the experiment](https://github.com/AKogut/ai-flaky-test-triage/issues/80)
@@ -86,15 +86,10 @@ output is often "the real problem is that nothing tests this path".
 
 ## Orchestration
 
-```
-analysis.json
-  → filter to failing / newly-flaky
-  → sort by ambiguity, most uncertain first
-  → concurrency-limited fan-out
-  → triage each
-  → app_code above threshold → root cause → fix suggestion
-  → assemble report.md
-```
+The orchestrator takes the failing and newly flaky tests from `analysis.json`, sorts them most
+ambiguous first, triages them under a concurrency limit, sends `app_code` above the threshold on to
+root cause and fix suggestion, and assembles `report.md`. The sequence, with its defaults, is in
+[`docs/agent-design.md`](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/agent-design.md#orchestration).
 
 The sort order is the non-obvious part. Work is ordered by ambiguity so that if the budget runs out,
 the cases dropped are the ones a heuristic could have handled anyway. Processing in file order would

@@ -38,8 +38,10 @@ rather than a public issue. Expect an initial response within 7 days.
 - **Fork PRs degrade rather than escalate.** No secrets means baseline-heuristic output, stated in
   the report. A fork's `GITHUB_TOKEN` is read-only, so the report is uploaded as a workflow
   artifact rather than posted as a comment.
-- **Least-privilege token.** `pull-requests: write`, `contents: read`. No `actions: write`, no
-  `packages`, no org scope.
+- **Least-privilege token.** The triage job's is `pull-requests: write`, `contents: read`. No
+  `actions: write`, no `packages`, no org scope. The one job with `contents: write` is the wiki
+  publish, which runs on `main` only. CodeQL and Scorecard hold `security-events: write` for their
+  own results, and Scorecard `id-token: write` to publish them.
 - **Agents have no tools.** Structured output only. The write capabilities they are promised not
   to have are capabilities they were never given.
 - **Untrusted text is data, not instruction.** Test titles, error messages, source, and diff hunks

@@ -222,10 +222,19 @@ on the harness (#79–#81) are not started, and each needs those calls.
 The wiki, the README screenshot of a real PR comment, the honest limitations write-up, and the
 release.
 
-**Status:** planned
+**Status:** in progress
 
 **Exit criterion:** the Definition of Done in the README holds end to end on a clean clone, and
 `v1.0.0` is tagged with `eval/report.md` headline numbers in the release notes.
+
+**Two of the Definition of Done's five lines hold, so the criterion is not met.**
+[`clean-clone.yml`](.github/workflows/clean-clone.yml) runs lines 1 and 2 on a fresh Linux and
+macOS runner every week (#85); line 3 waits on #75, line 4 on #38, and line 5 is the release itself
+(#87). The releases so far are pre-1.0, v0.1.0 to v0.4.0.
+
+The rest has started. CI publishes the wiki from `wiki/` whenever a merge to `main` changes it (#82). The
+README shows a real comment this repository's CI posted, the baseline's — #83 stays open for a
+comment with a model's classification, which needs #38. The optional local Jaeger (#86) is done.
 
 ---
 

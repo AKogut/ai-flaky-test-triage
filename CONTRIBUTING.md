@@ -27,7 +27,7 @@ Or open a [Codespace](https://codespaces.new/AKogut/ai-flaky-test-triage): `.dev
 What runs today:
 
 ```bash
-npm run test:coverage   # the full suite, with the coverage floor enforced
+npm run test:coverage   # the unit suite, with the coverage floor enforced
 npm run demo            # full pipeline, no API key — writes report.md
 npm run eval            # score the baseline against the golden dataset
 npm run eval:lint       # dataset composition and label-leakage check
@@ -42,7 +42,7 @@ npm run test:e2e        # Playwright, one TaskFlow per worker — needs `npx pla
 npm test                # unit and e2e together
 ```
 
-Requires Node ≥ 24.15 — the oldest 24.x that jsdom 30 accepts, not an arbitrary one. An
+Requires Node ≥ 24.15 — the oldest 24.x that jsdom 31 accepts, not an arbitrary one. An
 `ANTHROPIC_API_KEY` is only needed for live model calls; nothing that works today needs one.
 
 ```bash
