@@ -6,6 +6,12 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
 
+    // No `types` here. Since TypeScript 6.0 a project loads only the `@types`
+    // packages it names, so each workspace names the ones its own code uses:
+    // ["node"] for everything that runs on Node. app/client names none. Its code
+    // runs in a browser, and vite.config.ts, the one file in it that runs on
+    // Node, gets Node's types through Vite's own.
+
     // Project references. Declarations only — nothing in this repository is
     // executed from compiled JavaScript. CLIs run through tsx and tests through
     // vitest, both of which read the TypeScript sources directly, so emitting
