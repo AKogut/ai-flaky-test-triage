@@ -16,7 +16,20 @@ commitlint because a well-formed history needs them, but they are not release no
 
 ## Unreleased
 
-_No user-facing changes since v0.3.0._
+_No user-facing changes since v0.4.0._
+
+## v0.4.0 — 2026-11-27
+
+### Features
+
+- **dataset:** captured failures from the quadrants that had none ([#286](https://github.com/AKogut/ai-flaky-test-triage/pull/286))
+- **eval:** add the context-ablation harness and its baseline control ([#285](https://github.com/AKogut/ai-flaky-test-triage/pull/285))
+- **otel:** one usage ledger behind every token count ([#283](https://github.com/AKogut/ai-flaky-test-triage/pull/283))
+- **otel:** optional local Jaeger, fed by an opt-in OTLP export ([#287](https://github.com/AKogut/ai-flaky-test-triage/pull/287))
+
+### Fixes
+
+- **deps:** a clean npm install leaves the lockfile as it found it ([#282](https://github.com/AKogut/ai-flaky-test-triage/pull/282))
 
 ## v0.3.0 — 2026-11-23
 
