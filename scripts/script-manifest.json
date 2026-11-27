@@ -83,7 +83,7 @@
       "description": "Context-ablation study \u2192 eval/ablation.md",
       "milestone": "M9",
       "issue": 78,
-      "status": "pending"
+      "status": "implemented"
     },
     {
       "name": "demo",
