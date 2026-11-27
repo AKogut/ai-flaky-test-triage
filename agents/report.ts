@@ -1,6 +1,6 @@
 import { quadrantOf } from '@sentra/contracts'
+import { formatSpend, type Spend } from './ledger.js'
 import type { TriagedTest } from './pipeline.js'
-import { cost, formatUsd, type Usage } from './pricing.js'
 
 /**
  * The one document this pipeline writes, and the only thing most people read.
@@ -144,7 +144,12 @@ export interface ReportInput {
   runId: string
   model: string
   promptVersions: Record<string, string>
-  usage: readonly Usage[]
+  /**
+   * What the run was billed, from the usage ledger: every response that arrived,
+   * including the ones it could not use, which the footer names separately.
+   * `NO_SPEND` when no model was called.
+   */
+  spend: Spend
   /**
    * How well this classifier scored on the golden dataset, and where that came
    * from. Absent when no evaluation describes the classifier that ran, which the
@@ -385,7 +390,7 @@ const METHODOLOGY =
   '[Methodology](https://github.com/AKogut/ai-flaky-test-triage/blob/main/docs/eval-methodology.md)'
 
 function renderFooter(input: ReportInput): string {
-  const spend = cost(input.usage)
+  const { spend } = input
   const versions = Object.entries(input.promptVersions)
     .map(([agent, version]) => `${agent} \`${version}\``)
     .join(', ')
@@ -394,7 +399,7 @@ function renderFooter(input: ReportInput): string {
     '',
     '---',
     '',
-    `Model \`${input.model}\` · ${versions} · ${String(spend.inputTokens + spend.outputTokens)} tokens · ${formatUsd(spend.usd)}`,
+    `Model \`${input.model}\` · ${versions} · ${String(spend.inputTokens + spend.outputTokens)} tokens · ${formatSpend(spend)}`,
     '',
     input.accuracy === undefined
       ? '**This classifier has not been scored yet.** No accuracy figure exists, so none is quoted — ' +

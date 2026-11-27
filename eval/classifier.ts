@@ -2,11 +2,11 @@ import {
   AnthropicTransport,
   CassetteTransport,
   TokenBudget,
+  UsageLedger,
   resolveMode,
   triage,
   type Mode,
   type Transport,
-  type Usage,
 } from '@sentra/agents'
 import type { Classification, ClassificationInput } from '@sentra/contracts'
 import { CURRENT_PROMPT, loadPrompt } from '@sentra/prompts'
@@ -40,8 +40,12 @@ export interface ClassifierContext {
 export interface ChosenClassifier {
   classify: Classify
   context: ClassifierContext
-  /** Every model call the run made, in order. Empty for the baseline. */
-  usage: Usage[]
+  /**
+   * Every dispatch the run made, however it ended — the same ledger the token
+   * budget is charged from, so the report's cost and the budget cannot
+   * disagree. Empty for the baseline.
+   */
+  ledger: UsageLedger
 }
 
 /**
@@ -89,7 +93,7 @@ export function chooseClassifier(
     return {
       classify: (input) => Promise.resolve(classifyWithBaseline(withhold(input, withheld))),
       context: { promptVersion: null, mode: null },
-      usage: [],
+      ledger: new UsageLedger(),
     }
   }
 
@@ -100,8 +104,8 @@ export function chooseClassifier(
     deps.transport ??
     new CassetteTransport(mode === 'replay' ? unreachable() : new AnthropicTransport(), { mode })
 
-  const budget = new TokenBudget(tokenBudget(env))
-  const usage: Usage[] = []
+  const ledger = new UsageLedger()
+  const budget = new TokenBudget(tokenBudget(env), ledger)
   const context = contextFor(withheld)
 
   return {
@@ -113,18 +117,11 @@ export function chooseClassifier(
         budget,
         context,
         sample,
-        onTelemetry: (telemetry) => {
-          usage.push({
-            model: telemetry.model,
-            inputTokens: telemetry.inputTokens,
-            outputTokens: telemetry.outputTokens,
-          })
-        },
       })
       return result.classification
     },
     context: { promptVersion: prompt.version, mode },
-    usage,
+    ledger,
   }
 }
 

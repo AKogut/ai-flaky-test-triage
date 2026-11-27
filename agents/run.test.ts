@@ -489,6 +489,8 @@ describe('the spans a run leaves behind', () => {
       'sentra.run.tests.considered': 1,
       'sentra.run.tests.classified': 1,
       'sentra.run.calls': 1,
+      'sentra.run.input_tokens': 100,
+      'sentra.run.output_tokens': 30,
       'sentra.run.cost_usd': 0.001,
       'sentra.run.unpriced_calls': 0,
       'sentra.budget.limit': 200_000,
@@ -619,6 +621,93 @@ describe('the spans a run leaves behind', () => {
     expect(root?.status).toEqual({ code: 'ERROR', message: 'incomplete' })
     expect(root?.attributes['sentra.run.calls']).toBe(1)
   })
+})
+
+/**
+ * One run's cost, read from the four places it is printed.
+ *
+ * They are four views of one usage ledger, so they agree by construction — but
+ * "by construction" is a claim about code, and the thing worth pinning is the
+ * output. Before the ledger, the footer and the span disagreed about any call
+ * the schema rejected, and none of them counted a refusal.
+ */
+describe('what a run cost', () => {
+  const refusing = (): Transport => ({
+    countInputTokens: () => Promise.resolve(100),
+    send: () =>
+      Promise.reject(
+        new TransportError('refusal', 'the model declined', 200, undefined, {
+          model: 'claude-opus-5-5',
+          usage: { inputTokens: 100, outputTokens: 30 },
+        }),
+      ),
+  })
+
+  /** Answers the schema rejects, then one it accepts. */
+  const rejectingOnce = (): Transport => {
+    let sent = 0
+    return {
+      countInputTokens: () => Promise.resolve(100),
+      send: () => {
+        sent += 1
+        return Promise.resolve({
+          raw: sent === 1 ? { owner: 'app_code' } : CLASSIFICATION,
+          stopReason: 'end_turn',
+          model: 'claude-opus-5-5',
+          usage: { inputTokens: 100, outputTokens: 30 },
+        })
+      },
+    }
+  }
+
+  it('is printed to the console after the report is written', async () => {
+    const result = await run([], { transport: stub() })
+    // 100 in at $4/M and 30 out at $20/M.
+    expect(result.output).toContain(
+      '  cost: 100 input + 30 output tokens over 1 request(s), $0.0010',
+    )
+  })
+
+  it('is no model call and $0 on the baseline path, in the console and the footer', async () => {
+    const result = await run([], { env: {} })
+    expect(result.output).toContain('  cost: no model call, $0.0000')
+    expect(result.written['report.md']).toContain(
+      'Model `none — the baseline heuristic, no model call` · triage `triage.v1` · 0 tokens · $0.0000',
+    )
+  })
+
+  it.each([
+    [
+      'a refusal, which is billed and buys nothing',
+      refusing,
+      { input: 100, output: 30, usd: 0.001, requests: 1 },
+      '130 tokens · $0.0010, $0.0010 of it on responses the run could not use',
+    ],
+    [
+      'a schema retry, which is billed beside the answer it led to',
+      rejectingOnce,
+      { input: 200, output: 60, usd: 0.002, requests: 2 },
+      '260 tokens · $0.0020, $0.0010 of it on responses the run could not use',
+    ],
+  ])(
+    'agrees in the footer, the spans, the budget and the console after %s',
+    async (_, transport, spent, footer) => {
+      const result = await run([], { transport: transport() })
+      const [root] = spansIn(result.written).spans
+
+      expect(result.written['report.md']).toContain(footer)
+      expect(root?.attributes).toMatchObject({
+        'sentra.run.input_tokens': spent.input,
+        'sentra.run.output_tokens': spent.output,
+        'sentra.run.cost_usd': spent.usd,
+        'sentra.budget.used': spent.input,
+      })
+      expect(result.output).toContain(
+        `  cost: ${String(spent.input)} input + ${String(spent.output)} output tokens over ` +
+          `${String(spent.requests)} request(s), $${spent.usd.toFixed(4)}`,
+      )
+    },
+  )
 })
 
 describe('what the spans file will never carry', () => {

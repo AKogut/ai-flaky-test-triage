@@ -57,6 +57,8 @@ const call = (over: Partial<CallRecord> = {}): CallRecord => ({
   transientFailures: 0,
   inputTokens: 1_000,
   outputTokens: 200,
+  // 1,000 in at $5/M and 200 out at $25/M, as callModel prices it from the ledger.
+  costUsd: 0.01,
   startedAt: T0 + 100,
   durationMs: 1_500,
   ...over,
@@ -227,7 +229,8 @@ describe('a model call', () => {
 
   /** A cost of zero for an unrecognised model is the kind of wrong number that reads as good news. */
   it('carries no cost for a model pricing.ts does not know, and the run counts it', async () => {
-    const { file } = await record([call({ responseModel: 'claude-unreleased-9' })])
+    const { costUsd: _, ...unpriced } = call({ responseModel: 'claude-unreleased-9' })
+    const { file } = await record([unpriced])
     const [root, child] = file.spans
     expect(child?.attributes).not.toHaveProperty('sentra.call.cost_usd')
     expect(root?.attributes).toMatchObject({
@@ -237,18 +240,30 @@ describe('a model call', () => {
     })
   })
 
-  it('sums the priced calls into the run', async () => {
+  it('sums the calls into the run', async () => {
     const { file } = await record([call(), call({ startedAt: T0 + 200 })])
     expect(file.spans[0]?.attributes).toMatchObject({
       'sentra.run.calls': 2,
+      'sentra.run.input_tokens': 2_000,
+      'sentra.run.output_tokens': 400,
       'sentra.run.cost_usd': 0.02,
       'sentra.run.unpriced_calls': 0,
     })
   })
 
+  /**
+   * The span copies the call's cost rather than pricing its tokens again. Two
+   * pricings of one call are two numbers, and the day they differ the footer
+   * and the span disagree about what a run cost.
+   */
+  it('carries the cost the call was priced at, not one of its own', async () => {
+    const child = await childOf(call({ costUsd: 0.0123 }))
+    expect(child?.attributes['sentra.call.cost_usd']).toBe(0.0123)
+  })
+
   it('rounds the run’s cost rather than printing float noise', async () => {
     const calls = [0, 1, 2, 3, 4].map((i) =>
-      call({ inputTokens: 1_840, outputTokens: 212, startedAt: T0 + i }),
+      call({ inputTokens: 1_840, outputTokens: 212, costUsd: 0.0145, startedAt: T0 + i }),
     )
     // Five of 0.0145 summed in floating point is 0.07250000000000001.
     expect((await record(calls)).file.spans[0]?.attributes['sentra.run.cost_usd']).toBe(0.0725)

@@ -102,7 +102,16 @@ describe('a sampled run', { timeout: 30_000 }, () => {
     expect(evaluation.cost.outputTokens).toBe(calls * 40)
     // 100 in at $5/M plus 40 out at $25/M is $0.0015 a call.
     expect(evaluation.cost.usd).toBeCloseTo(calls * 0.0015, 6)
-    expect(renderReport(evaluation)).toContain('projected, 50-failure CI run')
+
+    const report = renderReport(evaluation)
+    expect(report).toContain('## Cost')
+    expect(report).toMatch(new RegExp(`\\| model requests +\\| +${String(calls)} \\|`))
+    // Per fixture is at the run's three samples; the projection is one
+    // classification per failure, because that is what a pull request gets.
+    expect(report).toMatch(/\| per fixture +\| +\$0\.0045 at 3 sample\(s\) each \|/)
+    expect(report).toMatch(/\| per classification +\| +\$0\.0015 \|/)
+    expect(report).toMatch(/\| projected, 50-failure CI run +\| +\$0\.0750 \|/)
+    expect(report).toContain('Replayed from cassettes')
   })
 })
 

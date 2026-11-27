@@ -1,5 +1,6 @@
 import { ClassificationSchema } from '@sentra/contracts'
 import { describe, expect, it, vi } from 'vitest'
+import { UsageLedger } from './ledger.js'
 import {
   BudgetExceededError,
   callModel,
@@ -275,6 +276,171 @@ describe('the token budget', () => {
   })
 })
 
+describe('the usage ledger', () => {
+  const refusal = (inputTokens = 90, outputTokens = 4) =>
+    new TransportError('refusal', 'the model declined', 200, undefined, {
+      model: MODEL_CONFIG.model,
+      usage: { inputTokens, outputTokens },
+    })
+  const unreadable = () =>
+    new TransportError('server', 'the response was not JSON: hm', undefined, undefined, {
+      model: MODEL_CONFIG.model,
+      usage: { inputTokens: 100, outputTokens: 7 },
+    })
+
+  const ledgered = (limit = 1_000_000) => {
+    const ledger = new UsageLedger()
+    return { ledger, budget: new TokenBudget(limit, ledger) }
+  }
+
+  it('holds one answered entry for a call that succeeded first time', async () => {
+    const { ledger, budget } = ledgered()
+    await call({ transport: scripted([ok()]), budget })
+    expect(ledger.dispatches).toEqual([
+      {
+        promptVersion: 'triage.v1',
+        requestModel: MODEL_CONFIG.model,
+        model: MODEL_CONFIG.model,
+        result: 'answered',
+        inputTokens: 100,
+        outputTokens: 40,
+      },
+    ])
+  })
+
+  /**
+   * The count admits the dispatch; what the API billed is what the budget is
+   * charged. Here the count was 60 and the bill 100, and the budget says 100 —
+   * the same number the footer and the span print.
+   */
+  it('charges the budget what was billed, not what was counted', async () => {
+    const { ledger, budget } = ledgered()
+    await call({ transport: scripted([ok()], 60), budget })
+    expect(budget.spent).toBe(100)
+    expect(budget.spent).toBe(ledger.inputTokens)
+  })
+
+  it('records a schema retry as a rejected entry, and the call’s figures include it', async () => {
+    const { ledger, budget } = ledgered()
+    const records: CallRecord[] = []
+    const { telemetry } = await call({
+      transport: scripted([ok({ owner: 'app_code' }), ok()]),
+      budget,
+      onCall: (record) => records.push(record),
+    })
+    expect(ledger.dispatches.map((d) => d.result)).toEqual(['rejected', 'answered'])
+    expect(telemetry).toMatchObject({ inputTokens: 200, outputTokens: 80 })
+    expect(records[0]).toMatchObject({ inputTokens: 200, outputTokens: 80, costUsd: 0.0024 })
+  })
+
+  /** A refusal is a 200 the API bills. Before the ledger, no figure anywhere counted it. */
+  it('bills a refusal, and the call’s record says which model refused', async () => {
+    const { ledger, budget } = ledgered()
+    const records: CallRecord[] = []
+    await call({
+      transport: scripted([refusal()]),
+      budget,
+      onCall: (record) => records.push(record),
+    }).catch(() => undefined)
+
+    expect(ledger.dispatches).toMatchObject([
+      { result: 'refused', model: MODEL_CONFIG.model, inputTokens: 90, outputTokens: 4 },
+    ])
+    expect(budget.spent).toBe(90)
+    expect(records[0]).toMatchObject({
+      outcome: 'refused',
+      responseModel: MODEL_CONFIG.model,
+      inputTokens: 90,
+      outputTokens: 4,
+    })
+  })
+
+  it('bills a reply with nothing to parse, and the retry after it', async () => {
+    const { ledger, budget } = ledgered()
+    const { telemetry } = await call({ transport: scripted([unreadable(), ok()]), budget })
+    expect(ledger.dispatches.map((d) => d.result)).toEqual(['unreadable', 'answered'])
+    expect(telemetry).toMatchObject({ transientFailures: 1, inputTokens: 200, outputTokens: 47 })
+  })
+
+  /** It happened, so the list says so; nothing was billed, so it costs the budget nothing. */
+  it('records a send that got no response, at zero tokens', async () => {
+    const { ledger, budget } = ledgered()
+    await call({
+      transport: scripted([new TransportError('rate-limit', 'slow down', 429), ok()]),
+      budget,
+    })
+    expect(ledger.dispatches).toMatchObject([
+      { result: 'unanswered', inputTokens: 0, outputTokens: 0 },
+      { result: 'answered', inputTokens: 100 },
+    ])
+    expect(ledger.dispatches[0]).not.toHaveProperty('model')
+    expect(budget.spent).toBe(100)
+  })
+
+  it('records nothing for a call the budget refused, because nothing was sent', async () => {
+    const { ledger, budget } = ledgered(100)
+    await expect(call({ transport: scripted([ok()], 500), budget })).rejects.toThrow(
+      BudgetExceededError,
+    )
+    expect(ledger.dispatches).toEqual([])
+  })
+
+  /**
+   * Two calls admitted at once must each see the other's count. Charging only
+   * from the ledger would let both through on a ledger neither had written to.
+   */
+  it('holds a call’s count against the budget while it is in flight', async () => {
+    let answer: (response: ModelResponse) => void = () => undefined
+    const slow: Transport = {
+      countInputTokens: () => Promise.resolve(100),
+      send: () =>
+        new Promise<ModelResponse>((resolve) => {
+          answer = resolve
+        }),
+    }
+    const { budget } = ledgered(150)
+
+    const first = call({ transport: slow, budget })
+    await vi.waitFor(() => {
+      expect(budget.spent).toBe(100)
+    })
+    await expect(call({ transport: scripted([ok()]), budget })).rejects.toThrow(BudgetExceededError)
+
+    answer(ok())
+    await first
+    expect(budget.spent).toBe(100)
+  })
+
+  it('releases a hold once, however many times it is released', () => {
+    const budget = new TokenBudget(100)
+    const release = budget.reserve(60)
+    release()
+    release()
+    expect(budget.spent).toBe(0)
+    expect(budget.remaining).toBe(100)
+  })
+
+  /**
+   * Without a budget a call still has a ledger — its own, unbounded — so the
+   * figures on its records are the same sums as anywhere else.
+   */
+  it('prices a call that was given no budget the same way', async () => {
+    const records: CallRecord[] = []
+    await call({ transport: scripted([ok()]), onCall: (record) => records.push(record) })
+    expect(records[0]).toMatchObject({ inputTokens: 100, outputTokens: 40, costUsd: 0.0012 })
+  })
+
+  it('leaves the cost off a call whose model has no price', async () => {
+    const records: CallRecord[] = []
+    await call({
+      transport: scripted([{ ...ok(), model: 'claude-unreleased-9' }]),
+      onCall: (record) => records.push(record),
+    })
+    expect(records[0]).toMatchObject({ responseModel: 'claude-unreleased-9', inputTokens: 100 })
+    expect(records[0]).not.toHaveProperty('costUsd')
+  })
+})
+
 describe('the record every call leaves, however it ends', () => {
   /**
    * `onTelemetry` fires only on success, because it feeds the cost figures.
@@ -308,6 +474,8 @@ describe('the record every call leaves, however it ends', () => {
       transientFailures: 0,
       inputTokens: 100,
       outputTokens: 40,
+      // 100 in at $4/M and 40 out at $20/M, priced from the ledger entry.
+      costUsd: 0.0012,
       startedAt: 1_250,
       // Read twice after the start: once for CallTelemetry, once here.
       durationMs: 500,

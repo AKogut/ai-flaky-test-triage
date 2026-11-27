@@ -6,6 +6,7 @@ import { parse } from 'yaml'
 // `agents/report.ts` and its imports took 5s on a busy machine, all of it charged
 // to that test's five-second limit; here it is paid while the file is collected,
 // like every other import.
+import { NO_SPEND } from '../../agents/ledger.js'
 import { renderReport } from '../../agents/report.js'
 
 /**
@@ -92,7 +93,7 @@ describe('what the comment carries', () => {
       runId: '1',
       model: 'claude-opus-5',
       promptVersions: { triage: 'triage.v1' },
-      usage: [],
+      spend: NO_SPEND,
     })
     expect(report).toContain('`abc1234`')
   })

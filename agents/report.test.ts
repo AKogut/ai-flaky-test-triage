@@ -1,6 +1,7 @@
 import type { ClassificationInput, FixSuggestion, RootCause } from '@sentra/contracts'
 import { describe, expect, it } from 'vitest'
 import { classifyWithBaseline } from './baseline.js'
+import { NO_SPEND, spendOf, type Dispatch } from './ledger.js'
 import type { TriagedTest } from './pipeline.js'
 import {
   COMMENT_LIMIT,
@@ -96,6 +97,16 @@ const agentAccuracy = {
 const sections = (report: string): string[] =>
   report.split('\n').filter((line) => line.startsWith('### ') || line === '<details>')
 
+const dispatch = (over: Partial<Dispatch> = {}): Dispatch => ({
+  promptVersion: 'triage.v1',
+  requestModel: 'claude-opus-5',
+  model: 'claude-opus-5',
+  result: 'answered',
+  inputTokens: 1000,
+  outputTokens: 200,
+  ...over,
+})
+
 const input = (over: Partial<ReportInput> = {}): ReportInput => ({
   triaged: [row()],
   commitSha: 'abc1234def',
@@ -103,7 +114,7 @@ const input = (over: Partial<ReportInput> = {}): ReportInput => ({
   runId: '42',
   model: 'claude-opus-5',
   promptVersions: { triage: 'triage.v1' },
-  usage: [{ model: 'claude-opus-5', inputTokens: 1000, outputTokens: 200 }],
+  spend: spendOf([dispatch()]),
   ...over,
 })
 
@@ -401,7 +412,50 @@ describe('the footer', () => {
     const report = renderReport(input())
     expect(report).toContain('claude-opus-5')
     expect(report).toContain('triage `triage.v1`')
-    expect(report).toContain('1200 tokens')
+    // 1,000 in at $5/M and 200 out at $25/M.
+    expect(report).toContain('1200 tokens · $0.0100\n')
+  })
+
+  /**
+   * The footer shows what was billed. A retry the schema forced, or a refusal,
+   * cost the same as an answer, and a footer that left them out would make an
+   * unstable prompt look cheap — so they are in the total and named beside it.
+   */
+  it('counts what the run could not use, and says how much that was', () => {
+    const report = renderReport(
+      input({
+        spend: spendOf([
+          dispatch({ result: 'rejected' }),
+          dispatch({ result: 'refused' }),
+          dispatch(),
+          {
+            promptVersion: 'triage.v1',
+            requestModel: 'claude-opus-5',
+            result: 'unanswered',
+            inputTokens: 0,
+            outputTokens: 0,
+          },
+        ]),
+      }),
+    )
+    expect(report).toContain(
+      '3600 tokens · $0.0300, $0.0200 of it on responses the run could not use',
+    )
+  })
+
+  /** A cost of zero for an unrecognised model is the kind of wrong number that reads as good news. */
+  it('says which models it could not price, rather than costing them at zero', () => {
+    const report = renderReport(
+      input({ spend: spendOf([dispatch(), dispatch({ model: 'claude-unreleased-9' })]) }),
+    )
+    expect(report).toContain(
+      '$0.0100, plus calls to `claude-unreleased-9`, which agents/pricing.ts has no price for',
+    )
+  })
+
+  it('says a run with no model call cost nothing, as nothing was called', () => {
+    const report = renderReport(input({ spend: NO_SPEND }))
+    expect(report).toContain('0 tokens · $0.0000\n')
   })
 
   /**

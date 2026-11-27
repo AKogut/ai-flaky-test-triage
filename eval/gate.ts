@@ -250,6 +250,15 @@ export interface GateInput {
   reference: MetricsSnapshot | null
   /** Present once both classifiers are scored — the delta is the project's headline. */
   baseline?: MetricsSnapshot | null
+  /**
+   * Models this run called that `agents/pricing.ts` has no price for.
+   *
+   * Not in the snapshot, because it is a fact about the price table rather than
+   * the classifier. It reaches the gate because a cost with a missing share is a
+   * floor, not a figure, and holding a floor to a ceiling passes for the wrong
+   * reason.
+   */
+  unpricedModels?: readonly string[]
 }
 
 export interface GateReport {
@@ -400,7 +409,16 @@ function selfConsistency({ current }: GateInput): CheckResult {
   }
 }
 
-function cost({ current, reference }: GateInput): CheckResult {
+/**
+ * Cost per fixture against the figure recorded on `main`.
+ *
+ * Enforced whenever a model ran: the run's cost comes from the usage ledger the
+ * token budget is charged from, retries and refusals included, so the number
+ * held to the threshold is the one a reader is billed rather than the cheaper
+ * one a success-only tally would give. What still skips is what cannot be
+ * compared — no model call, or nothing recorded on `main` yet.
+ */
+function cost({ current, reference, unpricedModels = [] }: GateInput): CheckResult {
   const id = 'cost-per-fixture'
   const metric = 'cost per fixture against main'
 
@@ -410,6 +428,17 @@ function cost({ current, reference }: GateInput): CheckResult {
       metric,
       status: 'skipped',
       detail: 'no model call, so no cost. Enforced once the agent is scored (#38).',
+    }
+  }
+  if (unpricedModels.length > 0) {
+    return {
+      id,
+      metric,
+      status: 'fail',
+      detail:
+        `agents/pricing.ts has no price for ${unpricedModels.join(', ')}, so ` +
+        `$${current.costPerFixtureUsd.toFixed(4)} is a floor rather than the cost. Add the price ` +
+        'to the table, with the date it was read.',
     }
   }
   if (reference?.costPerFixtureUsd == null) {

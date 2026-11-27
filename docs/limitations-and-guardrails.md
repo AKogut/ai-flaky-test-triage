@@ -16,7 +16,7 @@ about honest reporting.
 | Agents never modify the working tree                 | **enforced** | The pure agent modules cannot import `fs` or `child_process` at all — `eslint.config.js` fails the build on it, and `tests/unit/lint-guardrails.test.ts` feeds the config an actual violation, because a rule that silently does nothing passes as loudly as one that works.                                                                                                         |
 | The pipeline cannot fail the build on its own errors | **enforced** | The agent job is `continue-on-error: true`. Only the test job and the eval gate can turn CI red.                                                                                                                                                                                                                                                                                     |
 | Agents never approve or merge                        | **enforced** | The workflow's token is scoped `contents: read, pull-requests: write` on that job and `contents: read` globally. It cannot approve its own pull requests or merge one.                                                                                                                                                                                                               |
-| Cost cannot run away                                 | **enforced** | `TokenBudget` is checked before dispatch against a real `count_tokens` call, one budget per run. Once it refuses a call the orchestrator stops dispatching, and every test it never reached appears in the report as `not-dispatched` rather than as silence.                                                                                                                        |
+| Cost cannot run away                                 | **enforced** | `TokenBudget` is checked before dispatch against a real `count_tokens` call, one budget per run, and charged what the API billed, from the same usage ledger the footer prints. Once it refuses a call the orchestrator stops dispatching, and every test it never reached appears in the report as `not-dispatched` rather than as silence.                                         |
 | Agents never push, tag, or open PRs                  | **enforced** | `agents/git.ts` hands out four reads — `diff`, `log`, `show`, `fileAtRef` — and holds the client in a closure, so there is no field to reach through and no cast that recovers one. Lint makes it the only module allowed to import `simple-git`, and `tests/unit/lint-guardrails.test.ts` checks that by feeding the config a violation rather than by trusting the config's shape. |
 | Fix suggestions are never applied                    | **enforced** | `agents/fix-suggestion.ts` exports two functions, both of which return objects. There is no apply step to switch off, which is stronger than one that is — `tests/unit/guardrails.test.ts` asserts the module's whole export list, and that a full run writes exactly two files: `report.md` and `otel-spans.json`.                                                                  |
 
@@ -109,9 +109,15 @@ into a prompt.
 - **A model fallback is only partly accounted for.** On the PR-comment path a refused call can be
   answered by a second model inside the same request. The call's span carries both the requested
   and the answering model, and its tokens and cost are the answering attempt's. A declined attempt
-  before it is not counted, though it may be billed, and the token budget is checked against one
-  attempt, not two. The comment's header names the first call's model even when a later call fell
-  back. Never exercised against the live API; the evaluation path does not fall back at all.
+  before it is not counted, though it may be billed: the API reports it only inside
+  `usage.iterations`, which the transport does not read, so the usage ledger never sees it. The
+  token budget is checked against one attempt, not two. The comment's header names the first
+  call's model even when a later call fell back. Never exercised against the live API; the
+  evaluation path does not fall back at all.
+- **A request that timed out is costed at zero.** The usage ledger records every request, but a
+  request with no response carries no usage, so it is recorded at zero tokens. That is right for a
+  rate limit or a 4xx, which the API does not bill. It can be wrong for a connection that dropped
+  after the server had done the work, and nothing on this side can tell the two apart.
 
 ## Ethical and practical caveats
 

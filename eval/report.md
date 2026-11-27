@@ -48,6 +48,19 @@ Scored once per fixture (`--n=1`), so there is no spread to report.
 
 The baseline is a pure function: repeating it produces identical runs, and a self-consistency of 1 would say nothing about anything.
 
+## Cost
+
+No model call, so $0: the baseline is a heuristic. Every figure here is zero by
+construction, not by measurement.
+
+|                              |         |
+| ---------------------------- | ------: |
+| model requests               |    none |
+| tokens                       |       0 |
+| total                        | $0.0000 |
+| per fixture                  | $0.0000 |
+| projected, 50-failure CI run | $0.0000 |
+
 ## Calibration
 
 **Confidence is weakly informative.** Confidence ranks predictions at AUROC 0.70 with an expected calibration error of 0.215. It orders predictions better than chance but the stated number is not the observed rate — treat it as a sortable hint, not a probability. No root-cause threshold could be derived: the only thresholds reaching 70.0% do so over fewer than 5 predictions (best: 100.0% over 1), which is noise with a decimal point. At 26 predictions from a stratified dataset this is a direction, not a measurement.
