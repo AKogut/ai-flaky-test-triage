@@ -14,7 +14,7 @@ import type { QuadrantRow } from './confusion.js'
  *
  * Three properties follow from that.
  *
- * **Comparisons use interval lower bounds, never point estimates.** At n=26 a
+ * **Comparisons use interval lower bounds, never point estimates.** At n≈30 a
  * point estimate moves several percentage points between two classifiers that
  * are indistinguishable. Gating on the lower bound means the gate fires when the
  * evidence supports a regression, not when the dice do.
@@ -25,8 +25,9 @@ import type { QuadrantRow } from './confusion.js'
  * **A check that cannot mean anything yet is skipped out loud.** Several
  * thresholds in the methodology are targets for the finished agent, and the
  * baseline misses them by a wide margin — the joint-accuracy floor of 0.65
- * against a measured lower bound of 0.194, the hard-quadrant floor of 0.50
- * against 0.071. Enabling those today would make `main` permanently red, which
+ * against a measured lower bound near 0.2, the hard-quadrant floor of 0.50
+ * against one under 0.1 (`eval/metrics.json` has today's figures). Enabling
+ * those today would make `main` permanently red, which
  * teaches everyone to merge past a red gate. They are implemented, listed in
  * every run's output, and report the condition that will switch them on.
  */
@@ -45,7 +46,7 @@ export const THRESHOLDS = {
    * How far joint accuracy's lower bound may fall below the value recorded on
    * `main` before the merge is blocked.
    *
-   * 5pp is wide. It is meant to be: at n=26 the interval itself is ±17pp, so a
+   * 5pp is wide. It is meant to be: at n≈30 the interval itself is about ±16pp, so a
    * tighter bound would fire on fixtures being added rather than on the
    * classifier changing. It tightens as the dataset grows towards 60.
    */

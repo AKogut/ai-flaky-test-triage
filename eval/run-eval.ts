@@ -1045,12 +1045,17 @@ export async function buildReport(evaluation: Evaluation): Promise<string> {
 // CLI
 // ---------------------------------------------------------------------------
 
-const USAGE = `
+/**
+ * Built from the same constants `parseArgs` applies, so the help cannot claim a
+ * default the parser does not use — it said `--slice` defaulted to `all` while
+ * the parser used `dev`, and `--n` to 1 while the agent got 5.
+ */
+export const USAGE = `
   npm run eval -- [options]
 
-    --classifier=baseline|agent   which classifier to score   (default: baseline)
-    --slice=dev|holdout|all       which fixtures to use       (default: all)
-    --n=<number>                  samples per fixture         (default: 1)
+    --classifier=baseline|agent   which classifier to score   (default: ${DEFAULTS.classifier})
+    --slice=dev|holdout|all       which fixtures to use       (default: ${DEFAULTS.slice})
+    --n=<number>                  samples per fixture         (default: ${String(DEFAULT_SAMPLES.baseline)} baseline, ${String(DEFAULT_SAMPLES.agent)} agent)
     --gate                        verify the committed report is current and hold it to
                                   the thresholds in eval/gate.ts; writes nothing
     --reference=<git-ref>         what a regression is measured against (default: origin/main)
