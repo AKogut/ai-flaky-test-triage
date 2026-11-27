@@ -147,6 +147,11 @@ triage tool that can block a merge is one people learn to switch off. `Evaluatio
 required set in #27, the change that made it run at all — a required check that never reports
 leaves every pull request waiting for a status that will not arrive.
 
+`Clean clone` ([`clean-clone.yml`](../.github/workflows/clean-clone.yml)) is not required for the
+same reason. It runs the README's Definition of Done on a fresh Linux and macOS runner, weekly and on
+pull requests that change a manifest, the lockfile, `.nvmrc`, `.npmrc` or `scripts/demo.ts`, so on
+most pull requests it never reports.
+
 ### Outside pull requests
 
 The repository is public and forking cannot be disabled for public repositories, so anyone can

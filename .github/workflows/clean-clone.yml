@@ -1,0 +1,259 @@
+name: Clean clone
+
+# The README's Definition of Done, run the way a stranger runs it: a fresh
+# runner, a clone, `npm install`, `npm run demo`, `npm test` and `npm run eval`,
+# on Linux and on macOS, with each step timed. CI proves the same commands work
+# on every pull request, but on a warm machine: an npm cache restored by
+# setup-node, a browser installed by an earlier step, whatever the image
+# carries. The claims that quietly stop being true are the ones a warm machine
+# hides, so this one starts cold.
+#
+# No ANTHROPIC_API_KEY, or any other secret, is referenced anywhere in this
+# file, on purpose. The first step fails if a model credential is in the
+# environment anyway, because "no API key" is one of the claims under test.
+
+on:
+  workflow_dispatch:
+
+  # Weekly, because what breaks a clean clone mostly arrives without a commit:
+  # a new runner image, a new npm, a Playwright browser revision, a package
+  # that changed in the registry.
+  schedule:
+    - cron: '17 5 * * 1'
+
+  # Only when a path the Definition of Done depends on changes. Everything
+  # else a pull request can break, the CI workflow already runs on a Linux
+  # runner. What a cold machine adds is the install: the manifests (including
+  # the workspaces' own, which can drift from the lockfile without changing
+  # it), the lockfile, the Node line and the npm config. Plus the demo
+  # script, because it is the headline command, and this file.
+  #
+  # Not a required check, and it must not become one. It takes minutes on two
+  # operating systems, and with this filter it does not report on most pull
+  # requests. A required check that never reports leaves the pull request
+  # waiting for a status that will not arrive.
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/package.json'
+      - package-lock.json
+      - .nvmrc
+      - .npmrc
+      - scripts/demo.ts
+      - .github/workflows/clean-clone.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clean-clone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clean-clone:
+    name: Clean clone (${{ matrix.os }})
+    strategy:
+      # One operating system failing must not cancel the other's measurement.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: No model credential in the environment
+        run: |
+          found=$(env | cut -d= -f1 | grep -E '^(ANTHROPIC_|SENTRA_(LIVE|RECORD|REPLAY)$)' | tr '\n' ' ' || true)
+          if [ -n "$found" ]; then
+            echo "::error::The Definition of Done is measured with no model credential, and the environment sets: $found"
+            exit 1
+          fi
+          echo "no ANTHROPIC_* or SENTRA_* mode variable is set"
+
+      # A hosted runner is new for every job, but its image is not empty. These
+      # are the two caches that would make an install or a browser download
+      # look faster, or work at all, when a stranger's would not.
+      - name: Start with no npm cache and no Playwright browsers
+        run: |
+          for dir in "$HOME/.npm" "$HOME/.cache/ms-playwright" "$HOME/Library/Caches/ms-playwright"; do
+            if [ -e "$dir" ]; then
+              echo "removing $dir ($(du -sh "$dir" | cut -f1))"
+              rm -rf "$dir"
+            else
+              echo "absent: $dir"
+            fi
+          done
+
+      - name: Start the clock
+        run: |
+          echo "TIMINGS=$RUNNER_TEMP/timings.tsv" >> "$GITHUB_ENV"
+          echo "CLONE_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      # Full history, because `git clone` fetches full history.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Stop the clock on the clone
+        run: printf 'clone\t%s\n' "$(($(date +%s) - CLONE_START))" >> "$TIMINGS"
+
+      # Node is the one prerequisite the README names. No npm cache: a clean
+      # machine has none, and setup-node would restore one by itself if
+      # package.json ever named npm in `packageManager`.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      # `npm install`, not `npm ci`, because that is what the README tells a
+      # reader to type. It may rewrite the lockfile where `npm ci` would not;
+      # that is reported, not failed, because the claim is about the demo
+      # working, and the demo works either way.
+      - name: npm install
+        id: install
+        run: |
+          node --version
+          npm --version
+          start=$(date +%s)
+          npm install
+          printf 'install\t%s\n' "$(($(date +%s) - start))" >> "$TIMINGS"
+          git status --porcelain --untracked-files=no > "$RUNNER_TEMP/install-changes.txt"
+          if [ -s "$RUNNER_TEMP/install-changes.txt" ]; then
+            echo "::warning title=npm install changed the checkout::$(tr '\n' ' ' < "$RUNNER_TEMP/install-changes.txt")"
+            git --no-pager diff
+          fi
+
+      # The baseline, because with no key and no recorded cassettes it is the
+      # only classifier the demo can run, and the report has to say so. Once
+      # #38 records cassettes the demo replays the agent instead, and this line
+      # is the one to change.
+      - name: npm run demo
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          start=$(date +%s)
+          npm run demo
+          printf 'demo\t%s\n' "$(($(date +%s) - start))" >> "$TIMINGS"
+          test -s report.md
+          grep -F 'with the **baseline** classifier' report.md
+
+      # Documented in CONTRIBUTING.md, not in the README's quickstart; timed on
+      # its own row so the cost of the browser is visible.
+      - name: Install the Playwright browser
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          start=$(date +%s)
+          npx playwright install --with-deps chromium
+          printf 'browser\t%s\n' "$(($(date +%s) - start))" >> "$TIMINGS"
+
+      # Red on most runs, by design: the e2e suite carries specs that fail on
+      # purpose. As in the CI workflow's E2E job, the exit status is recorded
+      # and judged by scripts/e2e-summary.ts, not taken as the verdict.
+      - name: npm test
+        id: test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          start=$(date +%s)
+          status=0
+          npm test || status=$?
+          printf 'test\t%s\n' "$(($(date +%s) - start))" >> "$TIMINGS"
+          echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+
+      # `npm test` is the unit suite, then the e2e suite, joined by `&&`. A red
+      # unit suite therefore stops it before Playwright, and the summary below
+      # would only say results.json is missing. This says why.
+      - name: The unit suite passed and wrote results-unit.json
+        if: ${{ !cancelled() && steps.test.outcome == 'success' }}
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs'
+          let report
+          try {
+            report = JSON.parse(readFileSync('results-unit.json', 'utf8'))
+          } catch (error) {
+            console.log(`::error::npm test wrote no readable results-unit.json: ${error.message}`)
+            process.exit(1)
+          }
+          const { numTotalTests: total, numFailedTests: failed, success } = report
+          console.log(`results-unit.json: ${total} tests, ${failed} failed`)
+          if (success !== true || failed !== 0 || !(total > 0)) {
+            console.log(`::error::The unit suite is red on a clean clone: ${failed} of ${total} failed.`)
+            process.exit(1)
+          }
+          JS
+
+      - name: Summarise the e2e run
+        if: ${{ !cancelled() && steps.test.outcome == 'success' }}
+        env:
+          E2E_EXIT_CODE: ${{ steps.test.outputs.exit-code }}
+        run: npx tsx scripts/e2e-summary.ts
+
+      # The default mode: the baseline over the dev slice, no model, no key.
+      # No `--gate`; the CI workflow's Evaluation gate holds the numbers.
+      - name: npm run eval
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          start=$(date +%s)
+          npm run eval
+          printf 'eval\t%s\n' "$(($(date +%s) - start))" >> "$TIMINGS"
+          test -s eval/report.md
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: clean-clone-${{ matrix.os }}
+          path: |
+            report.md
+            results.json
+            results-unit.json
+            eval/report.md
+            eval/metrics.json
+          retention-days: 14
+
+      # Into the log as well as the summary, so `gh run view --log` carries the
+      # whole transcript.
+      - name: Write the timings to the job summary
+        if: always()
+        run: |
+          end=$(date +%s)
+          took() { if [ -f "$TIMINGS" ]; then awk -F '\t' -v key="$1" '$1 == key { print $2 }' "$TIMINGS"; fi; }
+          human() { if [ "$1" -ge 60 ]; then printf '%dm %02ds' $(($1 / 60)) $(($1 % 60)); else printf '%ds' "$1"; fi; }
+          cell() { s=$(took "$1"); if [ -n "$s" ]; then human "$s"; else printf 'did not finish'; fi; }
+          sum() {
+            t=0
+            for key in "$@"; do
+              s=$(took "$key")
+              if [ -z "$s" ]; then printf 'did not finish'; return; fi
+              t=$((t + s))
+            done
+            human "$t"
+          }
+          whole='did not finish'
+          if [ -n "${CLONE_START:-}" ]; then whole=$(human $((end - CLONE_START))); fi
+          node_version=$(node --version 2>/dev/null || echo unknown)
+          npm_version=$(npm --version 2>/dev/null || echo unknown)
+          commit=$(git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
+          {
+            echo "## Clean clone on $RUNNER_OS"
+            echo
+            echo "Image \`${ImageOS:-unknown} ${ImageVersion:-}\`, $RUNNER_ARCH, Node $node_version, npm $npm_version, commit \`$commit\`, [run $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID). No API key in the environment."
+            echo
+            echo '| Step | Wall-clock |'
+            echo '| --- | ---: |'
+            echo "| \`git clone\`, full history | $(cell clone) |"
+            echo "| \`npm install\`, no npm cache | $(cell install) |"
+            echo "| \`npm run demo\` | $(cell demo) |"
+            echo "| **Clone to \`report.md\`** | **$(sum clone install demo)** |"
+            echo "| \`npx playwright install --with-deps chromium\` | $(cell browser) |"
+            echo "| \`npm test\`, unit then e2e | $(cell test) |"
+            echo "| \`npm run eval\`, baseline, no key | $(cell eval) |"
+            echo "| **Whole job**, clone to last step, with Node setup | **$whole** |"
+            echo
+            if [ -s "$RUNNER_TEMP/install-changes.txt" ]; then
+              echo "\`npm install\` changed tracked files in the checkout:"
+              echo
+              echo '```'
+              cat "$RUNNER_TEMP/install-changes.txt"
+              echo '```'
+              echo
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
