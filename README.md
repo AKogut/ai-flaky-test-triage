@@ -195,6 +195,7 @@ schema, the report — never the model's behaviour today; that is measured separ
 **Run the pipeline's stages yourself:**
 
 ```bash
+npx playwright install chromium   # once: the browser the e2e half of npm test drives
 npm test                     # unit + e2e, produces results.json and results-unit.json
 npm run flakemetry:analyze   # test reports + history → analysis.json
 npm run agents:analyze       # analysis.json → report.md
