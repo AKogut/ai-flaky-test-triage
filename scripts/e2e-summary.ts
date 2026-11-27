@@ -8,11 +8,12 @@ import { metadata, unresolvedPaths, validate } from './e2e.js'
 /**
  * `npx tsx scripts/e2e-summary.ts` — the E2E job's verdict on its own run.
  *
- * The suite is red on most runs, and on purpose. A few specs fail some of the
- * time by design, because their failures are what the `Flakiness analysis` and
- * `Agent triage` jobs exist to classify. So "the suite exited 1" says nothing
- * on its own. It is the normal case, and it is also what a crashed runner, a
- * report nobody wrote and a broken control spec look like.
+ * The suite is red on every run, and on purpose. A few specs fail by design —
+ * most of them some of the time, a few on every run — because their failures
+ * are what the `Flakiness analysis` and `Agent triage` jobs exist to classify.
+ * So "the suite exited 1" says nothing on its own. It is the normal case, and it
+ * is also what a crashed runner, a report nobody wrote and a broken control spec
+ * look like.
  *
  * This reads the report and tells those apart. The job summary gets a table of
  * the run. The Actions UI gets one `::notice` with the counts when every
@@ -31,30 +32,54 @@ const REPORT = 'results.json'
 /** Where Playwright collects specs from: `testMatch` in playwright.config.ts, top level only. */
 const SPEC_DIR = 'tests/e2e'
 
+/** How a deliberate failure behaves on rerun, in the taxonomy's own words. */
+export type Determinism = 'intermittent' | 'deterministic'
+
 /**
- * The specs that fail some of the time on purpose. Each one's opening comment
- * says how and why.
+ * The specs that fail on purpose, and whether they fail some of the time or on
+ * every run. Each one's opening comment says how and why.
  *
  * A list, written down, rather than something read out of the specs at run
  * time. This is the gate that decides whether a red suite fails the job, and a
  * gate that parses prose fails open the day somebody rewords a header. The
- * cost of a list is drift. `tests/unit/e2e-summary.test.ts` holds it against
- * the spec files from both sides. An entry must still step outside the
- * controlled environment the control group runs in (a chaotic server, or a
- * database that is not reset), and every spec that does so must be here.
+ * cost of a list is drift, and the two kinds of entry drift differently, so
+ * they are held to different checks.
+ *
+ * **An intermittent entry** must still step outside the controlled environment
+ * the control group runs in — a chaotic server, a database that is not reset,
+ * or a file whose tests run in parallel — and every spec that does so must be
+ * here. `tests/unit/e2e-summary.test.ts` holds that from both sides.
+ *
+ * **A deterministic entry** fails inside the controlled environment, because
+ * nothing about timing or scheduling is involved — that is what makes it
+ * deterministic — so the static check has nothing to hold it to. It is held at
+ * run time instead: one that fails nothing is a problem, and the job goes red.
+ * The defect its header describes was fixed, and the exemption has to go, along
+ * with the golden-dataset fixtures it fed, before it forgives a real regression.
  *
  * Per file, not per test, because that is the level the headers describe.
- * `board-updates.spec.ts` and `visible-tasks.spec.ts` each hold one test that
- * should pass every run, and this forgives those too. A regression that breaks
- * one of them will almost always break a control spec as well, and the control
- * specs are not forgiven.
+ * Several files hold one test that should pass every run beside the one that
+ * fails, and this forgives those too. A regression that breaks one of them will
+ * almost always break a control spec as well, and the control specs are not
+ * forgiven.
  */
-export const DELIBERATELY_FLAKY: readonly string[] = [
-  'tests/e2e/board-updates.spec.ts',
-  'tests/e2e/find-by-name.spec.ts',
-  'tests/e2e/reorder-quick-succession.spec.ts',
-  'tests/e2e/visible-tasks.spec.ts',
-]
+export const DELIBERATE_FAILURES: Readonly<Record<string, Determinism>> = {
+  'tests/e2e/after-a-restart.spec.ts': 'intermittent',
+  'tests/e2e/back-and-forth.spec.ts': 'deterministic',
+  'tests/e2e/board-in-webkit.spec.ts': 'deterministic',
+  'tests/e2e/board-on-open.spec.ts': 'deterministic',
+  'tests/e2e/board-updates.spec.ts': 'intermittent',
+  'tests/e2e/complete-and-reopen.spec.ts': 'intermittent',
+  'tests/e2e/find-by-name.spec.ts': 'intermittent',
+  'tests/e2e/reorder-quick-succession.spec.ts': 'intermittent',
+  'tests/e2e/visible-tasks.spec.ts': 'intermittent',
+}
+
+/** The entries of {@link DELIBERATE_FAILURES} that fail the given way, in order. */
+export const deliberately = (how: Determinism): string[] =>
+  Object.entries(DELIBERATE_FAILURES)
+    .filter(([, determinism]) => determinism === how)
+    .map(([file]) => file)
 
 export interface Counts {
   passed: number
@@ -68,7 +93,7 @@ export interface Failure {
   title: string
   file: string
   outcome: 'failed' | 'timed out' | 'flaky'
-  /** In one of {@link DELIBERATELY_FLAKY}. */
+  /** In one of {@link DELIBERATE_FAILURES}. */
   deliberate: boolean
 }
 
@@ -199,8 +224,25 @@ export function judge(input: JudgeInput): Verdict {
     )
   }
 
-  const deliberate = new Set(DELIBERATELY_FLAKY)
+  const deliberate = new Set(Object.keys(DELIBERATE_FAILURES))
   const failures = run.results.flatMap((result) => failureOf(result, deliberate) ?? [])
+
+  // A spec listed as failing on every run that failed nothing has stopped
+  // demonstrating what it was listed for. Forgiving it from now on would forgive
+  // the next real failure in it. Only a file that actually ran is held to this:
+  // one that never ran is already reported above.
+  for (const file of deliberately('deterministic')) {
+    const ran = run.results.some((result) => result.file === file && result.status !== 'skipped')
+    const failed = failures.some((failure) => failure.file === file && failure.outcome !== 'flaky')
+    if (ran && !failed) {
+      problems.push(
+        `${file} is listed as failing on every run, and nothing in it failed. Either the defect ` +
+          `its header describes was fixed or the spec no longer reaches it: take it out of ` +
+          `DELIBERATE_FAILURES in scripts/e2e-summary.ts and delete the golden-dataset fixtures ` +
+          `it feeds.`,
+      )
+    }
+  }
 
   if (exitCode !== '' && exitCode !== '0' && failures.length === 0) {
     problems.push(
@@ -247,7 +289,7 @@ export function annotations(verdict: Verdict): string[] {
     const tail =
       failed + flaky === 0
         ? 'Nothing failed.'
-        : 'Every failure is in a spec that fails intermittently by design, and goes to Flakiness analysis and Agent triage.'
+        : 'Every failure is in a spec that fails by design, and goes to Flakiness analysis and Agent triage.'
     return [
       `::notice title=E2E tests::${escapeData(
         `${plural(total, 'test')}: ${String(passed)} passed, ${String(failed)} failed, ` +
@@ -323,9 +365,11 @@ export function render(verdict: Verdict, link: (file: string) => string): string
   }
 
   lines.push(
-    `These specs fail intermittently by design: ${DELIBERATELY_FLAKY.map(link).join(', ')}. ` +
+    `These specs fail some of the time by design: ${deliberately('intermittent').map(link).join(', ')}. ` +
+      `These fail on every run by design: ${deliberately('deterministic').map(link).join(', ')}. ` +
       'Their failures are expected and are passed to the **Flakiness analysis** and ' +
-      '**Agent triage** jobs to classify. A failure anywhere else fails this job.',
+      '**Agent triage** jobs to classify. A failure anywhere else fails this job, and so ' +
+      'does a spec in the second list that stops failing.',
     '',
   )
   return lines.join('\n')
