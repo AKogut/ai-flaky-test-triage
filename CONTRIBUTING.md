@@ -156,7 +156,8 @@ The highest-leverage and easiest-to-fool area of the project.
 npm run eval                     # development slice, baseline → eval/report.md
 npm run eval -- --gate           # verify the committed report and apply the thresholds
 npm run eval -- --slice=holdout  # the held-out slice — see the budget below
-npm run eval:ablation            # 🚧 M9 · #78
+npm run eval:ablation            # the context ablation, agent — needs cassettes (#38)
+npm run eval:ablation -- --classifier=baseline  # the same variants, baseline → eval/ablation.md
 ```
 
 `--classifier=agent` scores the triage agent itself, through the same seam as the baseline. What

@@ -223,10 +223,13 @@ you can wave through at 3am is not a gate.
 
 ## The ablation study
 
-🚧 Not built yet (M9, #78). `npm run eval:ablation` will re-run the dataset with parts of the
-context removed: no history, no diff, no test source, error message only, baseline, multi-step
-agent variant, smaller model. Every variant but the baseline needs model calls, so it waits on the
-same API key as #38.
+`npm run eval:ablation` re-runs the development slice once per variant, with parts of the context
+withheld — no history, no diff, no test source, no run context, error message only — and writes
+`eval/ablation.md`. The agent's variants need model calls, so until #38 records them the command
+reports each as not run and writes nothing. `--classifier=baseline` runs the same variants through
+the baseline today, which says which signals the control relies on; that is the committed report,
+and CI checks it against a fresh run. The baseline heuristic, multi-step agent and smaller-model rows
+of the methodology vary the classifier rather than its input, and the last two are not built.
 
 This is the part that will turn "I built an AI classifier" into "I measured which parts of it
 work". It is also how the context bundle will get pruned — a field that contributes nothing is cost

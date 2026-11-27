@@ -25,8 +25,8 @@ self-critique pass, no tool use beyond structured output. The pipeline's control
 TypeScript: filter, sort, fan out with a concurrency cap, assemble.
 
 The claim that this is sufficient is treated as testable, not assumed. The ablation harness
-(`npm run eval:ablation`, 🚧 #78) is to include a multi-step variant (#80), and the comparison will
-be published. Neither exists yet.
+(`npm run eval:ablation`, #78) is to include a multi-step variant (#80), and the comparison will
+be published. The harness exists; the multi-step variant does not yet.
 
 ## Options considered
 

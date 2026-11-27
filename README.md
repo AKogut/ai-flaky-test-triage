@@ -262,7 +262,7 @@ cat eval/report.md
 | `npm run analyze`            | M8        | flakemetry and agents in sequence                                                 |
 | `npm run capture`            | M5        | Turn a real Playwright report into golden-dataset payloads                        |
 | `npm run eval`               | M2        | Golden-dataset evaluation → eval/report.md                                        |
-| `npm run eval:ablation`      | M9 🚧     | Context-ablation study → eval/ablation.md                                         |
+| `npm run eval:ablation`      | M9        | Context-ablation study → eval/ablation.md                                         |
 | `npm run demo`               | M3        | Full pipeline with no credentials; baseline until cassettes exist                 |
 
 🚧 marks a script that is not implemented yet; running it says so and names its issue.

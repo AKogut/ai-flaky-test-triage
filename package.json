@@ -36,7 +36,7 @@
     "docs:status": "tsx scripts/status-banner.ts",
     "docs:status:check": "tsx scripts/status-banner.ts --check",
     "eval": "tsx eval/run-eval.ts",
-    "eval:ablation": "node scripts/pending.mjs eval:ablation",
+    "eval:ablation": "tsx eval/ablation.ts",
     "eval:lint": "tsx eval/hygiene.ts",
     "flakemetry:analyze": "tsx scripts/analyze.ts",
     "format": "prettier --write .",

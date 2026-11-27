@@ -200,8 +200,11 @@ and CI uploads it in the `triage-report` artifact. Cost accounting is partly the
 the remainder, including the gap between span cost, which counts the tokens failed calls spent, and
 the footer, which counts successful calls only.
 
-The ablation harness (#78) and the three experiments built on it (#79–#81) are not started, and
-every one of them needs live model calls.
+The ablation harness (#78) exists: `npm run eval:ablation` runs every context variant in the
+methodology and writes `eval/ablation.md`. What that file holds today is the baseline control,
+because the agent's variants need live model calls and none are recorded (#38) — so the exit
+criterion's "justified by the numbers" is still the agent's to answer. The three experiments built
+on the harness (#79–#81) are not started, and each needs those calls.
 
 ## M10 — Documentation, wiki & v1.0
 
