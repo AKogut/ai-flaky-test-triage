@@ -367,7 +367,10 @@ describe('the build', () => {
     demo: 'with the **baseline** classifier',
   }
   const here: Repo = {
-    kind: (path) => (/^(?:docs|demo)\/|\.md$/.test(path) ? 'file' : undefined),
+    kind: (path) =>
+      path.startsWith('docs/') || path.startsWith('demo/') || path.endsWith('.md')
+        ? 'file'
+        : undefined,
   }
 
   it('refuses a commit that is not a full SHA, because every page links to it', () => {
