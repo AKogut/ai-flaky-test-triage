@@ -23,6 +23,18 @@ more. Commit whatever it writes.
 Recording needs credentials and costs money; it is the only script here that does, which is why it
 refuses to start without them rather than producing a confident-looking run that recorded nothing.
 
+Price it first, and record the dataset as one Message Batch at half the price, under a ceiling:
+
+```bash
+npm run eval -- --classifier=agent --estimate               # counts every request; sends none
+npm run cassettes:record -- --batch --max-usd=<worst case>
+```
+
+A batch records the same files a synchronous run would, so nothing that reads them can tell the
+difference. If the batch outlives its wait, its id is saved in `.sentra/`, and running the same
+command again collects it instead of paying for it twice. `--max-usd` caps the dataset pass. The
+demo pass is a handful of synchronous requests and has no cap.
+
 ## Checking
 
 ```bash

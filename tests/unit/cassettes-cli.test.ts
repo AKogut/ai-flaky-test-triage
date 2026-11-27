@@ -197,6 +197,57 @@ describe('the recorder', () => {
     expect(steps).toEqual(['eval --classifier=agent', 'demo'])
   })
 
+  /**
+   * `--batch` records the dataset at half the price, under `--max-usd` if
+   * given. Those reach the dataset pass and nothing else does: another slice
+   * or sample count would record something other than the committed run.
+   */
+  it('passes the batch and cap flags to the dataset pass, and only there', async () => {
+    const steps: string[] = []
+    const code = await record({
+      argv: ['--batch', '--max-usd=12', '--wait=90'],
+      env: { ANTHROPIC_API_KEY: 'sk-ant-test' },
+      runEval: (argv) => {
+        steps.push(`eval ${argv.join(' ')}`)
+        return Promise.resolve(0)
+      },
+      runDemo: () => {
+        steps.push('demo')
+        return Promise.resolve(0)
+      },
+      log: () => undefined,
+    })
+    expect(code).toBe(0)
+    expect(steps).toEqual(['eval --classifier=agent --batch --max-usd=12 --wait=90', 'demo'])
+  })
+
+  it.each([['--estimate'], ['--slice=holdout'], ['--n=1'], ['--max-usd']])(
+    'refuses %s before anything is spent',
+    async (flag) => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const steps: string[] = []
+      try {
+        const code = await record({
+          argv: [flag],
+          env: { ANTHROPIC_API_KEY: 'sk-ant-test' },
+          runEval: () => {
+            steps.push('eval')
+            return Promise.resolve(0)
+          },
+          runDemo: () => {
+            steps.push('demo')
+            return Promise.resolve(0)
+          },
+          log: () => undefined,
+        })
+        expect(code).toBe(2)
+        expect(steps).toEqual([])
+      } finally {
+        spy.mockRestore()
+      }
+    },
+  )
+
   it('sets record mode for the runs it drives', async () => {
     const env: NodeJS.ProcessEnv = { ANTHROPIC_API_KEY: 'sk-ant-test' }
     await record({

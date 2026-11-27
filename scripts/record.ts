@@ -16,15 +16,46 @@ import { resolveMode } from '@sentra/agents'
  */
 
 export interface RecordDeps {
+  /** What followed `--` on the command line. Only the flags that decide how the dataset pass pays. */
+  argv?: string[]
   env?: NodeJS.ProcessEnv
   runEval?: (argv: string[]) => Promise<number>
   runDemo?: () => Promise<number>
   log?: (message: string) => void
 }
 
+/**
+ * Passed through to the dataset pass, and nothing else is.
+ *
+ * `--batch` records the dataset as one Message Batch at half the price, under
+ * `--max-usd` if given. The rest of `npm run eval`'s flags would record
+ * something other than the committed run — another slice, another sample count
+ * — and `--estimate` would print a figure and then go on to the demo pass,
+ * which spends. The demo pass is a handful of synchronous requests and takes
+ * none of these.
+ */
+const PASSED_THROUGH = /^--(batch|max-usd=.+|wait=.+)$/
+
 export async function main(deps: RecordDeps = {}): Promise<number> {
   const env = deps.env ?? process.env
   const log = deps.log ?? console.log
+  const argv = deps.argv ?? []
+
+  const refused = argv.filter((arg) => !PASSED_THROUGH.test(arg))
+  if (refused.length > 0) {
+    console.error(
+      [
+        '',
+        `  npm run cassettes:record takes --batch, --max-usd=<dollars> and --wait=<minutes>, not ${refused.join(' ')}.`,
+        '',
+        '  To see what recording would cost first, which spends nothing:',
+        '',
+        '    npm run eval -- --classifier=agent --estimate',
+        '',
+      ].join('\n'),
+    )
+    return 2
+  }
 
   // Judged before anything is set, so this reads the operator's intent rather
   // than the intent this script is about to impose.
@@ -59,11 +90,11 @@ export async function main(deps: RecordDeps = {}): Promise<number> {
   env.SENTRA_RECORD = '1'
 
   const evaluate =
-    deps.runEval ?? (async (argv) => (await import('@sentra/eval/run-eval')).main(argv))
+    deps.runEval ?? (async (args) => (await import('@sentra/eval/run-eval')).main(args))
   const demo = deps.runDemo ?? (async () => (await import('./demo.js')).main())
 
   log('  1/2  the golden dataset\n')
-  const evalCode = await evaluate(['--classifier=agent'])
+  const evalCode = await evaluate(['--classifier=agent', ...argv])
   if (evalCode !== 0) return evalCode
 
   log('  2/2  the bundled demo run\n')
@@ -75,5 +106,5 @@ export async function main(deps: RecordDeps = {}): Promise<number> {
 }
 
 if (process.argv[1]?.endsWith('record.ts') === true) {
-  process.exitCode = await main()
+  process.exitCode = await main({ argv: process.argv.slice(2) })
 }

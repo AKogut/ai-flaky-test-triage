@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { format } from 'prettier'
 import type { FixtureLabels } from '@sentra/contracts'
-import { formatUsd, MODEL_CONFIG, type Spend } from '@sentra/agents'
+import { BatchStillRunningError, formatUsd, MODEL_CONFIG, type Spend } from '@sentra/agents'
 import {
   calibrate,
   deriveThreshold,
@@ -28,6 +28,7 @@ import {
 import { DATASET_DIR, listFixtures, loadLabels, loadPayload } from './dataset.js'
 import { readReferenceSnapshot, renderGateReport, runGate, snapshot } from './gate.js'
 import { formatProportion, score, type Metrics } from './metrics.js'
+import { prepareBatch, prepareCapped, runEstimate, type PaidRunDeps } from './paid-run.js'
 import {
   appendHoldoutRun,
   consultsHoldout,
@@ -73,6 +74,14 @@ export interface Options {
   out: string
   /** Git ref holding the metrics a regression is measured against. */
   reference: string
+  /** Send the run as one Message Batch, at half the price (`eval/paid-run.ts`). */
+  batch: boolean
+  /** Count and price every request the run would send, and send none of them. */
+  estimate: boolean
+  /** A ceiling in dollars: the run does not start, or stops dispatching, rather than pass it. */
+  maxUsd: number | null
+  /** How long a batched run waits for its batch before leaving the id saved and stopping. */
+  waitMinutes: number
 }
 
 /**
@@ -117,6 +126,10 @@ export const DEFAULTS: Options = {
   gate: false,
   out: REPORT_PATHS.dev,
   reference: 'origin/main',
+  batch: false,
+  estimate: false,
+  maxUsd: null,
+  waitMinutes: 60,
 }
 
 /** Capabilities the CLI accepts but cannot do yet, with the issue that will land them. */
@@ -135,6 +148,7 @@ export function parseArgs(argv: string[]): Options {
   const options: Options = { ...DEFAULTS }
   let outWasGiven = false
   let samplesWereGiven = false
+  let waitWasGiven = false
 
   for (const arg of argv) {
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(arg)
@@ -165,9 +179,43 @@ export function parseArgs(argv: string[]): Options {
         options.out = value
         outWasGiven = true
         break
+      case 'batch':
+        options.batch = true
+        break
+      case 'estimate':
+        options.estimate = true
+        break
+      case 'max-usd':
+        options.maxUsd = dollars(flag, value)
+        break
+      case 'wait':
+        options.waitMinutes = wholeNumber(flag, value)
+        waitWasGiven = true
+        break
       default:
         throw new UsageError(`unknown flag "--${flag}"`)
     }
+  }
+
+  // Each of these spends money, or says what spending would cost. Accepting one
+  // where nothing is spent would print a cap or an estimate nobody measured.
+  const paid = [options.batch && '--batch', options.estimate && '--estimate']
+  if (options.maxUsd !== null) paid.push('--max-usd')
+  const named = paid.filter((flag): flag is string => flag !== false)
+  if (named.length > 0 && options.classifier !== 'agent') {
+    throw new UsageError(
+      `${named.join(', ')} only mean something with --classifier=agent; the baseline makes no model call`,
+    )
+  }
+  if (named.length > 0 && options.gate) {
+    throw new UsageError(
+      `${named.join(', ')} cannot be combined with --gate, which replays and spends nothing`,
+    )
+  }
+  if (waitWasGiven && !options.batch) {
+    throw new UsageError(
+      '--wait is how long --batch waits for its batch, and means nothing without it',
+    )
   }
 
   // Resolved after the loop, not inside it, so `--out=x --slice=holdout` and
@@ -208,6 +256,15 @@ function wholeNumber(flag: string, value: string | undefined): number {
   const parsed = Number(value)
   if (!Number.isInteger(parsed) || parsed < 1) {
     throw new UsageError(`--${flag} must be a whole number of 1 or more, got "${value ?? ''}"`)
+  }
+  return parsed
+}
+
+/** A dollar amount above zero. `--max-usd=0` would be a cap that refuses everything, which is not a run. */
+function dollars(flag: string, value: string | undefined): number {
+  const parsed = value === undefined || value.trim() === '' ? Number.NaN : Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new UsageError(`--${flag} must be an amount in US dollars above 0, got "${value ?? ''}"`)
   }
   return parsed
 }
@@ -669,8 +726,12 @@ export function costLine(evaluation: Evaluation): string {
   const { cost: spend } = evaluation
   if (spend.dispatches === 0) return `Cost: no model call, ${formatUsd(0)}.`
   const { perFixture, perClassification } = unitCosts(evaluation)
+  const batched =
+    spend.batched === 0
+      ? ''
+      : `, ${String(spend.batched)} of them at the Message Batches rate (${formatUsd(spend.atStandardRate)} at the standard rate)`
   return (
-    `Cost: ${formatUsd(spend.usd)} over ${String(spend.dispatches)} model request(s) — ` +
+    `Cost: ${formatUsd(spend.usd)} over ${String(spend.dispatches)} model request(s)${batched} — ` +
     `${formatUsd(perFixture)} per fixture, ${formatUsd(perClassification * PROJECTED_FAILURES)} ` +
     `projected for a ${String(PROJECTED_FAILURES)}-failure CI run` +
     (spend.unpricedModels.length === 0 ? '.' : `, not counting ${spend.unpricedModels.join(', ')}.`)
@@ -722,6 +783,15 @@ function renderCost(evaluation: Evaluation): string {
         ['input tokens', String(spend.inputTokens)],
         ['output tokens', String(spend.outputTokens)],
         ['total', formatUsd(spend.usd)],
+        ...(spend.batched === 0
+          ? []
+          : [
+              [
+                'requests at the Message Batches rate',
+                `${String(spend.batched)} of ${String(spend.dispatches)}`,
+              ],
+              ['the same tokens at the standard rate', formatUsd(spend.atStandardRate)],
+            ]),
         ['of which, on responses it could not use', formatUsd(spend.unused.usd)],
         ['per fixture', `${formatUsd(perFixture)} at ${String(options.samples)} sample(s) each`],
         ['per classification', formatUsd(perClassification)],
@@ -739,6 +809,17 @@ function renderCost(evaluation: Evaluation): string {
     `The projection is ${String(PROJECTED_FAILURES)} classifications at this run's cost per classification, retries`,
     'included — what `agents:analyze` spends on a pull request with that many failures, one triage',
     'call each, while root cause and fix suggestion are off.',
+    ...(spend.batched === 0
+      ? []
+      : [
+          '',
+          `**Sent as a Message Batch**, so ${String(spend.batched)} of the ${String(spend.dispatches)} requests were billed at the batch`,
+          'rate, half the standard one. Anything else — a schema correction, a re-send — no batch could',
+          'carry, and went at the standard rate. Every dollar figure above is the batch-rate bill, the',
+          'projection included, though a pull request pays the standard rate: "the same tokens at the',
+          'standard rate" is that price. It is also what a replay of this run reports, because a cassette',
+          'records what the model said, not how the request was paid for.',
+        ]),
     ...(classifier.mode === 'replay'
       ? [
           '',
@@ -1060,9 +1141,20 @@ export const USAGE = `
                                   the thresholds in eval/gate.ts; writes nothing
     --reference=<git-ref>         what a regression is measured against (default: origin/main)
     --out=<path>                  where to write              (default: eval/report.md)
+
+  Runs that cost money (--classifier=agent with credentials; none of these runs in replay):
+
+    --estimate                    count every request with count_tokens and price the run,
+                                  synchronous and batched; sends nothing to the model
+    --batch                       send the run as one Message Batch, at half the price;
+                                  re-run the same command to collect a batch it left running
+    --max-usd=<dollars>           refuse to start when the worst case exceeds this, and
+                                  send no request that would take the bill past it
+    --wait=<minutes>              how long --batch waits before leaving the batch id
+                                  saved and stopping          (default: ${String(DEFAULTS.waitMinutes)})
 `
 
-export async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[], deps: PaidRunDeps = {}): Promise<number> {
   let options: Options
   try {
     options = parseArgs(argv)
@@ -1083,20 +1175,33 @@ export async function main(argv: string[]): Promise<number> {
     )
   }
 
+  if (options.estimate) {
+    try {
+      console.log(`\n${await runEstimate(options, deps)}\n`)
+      return 0
+    } catch (error) {
+      console.error(
+        `\n  No estimate.\n\n${indent(error instanceof Error ? error.message : String(error))}\n`,
+      )
+      return 1
+    }
+  }
+
   let evaluation: Evaluation
   try {
-    evaluation = await evaluate(options)
+    evaluation = await evaluatePaid(options, deps)
   } catch (error) {
     // A run that could not finish is not a threshold failure and not a usage
     // error, and the difference matters to whoever reads the exit code. What it
     // needs is the message: a cassette miss, a budget ceiling and a refusal each
     // already say exactly what to do next, and wrapping them in a stack trace
     // buries the one line that helps.
-    console.error(
-      `\n  The evaluation could not finish.\n\n${indent(
-        error instanceof Error ? error.message : String(error),
-      )}\n`,
-    )
+    const message = error instanceof Error ? error.message : String(error)
+    const hint =
+      error instanceof BatchStillRunningError
+        ? `\n\nTo wait longer in one go, pass --wait=<minutes> (this run waited ${String(options.waitMinutes)}).`
+        : ''
+    console.error(`\n  The evaluation could not finish.\n\n${indent(`${message}${hint}`)}\n`)
     return 1
   }
 
@@ -1198,6 +1303,34 @@ export async function main(argv: string[]): Promise<number> {
   console.log(`\n  Wrote ${options.out} and ${metricsPath}`)
   console.log(`  ${costLine(evaluation)}\n`)
   return 0
+}
+
+/**
+ * `evaluate`, after whatever a run that costs money has to do first.
+ *
+ * With `--batch`, the batch is collected — submitted, if nothing saved answers
+ * it — and the run is scored through its results. With `--max-usd` alone, the
+ * run is estimated, refused if its worst case does not fit, and capped request
+ * by request. Otherwise this is `evaluate` exactly as it was, which is every
+ * replay and every run that asked for neither.
+ */
+async function evaluatePaid(options: Options, deps: PaidRunDeps): Promise<Evaluation> {
+  const env = deps.env === undefined ? {} : { env: deps.env }
+  if (options.classifier === 'agent' && options.batch) {
+    const prepared = await prepareBatch(options, deps)
+    const evaluation = await evaluate(options, {
+      ...env,
+      transport: prepared.transport,
+      ledger: prepared.ledger,
+    })
+    prepared.settle()
+    return evaluation
+  }
+  const capped = options.classifier === 'agent' ? await prepareCapped(options, deps) : null
+  return evaluate(
+    options,
+    capped === null ? env : { ...env, transport: capped.transport, ledger: capped.ledger },
+  )
 }
 
 /** Indents the text and not the blank lines — a trailing space shows up in captured output. */

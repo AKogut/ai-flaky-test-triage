@@ -81,6 +81,12 @@ export interface ClassifierDeps {
    * which reads the raw input, is handed it blanked. `variants.ts` has both.
    */
   withhold?: readonly InputName[]
+  /**
+   * The run's ledger, when something built outside the seam has to read it:
+   * the spending cap behind an injected transport (`eval/paid-run.ts`). The
+   * token budget is still built here, on whichever ledger this is.
+   */
+  ledger?: UsageLedger
 }
 
 export function chooseClassifier(
@@ -104,7 +110,7 @@ export function chooseClassifier(
     deps.transport ??
     new CassetteTransport(mode === 'replay' ? unreachable() : new AnthropicTransport(), { mode })
 
-  const ledger = new UsageLedger()
+  const ledger = deps.ledger ?? new UsageLedger()
   const budget = new TokenBudget(tokenBudget(env), ledger)
   const context = contextFor(withheld)
 
