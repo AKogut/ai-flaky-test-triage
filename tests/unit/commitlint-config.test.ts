@@ -126,6 +126,8 @@ const LONG_BUMPS = [
   'chore(deps-dev): bump @typescript-eslint/eslint-plugin-tslint from 8.46.4-alpha.12 to 8.73.0-alpha.3',
   'chore(deps-dev): bump the end-to-end-and-browser-testing group across 2 directories with 12 updates',
   'chore(deps-dev): bump the end-to-end-and-browser-testing-and-coverage group with 12 updates',
+  // The Codespace image, which Dependabot updates from /.devcontainer (#292).
+  'chore(deps-dev): bump mcr.microsoft.com/devcontainers/javascript-node from 24-bookworm to 24-bookworm in /.devcontainer',
 ]
 
 describe('a Dependabot bump title', () => {
@@ -164,6 +166,8 @@ describe('every other title', () => {
     'chore(deps): bump lint-staged and rewrite the pre-commit hook while the config is open',
     'chore(deps-dev): bump lint-staged from 17.6.0 to 17.6.1 in the dev-tooling group, and its config',
     'chore(deps-dev): bump lint-staged from 17.6.0 to 17.6.1 in the dev-tooling group across 1 folder',
+    // A directory has to be a path, as Dependabot writes it.
+    'chore(deps-dev): bump devcontainers/javascript-node from 24-bookworm to 24-bookworm in devcontainer',
     // Dependabot never writes `Bump` under a prefix.
     'chore(deps-dev): Bump lint-staged from 17.6.0 to 17.6.1 in the dev-tooling group across 1 directory',
   ])('fails on its length when it only starts like a bump: %s', async (title) => {

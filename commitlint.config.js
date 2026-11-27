@@ -17,13 +17,17 @@
  *   bump <package> from <version> to <version>
  *   bump <package> from <version> to <version> in the <group> group
  *   bump <package> from <version> to <version> in the <group> group across 1 directory
+ *   bump <package> from <version> to <version> in /<directory>
  *   bump the <group> group with <n> updates
  *   bump the <group> group across 1 directory with <n> updates
+ *
+ * `in /<directory>` is what Dependabot adds for an entry that is not the
+ * repository root — the Codespace image under /.devcontainer (#292).
  *
  * Anchored at both ends, so a title that only borrows the opening is not one.
  */
 const DEPENDABOT_BUMP =
-  /^(?:chore\(deps(?:-dev)?\)|ci\(deps\)): bump (?:\S+ from \S+ to \S+(?: in the \S+ group(?: across \d+ director(?:y|ies))?)?|the \S+ group(?: across \d+ director(?:y|ies))? with \d+ updates)$/
+  /^(?:chore\(deps(?:-dev)?\)|ci\(deps\)): bump (?:\S+ from \S+ to \S+(?: in the \S+ group(?: across \d+ director(?:y|ies))?| in \/\S+)?|the \S+ group(?: across \d+ director(?:y|ies))? with \d+ updates)$/
 
 /**
  * A length limit that a Dependabot bump is let off. Its length is a package
