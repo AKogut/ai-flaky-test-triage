@@ -8,11 +8,11 @@
 | ------------------- | ------------------------------------------- |
 | classifier          | `baseline`                                  |
 | model               | none — a heuristic, no model call           |
-| dataset             | 27 fixtures in `eval/golden-dataset`        |
-| dataset revision    | `08b6da23ebcfe892`                          |
+| dataset             | 32 fixtures in `eval/golden-dataset`        |
+| dataset revision    | `f185ef3b4aa87fd2`                          |
 | slice               | `dev` — the held-out slice is never ablated |
 | samples per fixture | 1 (baseline)                                |
-| scored per variant  | 26 (1 excluded)                             |
+| scored per variant  | 31 (1 excluded)                             |
 | variants            | 6                                           |
 
 The dataset revision is the one `eval/report.md` carries: the same fixtures, hashed before
@@ -38,14 +38,14 @@ that is the agent's run, not this one.
 
 | variant            | withheld                  | carried by |             joint |           `owner` |     `determinism` | Δ joint |  changed |       cost / fixture |
 | ------------------ | ------------------------- | ---------: | ----------------: | ----------------: | ----------------: | ------: | -------: | -------------------: |
-| **Full context**   | nothing                   |          — | 34.6% [19.4–53.8] | 46.2% [28.8–64.5] | 84.6% [66.5–93.8] |       — |        — | none — no model call |
-| No history         | history                   |         26 |  15.4% [6.2–33.5] | 46.2% [28.8–64.5] | 42.3% [25.5–61.1] | -19.2pp | 13 of 26 | none — no model call |
-| No diff            | diff                      |         19 | 34.6% [19.4–53.8] | 50.0% [32.1–67.9] | 84.6% [66.5–93.8] |   0.0pp |  3 of 26 | none — no model call |
-| No test source     | test source               |         13 | 34.6% [19.4–53.8] | 46.2% [28.8–64.5] | 84.6% [66.5–93.8] |   0.0pp |  0 of 26 | none — no model call |
-| No run context     | run context               |          0 | 34.6% [19.4–53.8] | 46.2% [28.8–64.5] | 84.6% [66.5–93.8] |   0.0pp |  0 of 26 | none — no model call |
-| Error message only | all but the error message |         26 |  11.5% [4.0–29.0] | 50.0% [32.1–67.9] | 42.3% [25.5–61.1] | -23.1pp | 15 of 26 | none — no model call |
+| **Full context**   | nothing                   |          — | 35.5% [21.1–53.1] | 48.4% [32.0–65.2] | 83.9% [67.4–92.9] |       — |        — | none — no model call |
+| No history         | history                   |         31 |  16.1% [7.1–32.6] | 48.4% [32.0–65.2] | 41.9% [26.4–59.2] | -19.4pp | 17 of 31 | none — no model call |
+| No diff            | diff                      |         19 | 35.5% [21.1–53.1] | 51.6% [34.8–68.0] | 83.9% [67.4–92.9] |   0.0pp |  3 of 31 | none — no model call |
+| No test source     | test source               |         18 | 35.5% [21.1–53.1] | 48.4% [32.0–65.2] | 83.9% [67.4–92.9] |   0.0pp |  0 of 31 | none — no model call |
+| No run context     | run context               |          0 | 35.5% [21.1–53.1] | 48.4% [32.0–65.2] | 83.9% [67.4–92.9] |   0.0pp |  0 of 31 | none — no model call |
+| Error message only | all but the error message |         31 |  12.9% [5.1–28.9] | 51.6% [34.8–68.0] | 41.9% [26.4–59.2] | -22.6pp | 19 of 31 | none — no model call |
 
-All figures over **n = 26**, with 95% Wilson intervals. Δ is against the bold
+All figures over **n = 31**, with 95% Wilson intervals. Δ is against the bold
 full-context row. `carried by` counts the fixtures that have something for the variant to
 withhold — a row carried by none cannot differ from the full context. `changed` counts
 fixtures whose predicted label moved on either axis; every row scores the same fixtures, so
@@ -53,27 +53,27 @@ that count is exact where the intervals are not.
 
 ### What it shows
 
-No variant moves joint accuracy beyond its interval. **No history**, **No diff** and **Error message only** change predictions without moving it beyond the interval — within noise at n = 26. **No test source** changes no prediction at all. **No run context** cannot be measured yet: no fixture in the slice carries what it withholds. On `determinism` alone the picture is sharper: **No history** and **Error message only** move it beyond the interval.
+No variant moves joint accuracy beyond its interval. **No history**, **No diff** and **Error message only** change predictions without moving it beyond the interval — within noise at n = 31. **No test source** changes no prediction at all. **No run context** cannot be measured yet: no fixture in the slice carries what it withholds. On `determinism` alone the picture is sharper: **No history** and **Error message only** move it beyond the interval.
 
-- **No history** moves joint accuracy from 34.6% to 15.4% (-19.2pp). It changes 13 of 26 predictions (`determinism` on 13): 1 becomes right and 6 become wrong. The joint intervals overlap, so at n = 26 that is within noise. `determinism` accuracy on its own goes from 84.6% [66.5–93.8] to 42.3% [25.5–61.1], and those intervals do not overlap. In the hard quadrant it places 3 of 8 correctly, against 2 with the full context.
-- **No diff** leaves joint accuracy where it was, at 34.6%. It changes 3 of 26 predictions (`owner` on 3): 1 becomes right and 1 becomes wrong. The joint intervals overlap, so at n = 26 that is within noise. In the hard quadrant it places 1 of 8 correctly, against 2 with the full context.
-- **No test source** changes none of the 26 predictions, although 13 of them carry a test source: on these fixtures the baseline's answer does not depend on it. That says nothing yet about whether the agent needs it.
+- **No history** moves joint accuracy from 35.5% to 16.1% (-19.4pp). It changes 17 of 31 predictions (`determinism` on 17): 2 become right and 8 become wrong. The joint intervals overlap, so at n = 31 that is within noise. `determinism` accuracy on its own goes from 83.9% [67.4–92.9] to 41.9% [26.4–59.2], and those intervals do not overlap. In the hard quadrant it places 3 of 9 correctly, against 2 with the full context.
+- **No diff** leaves joint accuracy where it was, at 35.5%. It changes 3 of 31 predictions (`owner` on 3): 1 becomes right and 1 becomes wrong. The joint intervals overlap, so at n = 31 that is within noise. In the hard quadrant it places 1 of 9 correctly, against 2 with the full context.
+- **No test source** changes none of the 31 predictions, although 18 of them carry a test source: on these fixtures the baseline's answer does not depend on it. That says nothing yet about whether the agent needs it.
 - **No run context** cannot be measured on this slice: no fixture in it carries a run context, so the row is the full context under another name. It starts to mean something with the first fixture that does.
-- **Error message only** moves joint accuracy from 34.6% to 11.5% (-23.1pp). It changes 15 of 26 predictions (`owner` on 3, `determinism` on 13): 1 becomes right and 7 become wrong. The joint intervals overlap, so at n = 26 that is within noise. `determinism` accuracy on its own goes from 84.6% [66.5–93.8] to 42.3% [25.5–61.1], and those intervals do not overlap.
+- **Error message only** moves joint accuracy from 35.5% to 12.9% (-22.6pp). It changes 19 of 31 predictions (`owner` on 3, `determinism` on 17): 2 become right and 9 become wrong. The joint intervals overlap, so at n = 31 that is within noise. `determinism` accuracy on its own goes from 83.9% [67.4–92.9] to 41.9% [26.4–59.2], and those intervals do not overlap.
 
 ### Per quadrant
 
 | quadrant                        | support | Full context | No history | No diff | No test source | No run context | Error message only |
 | ------------------------------- | ------: | -----------: | ---------: | ------: | -------------: | -------------: | -----------------: |
-| `app_code` + `deterministic`    |       7 |            5 |          0 |       5 |              5 |              5 |                  0 |
-| **`app_code` + `intermittent`** |       8 |            2 |          3 |       1 |              2 |              2 |                  2 |
-| `test_code` + `deterministic`   |       6 |            0 |          0 |       1 |              0 |              0 |                  0 |
+| `app_code` + `deterministic`    |       8 |            5 |          0 |       5 |              5 |              5 |                  0 |
+| **`app_code` + `intermittent`** |       9 |            2 |          3 |       1 |              2 |              2 |                  2 |
+| `test_code` + `deterministic`   |       7 |            1 |          0 |       2 |              1 |              1 |                  0 |
 | `test_code` + `intermittent`    |       2 |            1 |          1 |       1 |              1 |              1 |                  1 |
-| `environment` + `deterministic` |       2 |            1 |          0 |       1 |              1 |              1 |                  0 |
-| `environment` + `intermittent`  |       1 |            0 |          0 |       0 |              0 |              0 |                  0 |
+| `environment` + `deterministic` |       3 |            2 |          0 |       2 |              2 |              2 |                  0 |
+| `environment` + `intermittent`  |       2 |            0 |          1 |       0 |              0 |              0 |                  1 |
 
 Fixtures placed in their true quadrant — both axes right — out of `support`, by ground-truth
-quadrant. Counts rather than intervals: a quadrant holds between 1 and 8 fixtures
+quadrant. Counts rather than intervals: a quadrant holds between 2 and 9 fixtures
 here, and an interval over that few would span most of the scale. The bold row is the hard
 quadrant, `app_code` that does not reproduce on rerun — where a field that only matters for
 difficult cases would show.
@@ -83,10 +83,10 @@ difficult cases would show.
 | bucket                      |   n | Full context | No history | No diff | No test source | No run context | Error message only |
 | --------------------------- | --: | -----------: | ---------: | ------: | -------------: | -------------: | -----------------: |
 | `environment-as-regression` |   3 |            1 |          0 |       1 |              1 |              1 |                  0 |
-| `hard-quadrant`             |   8 |            2 |          3 |       1 |              2 |              2 |                  2 |
+| `hard-quadrant`             |   9 |            2 |          3 |       1 |              2 |              2 |                  2 |
 | `misleading-history`        |   3 |            0 |          0 |       0 |              0 |              0 |                  0 |
-| `stale-test`                |   5 |            0 |          0 |       1 |              0 |              0 |                  0 |
-| `straightforward`           |   5 |            5 |          0 |       5 |              5 |              5 |                  0 |
+| `stale-test`                |   6 |            1 |          0 |       2 |              1 |              1 |                  0 |
+| `straightforward`           |   8 |            6 |          1 |       6 |              6 |              6 |                  1 |
 | `unsynchronised-test`       |   2 |            1 |          1 |       1 |              1 |              1 |                  1 |
 
 Jointly correct fixtures per difficulty bucket. Each adversarial bucket was built to defeat one
@@ -158,7 +158,7 @@ from the same list, so neither classifier can be denied something the other stil
 
 **Beyond the interval means the two intervals do not overlap.** It is the rule the main report
 applies, and it is conservative — every row scores the same fixtures, so a paired test would
-detect smaller moves. At n = 26 the full-context interval alone is 34.4 points wide,
+detect smaller moves. At n = 31 the full-context interval alone is 31.9 points wide,
 so most single-field effects land inside it. "Within noise" is a statement about the size of
 the dataset, not evidence that a field does nothing.
 

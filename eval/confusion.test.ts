@@ -259,39 +259,39 @@ describe('the baseline against the committed dataset', () => {
   it('pins the owner confusion matrix', () => {
     // Rows app_code / test_code / environment, columns the same.
     expect(confusionMatrix(judgements, 'owner').counts).toEqual([
-      [17, 6, 0],
-      [10, 2, 0],
-      [3, 0, 1],
+      [17, 8, 0],
+      [10, 3, 0],
+      [3, 0, 3],
     ])
   })
 
   it('pins the determinism confusion matrix', () => {
     expect(confusionMatrix(judgements, 'determinism').counts).toEqual([
-      [17, 4],
-      [5, 13],
+      [20, 4],
+      [6, 14],
     ])
   })
 
   it('shows most of the `test_code` row collapsing into `app_code`', () => {
-    // Ten of twelve called app_code. This is the single most informative cell
+    // Ten of thirteen called app_code. This is the single most informative cell
     // in the report and accuracy alone never shows it.
     //
-    // The two that escape are captured fixtures with no commit under test, so
+    // The three that escape are captured fixtures with no commit under test, so
     // there is no product diff for the second rule to fire on and the baseline
     // reaches its locator rule. They are the exception that shows what the cell
     // is really measuring: not that the baseline cannot recognise a test fault,
     // but that a product diff overrides everything else it knows.
     const matrix = confusionMatrix(judgements, 'owner')
     const row = matrix.counts[matrix.labels.indexOf('test_code')]
-    expect(row).toEqual([10, 2, 0])
+    expect(row).toEqual([10, 3, 0])
   })
 
-  it('scores 3 of 12 on the hard quadrant', () => {
+  it('scores 3 of 13 on the hard quadrant', () => {
     // The project's thesis number. The baseline being poor here is the dataset
     // working, not the control being unfair.
     const hard = quadrantBreakdown(judgements).find((r) => r.hard)
-    expect(hard).toMatchObject({ support: 12, correct: 3 })
-    expect(hard?.accuracy.point).toBeCloseTo(0.25, 10)
+    expect(hard).toMatchObject({ support: 13, correct: 3 })
+    expect(hard?.accuracy.point).toBeCloseTo(3 / 13, 10)
   })
 
   /**
@@ -312,6 +312,13 @@ describe('the baseline against the committed dataset', () => {
   })
   const bucket = (name: string) => byBucket.find((g) => g.group === name)?.metrics
 
+  const byBucketAndProvenance = scoreBy(judgements, (j) => {
+    const labels = dataset.find((f) => f.judgement.name === j.name)?.labels
+    return `${labels?.bucket ?? 'unknown'}/${labels?.provenance ?? 'unknown'}`
+  })
+  const cell = (name: string, provenance: string) =>
+    byBucketAndProvenance.find((g) => g.group === `${name}/${provenance}`)?.metrics
+
   it('covers every bucket the dataset currently has', () => {
     expect(byBucket.map((g) => g.group)).toEqual([
       'cross-file-state-leak',
@@ -330,15 +337,43 @@ describe('the baseline against the committed dataset', () => {
    * checkable rather than asserted — and each assertion below is really a claim
    * about the *dataset*, not about the baseline.
    */
-  it('passes every straightforward case, which is the control on the control', () => {
+  it('passes every synthetic straightforward case, which is the control on the control', () => {
     // A baseline that failed these would be broken, and every failure below
     // would say nothing about the fixtures.
-    expect(bucket('straightforward')?.joint.point).toBe(1)
+    expect(cell('straightforward', 'synthetic')?.n).toBe(8)
+    expect(cell('straightforward', 'synthetic')?.joint.point).toBe(1)
   })
 
-  it('is defeated by stale-test on owner alone, the axis that bucket attacks', () => {
-    expect(bucket('stale-test')?.owner.accuracy.point).toBe(0)
+  /**
+   * And gets one of the three captured ones right. The control on the control
+   * was only ever measured on synthetic fixtures, and every synthetic
+   * straightforward fixture carries a product diff for the ownership rule to
+   * fire on. A captured run carries none: the repeated-move regression names a
+   * timeout, so the locator rule calls it `test_code`, and the port collision
+   * ended its history on two failures in a row, so the streak rule calls it
+   * deterministic. Both are the baseline being the crude thing it is, on inputs
+   * production really produces.
+   */
+  it('gets one of the three captured straightforward cases right', () => {
+    expect(cell('straightforward', 'captured')?.n).toBe(3)
+    expect(cell('straightforward', 'captured')?.joint.successes).toBe(1)
+    expect(cell('straightforward', 'captured')?.owner.accuracy.successes).toBe(2)
+    expect(cell('straightforward', 'captured')?.determinism.accuracy.successes).toBe(2)
+  })
+
+  it('is defeated by synthetic stale-test on owner alone, the axis that bucket attacks', () => {
+    expect(cell('stale-test', 'synthetic')?.owner.accuracy.point).toBe(0)
     expect(bucket('stale-test')?.determinism.accuracy.point).toBe(1)
+  })
+
+  /**
+   * The captured stale test is not: it has no diff, so the product rule cannot
+   * fire, and its message names a locator. Right for a reason that is not the
+   * reason, like `unsynchronised-test` below.
+   */
+  it('gets the captured stale test right on owner, for want of a diff', () => {
+    expect(cell('stale-test', 'captured')?.n).toBe(1)
+    expect(cell('stale-test', 'captured')?.joint.point).toBe(1)
   })
 
   /**
@@ -366,9 +401,9 @@ describe('the baseline against the committed dataset', () => {
     expect(bucket('environment-as-regression')?.determinism.accuracy.point).toBe(1)
   })
 
-  it('scores 3 of 12 joint on the hard-quadrant bucket', () => {
-    expect(bucket('hard-quadrant')?.joint.point).toBeCloseTo(0.25, 10)
-    expect(bucket('hard-quadrant')?.owner.accuracy.point).toBeCloseTo(0.5, 10)
+  it('scores 3 of 13 joint on the hard-quadrant bucket', () => {
+    expect(bucket('hard-quadrant')?.joint.point).toBeCloseTo(3 / 13, 10)
+    expect(bucket('hard-quadrant')?.owner.accuracy.point).toBeCloseTo(6 / 13, 10)
   })
 
   /**

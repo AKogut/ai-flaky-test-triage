@@ -193,6 +193,6 @@ describe('the committed dataset', () => {
     // When this flips, the drift check starts failing the build — which is the
     // point at which the remaining buckets have to be filled in.
     expect(report.compositionEnforced).toBe(false)
-    expect(report.fixtures).toBe(39)
+    expect(report.fixtures).toBe(44)
   })
 })

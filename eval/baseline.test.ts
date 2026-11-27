@@ -192,14 +192,29 @@ describe('scored against the committed dataset', () => {
     expect(scored.length).toBeGreaterThan(0)
   })
 
-  it('gets every straightforward regression right', () => {
+  it('gets every synthetic straightforward regression right', () => {
     // The sanity floor. A control that fails these is broken rather than simple.
-    const easy = scored.filter((s) => s.labels.bucket === 'straightforward')
+    const easy = scored.filter(
+      (s) => s.labels.bucket === 'straightforward' && s.labels.provenance === 'synthetic',
+    )
     expect(easy.length).toBeGreaterThan(0)
     for (const s of easy) expect(s.predicted.owner, s.name).toBe(s.labels.owner)
   })
 
-  it('gets every stale-test fixture wrong, exactly as documented', () => {
+  /**
+   * The floor was only ever measured on synthetic fixtures, each of which
+   * carries a product diff. The one captured regression carries none, and its
+   * message names a timeout — the wait that expired is a poll of the stored rows
+   * — so the locator rule fires and calls it `test_code`. Recorded rather than
+   * patched, for the reason the next test gives.
+   */
+  it('calls the captured regression test_code, for want of a diff', () => {
+    const swap = scored.find((s) => s.name === 'fifty-fifth-swap-does-not-take')
+    expect(swap?.labels.owner).toBe('app_code')
+    expect(swap?.predicted.owner).toBe('test_code')
+  })
+
+  it('gets every synthetic stale-test fixture wrong, exactly as documented', () => {
     // Not a defect. Each of those fixtures has a product diff, so the second
     // rule fires and calls it app_code. Patching around it would mean tuning the
     // control against the dataset it exists to control for.
@@ -210,9 +225,23 @@ describe('scored against the committed dataset', () => {
     // #55 added `unsynchronised-test` — the cell `docs/taxonomy.md` always had
     // and the bucket list never did — and both fixtures moved there, which is
     // what restored the absolute claim rather than any change to the rules.
-    const stale = scored.filter((s) => s.labels.bucket === 'stale-test')
+    //
+    // #171 then captured a stale test that really is one, and the qualifier is
+    // back for a better reason: the claim is about fixtures with a product diff,
+    // and a captured run has none. That one is asserted below.
+    const stale = scored.filter(
+      (s) => s.labels.bucket === 'stale-test' && s.labels.provenance === 'synthetic',
+    )
     expect(stale.length).toBeGreaterThan(0)
     for (const s of stale) expect(s.predicted.owner, s.name).toBe('app_code')
+  })
+
+  it('gets the captured stale test right, because there is no diff to mislead it', () => {
+    const captured = scored.filter(
+      (s) => s.labels.bucket === 'stale-test' && s.labels.provenance === 'captured',
+    )
+    expect(captured.map((s) => s.name)).toEqual(['board-opens-with-a-row-the-list-leaves-out'])
+    for (const s of captured) expect(s.predicted.owner, s.name).toBe('test_code')
   })
 
   it('gets a majority of the hard quadrant wrong, which is why the dataset can discriminate', () => {
@@ -224,8 +253,8 @@ describe('scored against the committed dataset', () => {
       (s) =>
         s.predicted.owner !== s.labels.owner || s.predicted.determinism !== s.labels.determinism,
     )
-    expect(hard.length).toBe(12)
-    expect(missed.length).toBe(9)
+    expect(hard.length).toBe(13)
+    expect(missed.length).toBe(10)
   })
 
   it('does not read a documentation-only commit as a product change (#112)', () => {
@@ -266,13 +295,12 @@ describe('scored against the committed dataset', () => {
   })
 
   it('records the current owner-axis accuracy so a change to the rules is visible', () => {
-    // 8 of 15 by construction: every straightforward fixture, no stale-test one.
-    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(20 / 39, 5)
+    expect(accuracy((s) => s.predicted.owner === s.labels.owner)).toBeCloseTo(23 / 44, 5)
   })
 
   it('records the current determinism-axis accuracy', () => {
     expect(accuracy((s) => s.predicted.determinism === s.labels.determinism)).toBeCloseTo(
-      30 / 39,
+      34 / 44,
       5,
     )
   })
