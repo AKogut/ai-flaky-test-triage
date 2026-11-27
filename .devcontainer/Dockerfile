@@ -13,4 +13,4 @@
 # A Dockerfile rather than an `image` line in devcontainer.json, so that Dependabot
 # sees it at all: its `docker` updater reads Dockerfiles, and its `devcontainers`
 # updater only updates Features, of which this configuration has none.
-FROM mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:72c2f2a9a837cf27a8cad29a6031e48d852a31d1acd716379ee0b4fa543dcfc8
+FROM mcr.microsoft.com/devcontainers/javascript-node:24-bookworm@sha256:3c8ce4987c62687416c86d803e2bef2a193ed25b370ed4378992c3b154dd65d5
